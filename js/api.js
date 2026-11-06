@@ -375,7 +375,7 @@ async function adsbByCallsign(cs) {
       if (!a) return null;
       return {
         reg: a.r, hex: a.hex?.toLowerCase(), model: a.t,
-        pos: a.lat != null ? { lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : a.alt_baro, gs: a.gs, track: a.track, at: new Date(Date.now() - (a.seen_pos || 0) * 1000).toISOString(), source: 'adsb.lol' } : null,
+        pos: a.lat != null ? { lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : a.alt_baro, onGround: a.alt_baro === 'ground', gs: a.gs, track: a.track, at: new Date(Date.now() - (a.seen_pos || 0) * 1000).toISOString(), source: 'adsb.lol' } : null,
       };
     } catch { return null; }
   });
@@ -396,7 +396,7 @@ export async function liveByReg(reg) {
       const out = {
         reg: a.r || reg, hex: a.hex?.toLowerCase(), callsign: (a.flight || '').trim(), model: a.t,
         onGround: a.alt_baro === 'ground',
-        pos: a.lat != null ? { lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : a.alt_baro, gs: a.gs, track: a.track, at: new Date(Date.now() - (a.seen_pos || 0) * 1000).toISOString(), source: 'adsb.lol' } : null,
+        pos: a.lat != null ? { lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : a.alt_baro, onGround: a.alt_baro === 'ground', gs: a.gs, track: a.track, at: new Date(Date.now() - (a.seen_pos || 0) * 1000).toISOString(), source: 'adsb.lol' } : null,
       };
       if (out.callsign && out.pos && !out.onGround) out.route = await routeOf(out.callsign, out.pos);
       return out;
@@ -429,7 +429,7 @@ export async function getLivePosition(flight) {
     if (flight.aircraft?.reg) {
       const a = await liveByReg(flight.aircraft.reg);
       if (a?.hex) flight.aircraft = { ...flight.aircraft, hex: a.hex };
-      if (a?.pos && !a.onGround) return a.pos;
+      if (a?.pos) return { ...a.pos, onGround: a.onGround };
     }
     if (!AIRBORNE.includes(flight.status) || !flight.callSign) return null;
     const a = await adsbByCallsign(flight.callSign);
@@ -441,14 +441,14 @@ export async function getLivePosition(flight) {
       const r = await fetch(`https://api.adsb.lol/v2/hex/${hex}`);
       if (r.ok) {
         const a = (await r.json()).ac?.[0];
-        if (a?.lat != null) return { lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : a.alt_baro, gs: a.gs, track: a.track, at: new Date(Date.now() - (a.seen_pos || 0) * 1000).toISOString(), source: 'adsb.lol' };
+        if (a?.lat != null) return { lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : a.alt_baro, onGround: a.alt_baro === 'ground', gs: a.gs, track: a.track, at: new Date(Date.now() - (a.seen_pos || 0) * 1000).toISOString(), source: 'adsb.lol' };
       }
     } catch { /* passa al prossimo */ }
     try {
       const r = await fetch(`https://opensky-network.org/api/states/all?icao24=${hex}`);
       if (r.ok) {
         const s = (await r.json()).states?.[0];
-        if (s && s[6] != null) return { lat: s[6], lon: s[5], alt: s[7] != null ? Math.round(s[7] * 3.281) : null, gs: s[9] != null ? Math.round(s[9] * 1.944) : null, track: s[10], at: new Date(s[4] * 1000).toISOString(), source: 'OpenSky' };
+        if (s && s[6] != null) return { lat: s[6], lon: s[5], alt: s[7] != null ? Math.round(s[7] * 3.281) : null, gs: s[9] != null ? Math.round(s[9] * 1.944) : null, track: s[10], onGround: !!s[8], at: new Date(s[4] * 1000).toISOString(), source: 'OpenSky' };
       }
     } catch { /* nessuna fonte disponibile */ }
     return null;

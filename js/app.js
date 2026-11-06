@@ -3,7 +3,7 @@ import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
 
-const APP_VERSION = '1.8 · tabelloni ufficiali via Worker (PSA, FLR, GVA)';
+const APP_VERSION = '1.9 · stato corretto con la posizione reale dell’aereo';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -20,7 +20,7 @@ const STATUS = {
   Boarding: ['Imbarco', 'go'], GateClosed: ['Gate chiuso', 'warn'], Departed: ['Decollato', 'go'],
   EnRoute: ['In volo', 'go'], Approaching: ['In avvicinamento', 'go'], Delayed: ['In ritardo', 'warn'],
   Arrived: ['Atterrato', 'done'], Canceled: ['Cancellato', 'bad'], CanceledUncertain: ['Forse cancellato', 'bad'],
-  Diverted: ['Dirottato', 'bad'],
+  Diverted: ['Dirottato', 'bad'], OnGround: ['Ancora a terra', 'warn'],
 };
 const statusBadge = s => { const [t, c] = STATUS[s] || [s, 'muted']; return `<span class="badge ${c}">${esc(t)}</span>`; };
 const star = (on, attrs) => `<button class="star ${on ? 'on' : ''}" ${attrs} aria-pressed="${on}" title="${on ? 'Rimuovi dai preferiti' : 'Aggiungi ai preferiti'}">${on ? '★' : '☆'}</button>`;
@@ -207,6 +207,7 @@ const apIcon = code => L.divIcon({ className: 'apmark', html: `<span>${esc(code)
 function arc(a, b) { return Array.from({ length: 65 }, (_, i) => greatCircle(a, b, i / 64)).map(p => [p.lat, p.lon]); }
 
 function progress(f) {
+  if (!['Departed', 'EnRoute', 'Approaching', 'Arrived'].includes(f.status)) return 0;
   const s = new Date((f.dep.actual || f.dep.revised || f.dep.sched)?.utc), e = new Date((f.arr.revised || f.arr.sched)?.utc);
   if (isNaN(s) || isNaN(e)) return 0;
   return Math.max(0, Math.min(1, (Date.now() - s) / (e - s)));
@@ -299,7 +300,7 @@ async function viewFlight(number, date, depHint) {
   } catch (e) { document.getElementById('inbound').innerHTML = errorBox(e); }
 
   // tracking live (stesso aeromobile: se il volo non è partito, si segue sulla tratta precedente)
-  let marker = null, trail = null;
+  let marker = null, trail = null, groundAtDep = false;
   const trailPts = [];
   const live = async () => {
     const meta = document.getElementById('livemeta');
@@ -311,6 +312,20 @@ async function viewFlight(number, date, depHint) {
       meta.textContent = s === 'Arrived' ? 'Volo concluso' : s === 'Canceled' ? 'Volo cancellato' : f.aircraft?.hex || getSettings().provider !== 'aerodatabox' ? 'Aereo a terra o fuori copertura' : 'Tracking disponibile quando l’aereo viene assegnato';
       return;
     }
+    // aereo a terra: se è all'aeroporto di partenza il volo non è ancora decollato, qualunque cosa dica la compagnia
+    if (pos.onGround || (pos.gs != null && pos.gs < 50 && (pos.alt ?? 0) < 1500)) {
+      const P = [[f.dep, A], [f.arr, B]].find(([, X]) => X?.lat != null && distanceKm(pos, X) < 8);
+      const where = P?.[0]?.iata;
+      if (where && where === f.dep.iata && AIR.includes(f.status)) {
+        groundAtDep = true; f.status = 'OnGround';
+        document.getElementById('leg').innerHTML = legCard(f, 'Questo volo');
+      }
+      if (!marker) marker = L.marker([pos.lat, pos.lon], { icon: planeIcon(pos.track), zIndexOffset: 1000 }).addTo(map);
+      else marker.setLatLng([pos.lat, pos.lon]).setIcon(planeIcon(pos.track));
+      meta.innerHTML = `Aereo a terra${where ? ` a <b>${esc(where)}</b>` : ''}${groundAtDep ? ' · il volo non è ancora decollato' : ''} · fonte ${esc(pos.source)}`;
+      return;
+    }
+    if (groundAtDep && AIR.includes(f.status)) groundAtDep = false;
     if (inbound && !AIR.includes(f.status) && AIR.includes(inbound.status)) {
       on = `volo precedente ${inbound.number}`;
       if (pos.gs > 80 && A?.lat != null) {
@@ -330,7 +345,7 @@ async function viewFlight(number, date, depHint) {
   every(getSettings().refreshSec, async () => {
     try {
       const fresh = (await getFlight(number, date)).find(l => l.dep?.iata === f.dep.iata);
-      if (fresh) { Object.assign(f, fresh); document.getElementById('leg').innerHTML = legCard(f, 'Questo volo'); }
+      if (fresh) { Object.assign(f, fresh); if (groundAtDep && AIR.includes(f.status)) f.status = 'OnGround'; document.getElementById('leg').innerHTML = legCard(f, 'Questo volo'); }
     } catch { /* riprova al giro successivo */ }
   });
 }
