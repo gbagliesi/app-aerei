@@ -68,7 +68,7 @@ async function staffMonitor(airport, nature, log) {
       const t0 = Date.now();
       let r;
       try {
-        r = await fetch(u, { signal: AbortSignal.timeout(20000), headers: { 'User-Agent': UA, 'Accept': 'text/html,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9', 'Referer': `${base}.html`, ...(cookie ? { Cookie: cookie } : {}) } });
+        r = await fetch(u, { signal: AbortSignal.timeout(9000), headers: { 'User-Agent': UA, 'Accept': 'text/html,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9', 'Referer': `${base}.html`, ...(cookie ? { Cookie: cookie } : {}) } });
       } catch (e) { log.push({ url: u, error: String(e), ms: Date.now() - t0 }); return ''; }
       const sc = r.headers.get('set-cookie') || '';
       const m = /JSESSIONID=([^;,\s]+)/i.exec(sc);
@@ -207,10 +207,19 @@ async function probeSite(site) {
 async function probePage(page) {
   let u;
   try { u = new URL(page); } catch { return { error: 'indirizzo non valido' }; }
-  if (!/(^|\.)(aeroportidipuglia\.it|adr\.it)$/.test(u.hostname)) return { error: 'sito non previsto' };
+  if (!/(^|\.)(aeroportidipuglia\.it|adr\.it|firenze-airport\.it|pisa-airport\.com|toscana-aeroporti\.com|aeroporto\.firenze\.it)$/.test(u.hostname)) return { error: 'sito non previsto' };
   const r = await fetch(u.href, { signal: AbortSignal.timeout(20000), headers: { 'User-Agent': UA, 'Accept-Language': 'it-IT,it;q=0.9' } });
   const html = await r.text();
   const i = html.search(/\b(FR|AZ|W6|W4|U2|VY|LH|AF|KL|BA|EN|V7|DY|EW)\s?\d{2,4}\b/);
   const urls = [...new Set([...html.matchAll(/["'](https?:\/\/[^"'\s]+|\/[^"'\s]+)["']/g)].map(m => m[1]).filter(x => /ajax|api|json|wp-json|admin-ajax|flight|voli|partenz|arriv|fids|\.js(\?|$)/i.test(x) && !/\.(css|png|jpe?g|svg|woff2?|ico|gif)(\?|$)/i.test(x)))].slice(0, 60);
-  return { url: u.href, status: r.status, length: html.length, flightAt: i, excerpt: i >= 0 ? html.slice(Math.max(0, i - 1500), i + 2500) : html.slice(0, 3000), urls };
+  const around = (re, before, after, max = 4) => { const out = []; for (const m of html.matchAll(re)) { out.push(html.slice(Math.max(0, m.index - before), m.index + after)); if (out.length >= max) break; } return out; };
+  const body = html.replace(/<head[\s\S]*?<\/head>/i, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<svg[\s\S]*?<\/svg>/gi, '');
+  return {
+    url: u.href, status: r.status, length: html.length, flightAt: i, urls,
+    ajax: around(/admin-ajax|ajaxurl|wp-json|fetch\(|\$\.(ajax|post|get)\(/g, 600, 900),
+    tables: [...body.matchAll(/<table[\s\S]{0,2500}/gi)].slice(0, 2).map(m => m[0]),
+    flightRows: i >= 0 ? [html.slice(Math.max(0, i - 1200), i + 1500)] : [],
+    inlineScripts: [...html.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1].trim()).filter(t => /volo|voli|flight|partenz|arriv|ajax|api/i.test(t)).map(t => t.slice(0, 1500)).slice(0, 6),
+    links: [...new Set([...html.matchAll(/href="([^"]*(?:partenz|arriv|departur|voli|flight)[^"]*)"/gi)].map(m => m[1]))].slice(0, 15),
+  };
 }
