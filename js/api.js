@@ -189,8 +189,31 @@ export async function getInbound(flight) {
       if (!t) return false;
       const gap = (depUtc - new Date(t)) / 60e3;
       const al = a.airline?.iata || a.number.replace(/\d.*$/, '');
-      return al === airline && gap >= 20 && gap <= 180 && a.status !== 'Canceled';
+      return al === airline && gap >= 15 && gap <= 240 && a.status !== 'Canceled';
     });
+    // 2a) verifica incrociata: per gli aerei della stessa compagnia arrivati poco prima, guardo la loro
+    //     giornata (marche note dal tabellone o dalla rete ADS-B): se contiene questo volo, è l'aereo giusto
+    if (!reg) {
+      const d0 = isoDate(depUtc);
+      const near = [...cands].sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc));
+      let lookups = 0;
+      for (const a of near) {
+        if (lookups >= 6) break;
+        let r = a.aircraft?.reg;
+        if (!r && AIRBORNE.includes(a.status) && a.callSign) {
+          const x = await adsbByCallsign(a.callSign);
+          if (x?.reg) { r = x.reg; a.aircraft = { ...a.aircraft, reg: x.reg, hex: x.hex, model: a.aircraft?.model || x.model }; }
+        }
+        if (!r) continue;
+        lookups++;
+        const day = await getFlightsByReg(r, d0).catch(() => []);
+        const mine = day.find(f => f.number === flight.number && (!f.dep?.iata || f.dep.iata === depSide.iata));
+        if (mine) {
+          flight.aircraft = { ...flight.aircraft, reg: r, hex: mine.aircraft?.hex || a.aircraft?.hex, model: flight.aircraft?.model || mine.aircraft?.model };
+          return { inbound: a, method: 'reg' };
+        }
+      }
+    }
     const back = cands.filter(a => a.dep?.iata && a.dep.iata === flight.arr?.iata)
       .sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc))[0];
     if (back) {
