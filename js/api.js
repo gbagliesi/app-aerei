@@ -15,17 +15,32 @@ async function cached(key, ttlMs, fn) {
   return v;
 }
 
-async function adb(path) {
-  const { apiKey } = getSettings();
+async function adb(path, key = getSettings().apiKey) {
+  const apiKey = (key || '').trim();
   if (!apiKey) throw new Error('Manca la chiave API AeroDataBox: aggiungila in Impostazioni.');
-  const res = await fetch(`https://${ADB_HOST}${path}`, {
-    headers: { 'X-RapidAPI-Key': apiKey, 'X-RapidAPI-Host': ADB_HOST },
-  });
+  let res;
+  try {
+    res = await fetch(`https://${ADB_HOST}${path}`, { headers: { 'X-RapidAPI-Key': apiKey, 'X-RapidAPI-Host': ADB_HOST } });
+  } catch { throw new Error('Impossibile contattare AeroDataBox: controlla la connessione.'); }
   if (res.status === 204) return null;
-  if (res.status === 429) throw new Error('Limite di richieste API raggiunto, riprova tra poco.');
-  if (res.status === 401 || res.status === 403) throw new Error('Chiave API non valida o piano non abilitato.');
-  if (!res.ok) throw new Error(`Errore API (${res.status})`);
-  return res.json();
+  if (res.ok) return res.json();
+  let msg = '';
+  try { const b = await res.json(); msg = b.message || b.error || ''; } catch { /* corpo non JSON */ }
+  const m = msg.toLowerCase();
+  let hint;
+  if (m.includes('not subscribed')) hint = 'La chiave è giusta ma non sei iscritto ad AeroDataBox: su RapidAPI apri AeroDataBox → Pricing e premi Subscribe sul piano Basic.';
+  else if (m.includes('invalid api key') || res.status === 401) hint = 'Chiave non riconosciuta: ricopiala dalla riga X-RapidAPI-Key, senza spazi o caratteri in più.';
+  else if (res.status === 429 || m.includes('quota') || m.includes('rate limit')) hint = 'Limite di richieste del piano raggiunto: riprova più tardi o alza l’intervallo di aggiornamento.';
+  else if (m.includes('tier') || m.includes('plan')) hint = 'Questa funzione non è inclusa nel tuo piano AeroDataBox.';
+  else hint = `Errore API (${res.status}).`;
+  throw new Error(`${hint}${msg ? ` [RapidAPI: "${msg}"]` : ''}`);
+}
+
+/** Verifica una chiave con una chiamata leggera. */
+export async function testKey(key) {
+  await adb('/airports/iata/FCO', key);
+  const fids = await adb('/flights/airports/iata/FCO?offsetMinutes=0&durationMinutes=60&withLeg=false&direction=Departure', key);
+  return (fids?.departures || []).length;
 }
 
 const isDemo = () => getSettings().provider !== 'aerodatabox';

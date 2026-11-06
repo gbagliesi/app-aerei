@@ -118,3 +118,4 @@ dd.big { font-size: 1.3rem; color: var(--amber); line-height: 1.1; }
   .map { height: 280px; }
   .pagehead { flex-direction: column; }
 }
+.okmsg { background: #0f3a2c; color: var(--green); border-radius: 10px; padding: .8rem 1rem; margin: .8rem 0; }

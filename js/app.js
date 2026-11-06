@@ -1,4 +1,4 @@
-import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate } from './api.js';
+import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey } from './api.js';
 import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle } from './demo.js';
@@ -288,7 +288,8 @@ function viewSettings() {
       <p class="hint">Come ottenerla: crea un account su RapidAPI, abbonati ad <a href="https://rapidapi.com/aedbx-aedbx/api/aerodatabox" target="_blank" rel="noopener">AeroDataBox</a> (c'è un piano gratuito con poche centinaia di chiamate al mese, quelli a pagamento partono da pochi euro), poi copia la chiave. La chiave resta solo in questo browser.</p>
       <label>Aggiornamento automatico tabelloni (secondi)<input name="refreshSec" type="number" min="30" max="600" value="${s.refreshSec}"></label>
       <p class="hint">Ogni aggiornamento consuma una chiamata API: con il piano gratuito conviene 120–300 secondi.</p>
-      <button>Salva</button> <span id="saved" class="sub"></span>
+      <button>Salva</button> <button type="button" class="ghost" id="test">Prova la chiave</button> <span id="saved" class="sub"></span>
+      <div id="testres"></div>
     </form>
     <div class="card">
       <span class="eyebrow">Tracking in tempo reale</span>
@@ -306,6 +307,14 @@ function viewSettings() {
     document.getElementById('saved').textContent = 'Salvato ✓';
     updateBanner();
   });
+  document.getElementById('test').onclick = async () => {
+    const out = document.getElementById('testres');
+    out.innerHTML = '<p class="hint">Verifico la chiave…</p>';
+    try {
+      const n = await testKey(document.querySelector('[name=apiKey]').value);
+      out.innerHTML = `<p class="okmsg">✓ Chiave valida: trovate ${n} partenze da Fiumicino nella prossima ora. Ricordati di selezionare AeroDataBox e premere Salva.</p>`;
+    } catch (e) { out.innerHTML = errorBox(e); }
+  };
   document.getElementById('exp').onclick = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([exportFavorites()], { type: 'application/json' }));
