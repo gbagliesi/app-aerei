@@ -4,7 +4,8 @@ L'app gira nel browser, che non può leggere direttamente i tabelloni dei siti d
 Questo piccolo Worker (gratuito) li legge al posto suo e li restituisce all'app.
 
 Aeroporti supportati: **Pisa (PSA)**, **Firenze (FLR)**, **Ginevra (GVA)**.
-Dati: gate, check-in, nastro, orario stimato, stato e marche dell'aereo.
+Fonti: l'API pubblica dei siti di Toscana Aeroporti (Pisa, Firenze) e il feed dell'app dell'aeroporto di Ginevra.
+Dati: gate, check-in, nastro, orario stimato e stato; per Ginevra anche le marche dell'aereo.
 
 ## Pubblicarlo (una volta sola, ~5 minuti)
 
@@ -17,7 +18,7 @@ Dati: gate, check-in, nastro, orario stimato, stato e marche dell'aereo.
 ## Verifica e diagnostica
 
 - `https://…workers.dev/board?airport=PSA&nature=D` — partenze di Pisa (`nature=A` per gli arrivi)
-- `https://…workers.dev/debug?airport=FLR&nature=D` — mostra gli indirizzi provati e l'inizio della risposta
+- `https://…workers.dev/debug?airport=FLR&nature=D` — mostra l'indirizzo letto, i tempi e l'inizio della risposta
 
 Di default il Worker risponde solo all'app su `https://gbagliesi.github.io` e a `http://localhost:8000`.
 Per cambiarlo aggiungi in **Settings → Variables** una variabile `ALLOWED_ORIGINS` con gli indirizzi separati da virgola.

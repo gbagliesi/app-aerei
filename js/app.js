@@ -3,7 +3,7 @@ import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
 
-const APP_VERSION = '1.9 · stato corretto con la posizione reale dell’aereo';
+const APP_VERSION = '2.0 · tabelloni ufficiali di Pisa, Firenze e Ginevra';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -154,7 +154,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
         <a href="#/airport/${iata}/arr" class="${dir === 'arr' ? 'active' : ''}">🛬 Arrivi</a>
         <input id="filter" type="search" placeholder="Filtra: città, volo, compagnia" value="${esc(filter)}">
       </div>`}
-      ${data && (data.departures.concat(data.arrivals)).some(x => x._official) ? '<p class="hint official">✓ Gate, orari stimati, stato e marche dal tabellone ufficiale dell’aeroporto</p>' : ''}
+      ${data && (data.departures.concat(data.arrivals)).some(x => x._official) ? '<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto</p>' : ''}
       <div id="board">${data ? boardTable(filtered, isRoute ? 'dep' : dir, filter) : '<div class="loading">Caricamento tabellone…</div>'}</div>
       <p class="updated" id="updated"></p>`;
     bindStars($app, render);
@@ -494,7 +494,7 @@ function viewSettings() {
       <label>Chiave API RapidAPI per AeroDataBox<input name="apiKey" type="password" value="${esc(s.apiKey)}" placeholder="incolla qui la X-RapidAPI-Key"></label>
       <p class="hint">Come ottenerla: crea un account su RapidAPI, abbonati ad <a href="https://rapidapi.com/aedbx-aedbx/api/aerodatabox" target="_blank" rel="noopener">AeroDataBox</a> (c'è un piano gratuito con poche centinaia di chiamate al mese, quelli a pagamento partono da pochi euro), poi copia la chiave. La chiave resta solo in questo browser.</p>
       <label>Indirizzo del tuo Cloudflare Worker (tabelloni ufficiali di Pisa, Firenze, Ginevra)<input name="workerUrl" type="url" value="${esc(s.workerUrl || '')}" placeholder="https://tabellone-voli.tuonome.workers.dev"></label>
-      <p class="hint">Facoltativo. Con il Worker, per questi aeroporti gate, orari stimati, stato e marche dell'aereo arrivano dal tabellone dell'aeroporto. Istruzioni: <a href="https://github.com/gbagliesi/app-aerei/blob/main/worker/README.md" target="_blank" rel="noopener">worker/README.md</a>. <button type="button" class="ghost" id="testw">Prova il Worker</button></p>
+      <p class="hint">Facoltativo. Con il Worker, per questi aeroporti gate, orari stimati e stato arrivano dal tabellone dell'aeroporto (per Ginevra anche le marche dell'aereo). Istruzioni: <a href="https://github.com/gbagliesi/app-aerei/blob/main/worker/README.md" target="_blank" rel="noopener">worker/README.md</a>. <button type="button" class="ghost" id="testw">Prova il Worker</button></p>
       <div id="testwres"></div>
       <label>Aggiornamento automatico tabelloni (secondi)<input name="refreshSec" type="number" min="30" max="600" value="${s.refreshSec}"></label>
       <p class="hint">Ogni aggiornamento consuma una chiamata API: con il piano gratuito conviene 120–300 secondi.</p>
