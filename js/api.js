@@ -222,7 +222,38 @@ export async function getInbound(flight) {
         const a = await adsbByCallsign(back.callSign);
         if (a?.reg) back.aircraft = { ...back.aircraft, reg: a.reg, hex: a.hex, model: back.aircraft?.model || a.model };
       }
-      return { inbound: back, method: 'guess' };
+      return { inbound: back, method: 'guess', basis: 'return' };
+    }
+
+    // 2c) deduzione dalle rotazioni: abbino in ordine di tempo gli aerei della compagnia arrivati
+    //     in questo aeroporto ai suoi voli in partenza senza aereo assegnato (come fanno i tracker)
+    const al = x => x.airline?.iata || x.number.replace(/\d.*$/, '');
+    const tOf = t => (t?.utc ? new Date(t.utc).getTime() : NaN);
+    const arrT = a => tOf(a.arr?.actual || a.arr?.revised || a.arr?.sched);
+    const depT = d => tOf(d.dep?.revised || d.dep?.sched);
+    const turn = (LOWCOST_CODES.includes(airline) ? 25 : 40) * 60e3;
+    const arrivals = board.arrivals.filter(a => al(a) === airline && a.status !== 'Canceled' && arrT(a) <= +depUtc + 30 * 60e3 && arrT(a) >= depUtc - 8 * 3600e3);
+    let enrich = 0;
+    for (const a of arrivals) {
+      if (!a.aircraft?.reg && a.callSign && AIRBORNE.includes(a.status) && enrich++ < 4) {
+        const x = await adsbByCallsign(a.callSign);
+        if (x?.reg) a.aircraft = { ...a.aircraft, reg: x.reg, hex: x.hex, model: a.aircraft?.model || x.model };
+      }
+    }
+    // aerei già assegnati a una partenza successiva al loro arrivo: non sono liberi
+    const assigned = board.departures.filter(d => al(d) === airline && d.aircraft?.reg);
+    const free = arrivals.filter(a => !assigned.some(d => d.aircraft.reg === a.aircraft?.reg && depT(d) > arrT(a)))
+      .sort((a, b) => arrT(a) - arrT(b));
+    const deps = board.departures.filter(d => al(d) === airline && !d.aircraft?.reg && d.status !== 'Canceled' && !isNaN(depT(d)));
+    if (!deps.some(d => d.number === flight.number)) deps.push(flight);
+    deps.sort((a, b) => depT(a) - depT(b));
+    const used = new Set();
+    for (const d of deps) {
+      const avail = free.filter(a => !used.has(a));
+      const pick = avail.find(a => arrT(a) + turn <= depT(d)) || avail.find(a => arrT(a) + turn <= depT(d) + 60 * 60e3);
+      if (!pick) continue;
+      used.add(pick);
+      if (d.number === flight.number) return { inbound: pick, method: 'guess', basis: 'rotation' };
     }
   }
 
@@ -252,6 +283,7 @@ async function adsbByCallsign(cs) {
   });
 }
 const AIRBORNE = ['Departed', 'EnRoute', 'Approaching'];
+const LOWCOST_CODES = ['FR', 'U2', 'W6', 'VY', 'EW', 'HV', 'DY', 'V7'];
 
 
 /** Aereo cercato per marche sulla rete ADS-B (indipendente dai dati della compagnia). */

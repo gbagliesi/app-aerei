@@ -1,9 +1,9 @@
 import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg } from './api.js';
 import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
-import { greatCircle } from './demo.js';
+import { greatCircle, distanceKm } from './demo.js';
 
-const APP_VERSION = '1.6 · aereo: posizione live per marche, pulizia doppioni';
+const APP_VERSION = '1.7 · ritardo previsto, aereo dedotto dalle rotazioni';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -175,6 +175,30 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
   every(getSettings().refreshSec, load);
 }
 
+
+// ---------- ritardo previsto dalla rotazione dell'aereo ----------
+const LOWCOST = ['FR', 'U2', 'W6', 'VY', 'EW', 'HV', 'DY', 'V7'];
+function fmtLocalLike(ms, ref) {
+  const m = /([+-])(\d\d):(\d\d)$/.exec(ref?.local || '');
+  const off = m ? (m[1] === '-' ? -1 : 1) * (+m[2] * 60 + +m[3]) : -new Date(ms).getTimezoneOffset();
+  const d = new Date(ms + off * 60e3);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+}
+function predictionHtml(f, inbound, etaMs, etaSource) {
+  if (!inbound || ['Departed', 'EnRoute', 'Approaching', 'Arrived', 'Canceled'].includes(f.status)) return '';
+  const arrMs = etaMs ?? tms(inbound.arr.actual || inbound.arr.revised || inbound.arr.sched);
+  const schedMs = tms(f.dep.sched), declMs = tms(f.dep.revised) || schedMs;
+  if (!arrMs || !schedMs) return '';
+  const minTurn = LOWCOST.includes(f.airline?.iata || f.number.slice(0, 2)) ? 25 : 40;
+  const predMs = Math.max(schedMs, arrMs + minTurn * 60e3);
+  const delay = Math.round((predMs - schedMs) / 60e3), extra = Math.round((predMs - declMs) / 60e3);
+  if (delay < 5 || extra < 5) return '';
+  const landed = !!inbound.arr.actual || inbound.status === 'Arrived';
+  return `<div class="card predict"><span class="eyebrow">Ritardo previsto</span>
+    <p><b class="late">circa ${delay} min</b>: partenza stimata non prima delle <b>${fmtLocalLike(predMs, f.dep.sched)}</b>${tms(f.dep.revised) && tms(f.dep.revised) !== schedMs ? ` (la compagnia indica ${hhmm(f.dep.revised)})` : ' (la compagnia indica ancora in orario)'}.</p>
+    <p class="hint">L'aereo ${esc(inbound.aircraft?.reg || '')} ${landed ? 'è atterrato' : 'atterra'} a ${esc(f.dep.iata)} alle ${fmtLocalLike(arrMs, f.dep.sched)}${etaSource ? ` (stima da ${esc(etaSource)})` : ''} e per una rotazione servono almeno ${minTurn} minuti.</p></div>`;
+}
+
 // ---------- Dettaglio volo ----------
 const planeIcon = track => L.divIcon({ className: 'plane', html: `<div style="transform:rotate(${(track || 0) - 45}deg)">✈︎</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
 const apIcon = code => L.divIcon({ className: 'apmark', html: `<span>${esc(code)}</span>`, iconSize: [40, 18], iconAnchor: [20, 9] });
@@ -222,6 +246,7 @@ async function viewFlight(number, date, depHint) {
     ${legs.length > 1 ? `<div class="tabs">${legs.map(l => `<a href="#/flight/${encodeURIComponent(number)}/${date}?dep=${l.dep.iata}" class="${l === f ? 'active' : ''}">${l.dep.iata} → ${l.arr.iata}</a>`).join('')}</div>` : ''}
     <p class="links">Tratta <b>${esc(f.dep.iata)} → ${esc(f.arr.iata)}</b> ${star(isFavorite('routes', { from: f.dep.iata, to: f.arr.iata }), favAttrs('routes', { from: f.dep.iata, to: f.arr.iata }))}
       · <a href="#/route/${f.dep.iata}/${f.arr.iata}">altri voli su questa tratta</a> · <a href="#/airport/${f.dep.iata}/dep">tabellone ${esc(f.dep.iata)}</a></p>
+    <div id="predict"></div>
     <div id="leg">${legCard(f, 'Questo volo')}</div>
     <div class="card"><div class="leghead"><span class="eyebrow">Posizione dell'aereo</span><span id="livemeta" class="sub"></span></div><div id="map" class="map"></div></div>
     <div class="card" id="aircraft">${aircraftCard(f.aircraft, date)}</div>
@@ -251,7 +276,9 @@ async function viewFlight(number, date, depHint) {
       const turn = minutesBetween(inbound.arr.revised || inbound.arr.sched, f.dep.revised || f.dep.sched);
       const guess = r.method === 'guess';
       html = `${legCard(inbound, `Da dove arriva l'aereo · ${guess ? 'probabile volo precedente' : 'volo precedente'} <a href="${flightLink(inbound)}">${esc(inbound.number)}</a>`, 'inbound')}
-        ${guess ? `<p class="note">ℹ️ Stima: ${esc(f.airline?.name || 'la compagnia')} non ha ancora indicato quale aereo farà il volo. Questo è il suo volo in arrivo da ${esc(inbound.dep.iata)} poco prima della partenza: le low cost di solito fanno andata e ritorno con lo stesso aereo.</p>` : ''}
+        ${guess ? `<p class="note">ℹ️ Stima: ${esc(f.airline?.name || 'la compagnia')} non ha ancora indicato quale aereo farà il volo. ${r.basis === 'rotation'
+          ? `Abbinando in ordine di tempo gli aerei ${esc(f.airline?.name || '')} arrivati a ${esc(f.dep.iata)} con le sue partenze ancora senza aereo, a questo volo tocca quello in arrivo da ${esc(inbound.dep.iata)}.`
+          : `Questo è il suo volo in arrivo da ${esc(inbound.dep.iata)} poco prima della partenza: le low cost di solito fanno andata e ritorno con lo stesso aereo.`}</p>` : ''}
         <p class="note ${turn < 35 ? 'warn' : ''}">${turn < 35 ? '⚠️ ' : ''}Tempo di rotazione a ${esc(f.dep.iata)}: <b>${turn} min</b> tra l'arrivo dell'aereo e la partenza prevista${turn < 35 ? ': un ritardo del volo precedente si ripercuoterà probabilmente su questo.' : '.'}</p>`;
       const P = inbound.dep.lat != null ? inbound.dep : await getAirportInfo(inbound.dep.iata);
       if (P?.lat != null && A?.lat != null) {
@@ -261,9 +288,10 @@ async function viewFlight(number, date, depHint) {
       }
     }
     document.getElementById('inbound').innerHTML = html;
+    document.getElementById('predict').innerHTML = predictionHtml(f, inbound);
     const card = document.getElementById('aircraft');
     if (inbound && r.method === 'guess' && !f.aircraft?.reg && inbound.aircraft?.reg) {
-      card.innerHTML = aircraftCard(inbound.aircraft, date, `Ricavato dalla rete ADS-B seguendo il volo precedente ${esc(inbound.number)}: la compagnia non ha ancora confermato l'aereo.`, true);
+      card.innerHTML = aircraftCard(inbound.aircraft, date, `Stima basata sul volo precedente ${esc(inbound.number)}: la compagnia non ha ancora confermato l'aereo.`, true);
     } else if (inbound && r.method === 'reg' && f.aircraft?.reg && !hadReg) {
       card.innerHTML = aircraftCard(f.aircraft, date, `La compagnia non lo indica sul volo, ma la giornata di questo aereo (arrivato con ${esc(inbound.number)}) prevede proprio ${esc(f.number)}.`);
     }
@@ -282,7 +310,14 @@ async function viewFlight(number, date, depHint) {
       meta.textContent = s === 'Arrived' ? 'Volo concluso' : s === 'Canceled' ? 'Volo cancellato' : f.aircraft?.hex || getSettings().provider !== 'aerodatabox' ? 'Aereo a terra o fuori copertura' : 'Tracking disponibile quando l’aereo viene assegnato';
       return;
     }
-    if (inbound && !AIR.includes(f.status) && AIR.includes(inbound.status)) on = `volo precedente ${inbound.number}`;
+    if (inbound && !AIR.includes(f.status) && AIR.includes(inbound.status)) {
+      on = `volo precedente ${inbound.number}`;
+      if (pos.gs > 80 && A?.lat != null) {
+        const eta = Date.now() + distanceKm(pos, A) / (pos.gs * 1.852) * 3600e3 + 8 * 60e3;
+        const pe = document.getElementById('predict');
+        if (pe) pe.innerHTML = predictionHtml(f, inbound, eta, 'posizione ADS-B');
+      }
+    }
     trailPts.push([pos.lat, pos.lon]);
     if (!marker) { marker = L.marker([pos.lat, pos.lon], { icon: planeIcon(pos.track), zIndexOffset: 1000 }).addTo(map); trail = L.polyline(trailPts, { color: '#38d39f', weight: 3 }).addTo(map); }
     else { marker.setLatLng([pos.lat, pos.lon]).setIcon(planeIcon(pos.track)); trail.setLatLngs(trailPts); }
