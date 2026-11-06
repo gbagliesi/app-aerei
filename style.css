@@ -126,3 +126,5 @@ dd.big { font-size: 1.3rem; color: var(--amber); line-height: 1.1; }
 .board .num a { color: var(--text); }
 .reglink { color: var(--blue) !important; font-family: var(--mono); }
 .board small .reglink { font-size: .78rem; }
+.board .row.adsb { background: #0d2a22; border-left: 3px solid var(--green); }
+.board .row span small[title] { display: block; color: var(--muted); font-size: .7rem; }

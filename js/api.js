@@ -253,12 +253,54 @@ async function adsbByCallsign(cs) {
 }
 const AIRBORNE = ['Departed', 'EnRoute', 'Approaching'];
 
+
+/** Aereo cercato per marche sulla rete ADS-B (indipendente dai dati della compagnia). */
+export async function liveByReg(reg) {
+  if (isDemo() || !reg) return null;
+  return cached(`livereg:${reg}`, 10e3, async () => {
+    try {
+      const r = await fetch(`https://api.adsb.lol/v2/reg/${encodeURIComponent(reg)}`);
+      if (!r.ok) return null;
+      const a = (await r.json()).ac?.[0];
+      if (!a) return null;
+      const out = {
+        reg: a.r || reg, hex: a.hex?.toLowerCase(), callsign: (a.flight || '').trim(), model: a.t,
+        onGround: a.alt_baro === 'ground',
+        pos: a.lat != null ? { lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : a.alt_baro, gs: a.gs, track: a.track, at: new Date(Date.now() - (a.seen_pos || 0) * 1000).toISOString(), source: 'adsb.lol' } : null,
+      };
+      if (out.callsign && out.pos && !out.onGround) out.route = await routeOf(out.callsign, out.pos);
+      return out;
+    } catch { return null; }
+  });
+}
+
+/** Rotta di un nominativo radio (database rotte di adsb.lol): { from, to } in codici IATA. */
+async function routeOf(callsign, pos) {
+  return cached(`route:${callsign}`, 30 * 60e3, async () => {
+    try {
+      const r = await fetch('https://api.adsb.lol/api/0/routeset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planes: [{ callsign, lat: pos.lat, lng: pos.lon }] }),
+      });
+      if (!r.ok) return null;
+      const x = (await r.json())?.[0];
+      const codes = (x?._airport_codes_iata || '').split('-').filter(c => /^[A-Z]{3}$/.test(c));
+      return codes.length >= 2 && x.plausible !== 0 ? { from: codes[0], to: codes[codes.length - 1] } : null;
+    } catch { return null; }
+  });
+}
+
 /** Posizione live dell'aereo: prima AeroDataBox (se già nel volo), poi adsb.lol, poi OpenSky. */
 export async function getLivePosition(flight) {
   if (isDemo()) return demo.livePosition(flight);
   if (flight.location) return flight.location;
   const hex = flight.aircraft?.hex;
   if (!hex) {
+    if (flight.aircraft?.reg) {
+      const a = await liveByReg(flight.aircraft.reg);
+      if (a?.hex) flight.aircraft = { ...flight.aircraft, hex: a.hex };
+      if (a?.pos && !a.onGround) return a.pos;
+    }
     if (!AIRBORNE.includes(flight.status) || !flight.callSign) return null;
     const a = await adsbByCallsign(flight.callSign);
     if (a?.reg && !flight.aircraft?.reg) flight.aircraft = { ...flight.aircraft, reg: a.reg, hex: a.hex };
