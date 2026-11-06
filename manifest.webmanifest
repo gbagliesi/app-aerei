@@ -1,0 +1,12 @@
+{
+  "name": "Tabellone Voli",
+  "short_name": "Voli",
+  "description": "Partenze, arrivi, gate e tracking in tempo reale degli aerei",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#0b1220",
+  "lang": "it",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
