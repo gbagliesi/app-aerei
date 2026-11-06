@@ -3,6 +3,7 @@ import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle } from './demo.js';
 
+const APP_VERSION = '1.3 · volo precedente stimato + ADS-B';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -287,6 +288,7 @@ function viewSettings() {
   const s = getSettings();
   $app.innerHTML = `
     <h1>Impostazioni</h1>
+    <p class="sub">Versione app: ${APP_VERSION}</p>
     <form class="card settings" id="sf">
       <span class="eyebrow">Fonte dati voli</span>
       <label class="radio"><input type="radio" name="provider" value="demo" ${s.provider !== 'aerodatabox' ? 'checked' : ''}> <span><b>Demo</b> · voli simulati, nessuna chiave richiesta</span></label>
