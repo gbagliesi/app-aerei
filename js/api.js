@@ -139,21 +139,68 @@ export async function getAirportInfo(iata) {
 
 /**
  * Trova la tratta precedente dello stesso aeromobile (l'aereo "in arrivo" che farà il volo).
- * Restituisce { inbound, reason } dove reason spiega perché manca.
+ * Restituisce { inbound, method, reason }:
+ *  - method 'reg'   = certo, stesso aeromobile (marche)
+ *  - method 'guess' = stima: la compagnia non ha indicato l'aereo, si usa il volo della stessa
+ *                     compagnia che arriva dalla destinazione poco prima (tipico delle low cost,
+ *                     che fanno andata e ritorno con lo stesso aereo)
  */
 export async function getInbound(flight) {
-  const reg = flight.aircraft?.reg;
-  if (!reg) return { inbound: null, reason: "La compagnia non ha ancora assegnato l'aeromobile (succede di solito poche ore prima del volo)." };
-  const depUtc = flight.dep?.sched?.utc && new Date(flight.dep.sched.utc);
+  const depSide = flight.dep || {};
+  const depUtc = (depSide.revised || depSide.sched)?.utc && new Date((depSide.revised || depSide.sched).utc);
   if (!depUtc) return { inbound: null, reason: 'Orario di partenza non disponibile.' };
-  const d0 = isoDate(depUtc), d1 = isoDate(new Date(depUtc - 86400e3));
-  const lists = await Promise.all([getFlightsByReg(reg, d0), d1 !== d0 ? getFlightsByReg(reg, d1) : []]);
-  const candidates = lists.flat()
-    .filter(f => f.number !== flight.number || f.dep?.iata !== flight.dep?.iata)
-    .filter(f => f.arr?.sched?.utc && new Date(f.arr.sched.utc) <= depUtc)
-    .filter(f => !flight.dep?.iata || !f.arr?.iata || f.arr.iata === flight.dep.iata)
-    .sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc));
-  return { inbound: candidates[0] || null, reason: candidates[0] ? '' : 'Nessuna tratta precedente trovata per questo aeromobile.' };
+
+  // 1) marche dell'aereo: dal volo, oppure dal tabellone dell'aeroporto (a volte è più aggiornato)
+  let reg = flight.aircraft?.reg;
+  let board = null;
+  const loadBoard = async () => {
+    if (board || !depSide.iata) return board;
+    const near = Math.abs(depUtc - Date.now()) < 10 * 3600e3; // il tabellone copre da -2h a +10h
+    if (near) board = await getBoard(depSide.iata).catch(() => null);
+    return board;
+  };
+  if (!reg && await loadBoard()) {
+    const same = board.departures.find(d => d.number === flight.number);
+    if (same?.aircraft?.reg) { reg = same.aircraft.reg; flight.aircraft = { ...flight.aircraft, ...same.aircraft }; }
+  }
+
+  if (reg) {
+    const d0 = isoDate(depUtc), d1 = isoDate(new Date(depUtc - 86400e3));
+    const lists = await Promise.all([getFlightsByReg(reg, d0).catch(() => []), d1 !== d0 ? getFlightsByReg(reg, d1).catch(() => []) : []]);
+    const byReg = lists.flat()
+      .filter(f => !(f.number === flight.number && f.dep?.iata === depSide.iata))
+      .filter(f => f.arr?.sched?.utc && new Date(f.arr.sched.utc) <= depUtc)
+      .filter(f => !depSide.iata || !f.arr?.iata || f.arr.iata === depSide.iata)
+      .sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc));
+    if (byReg[0]) return { inbound: byReg[0], method: 'reg' };
+    // anche il tabellone arrivi può riportare le marche
+    if (await loadBoard()) {
+      const arr = board.arrivals.filter(a => a.aircraft?.reg === reg && a.arr?.sched?.utc && new Date(a.arr.sched.utc) <= depUtc)
+        .sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc))[0];
+      if (arr) return { inbound: arr, method: 'reg' };
+    }
+  }
+
+  // 2) stima dal tabellone arrivi
+  if (await loadBoard()) {
+    const airline = flight.airline?.iata || flight.number.replace(/\d.*$/, '');
+    const cands = board.arrivals.filter(a => {
+      const t = (a.arr?.revised || a.arr?.sched)?.utc;
+      if (!t) return false;
+      const gap = (depUtc - new Date(t)) / 60e3;
+      const al = a.airline?.iata || a.number.replace(/\d.*$/, '');
+      return al === airline && gap >= 20 && gap <= 180 && a.status !== 'Canceled';
+    });
+    const back = cands.filter(a => a.dep?.iata && a.dep.iata === flight.arr?.iata)
+      .sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc))[0];
+    if (back) return { inbound: back, method: 'guess' };
+  }
+
+  return {
+    inbound: null,
+    reason: reg ? 'Nessuna tratta precedente trovata per questo aeromobile.'
+      : "La compagnia non ha ancora indicato quale aereo farà il volo e non c'è un volo di ritorno compatibile in arrivo. L'aereo di solito viene assegnato poche ore prima della partenza.",
+  };
 }
 
 /** Posizione live dell'aereo: prima AeroDataBox (se già nel volo), poi adsb.lol, poi OpenSky. */
