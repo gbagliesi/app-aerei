@@ -35,6 +35,7 @@ export default {
     const json = (obj, status = 200, extra = {}) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
 
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(STAFF_MONITOR), 'GVA'] });
+    if (url.pathname === '/probe') return json(await probeAdr());
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);
     if (!STAFF_MONITOR[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
 
@@ -167,4 +168,30 @@ function fmtReg(r) {
   if (p2) return `${p2}-${r.slice(2)}`;
   if (/^[DFGIMC]/.test(r) && r.length === 5) return `${r[0]}-${r.slice(1)}`;
   return r;
+}
+
+// ---------- ricognizione del sito ADR (Fiumicino) per trovare la fonte dei voli ----------
+async function probeAdr() {
+  const found = { pages: [], candidates: [] };
+  const grab = async u => {
+    try {
+      const r = await fetch(u, { headers: { 'User-Agent': UA, 'Accept-Language': 'it-IT,it;q=0.9' } });
+      const t = await r.text();
+      found.pages.push({ url: u, status: r.status, length: t.length });
+      return t;
+    } catch (e) { found.pages.push({ url: u, error: String(e) }); return ''; }
+  };
+  const abs = (h, base) => { try { return new URL(h.replace(/&amp;/g, '&'), base).href; } catch { return null; } };
+  const home = await grab('https://www.adr.it/');
+  const links = [...new Set([...home.matchAll(/href="([^"]*(?:partenz|departur|voli|flight)[^"]*)"/gi)].map(m => abs(m[1], 'https://www.adr.it/')).filter(Boolean))].slice(0, 6);
+  found.links = links;
+  for (const l of links.slice(0, 3)) {
+    const html = await grab(l);
+    for (const m of html.matchAll(/["'](https?:\/\/[^"'\s]*|\/[^"'\s]*)["']/g)) {
+      const u = m[1];
+      if (/api|json|ajax|flight|voli|partenz|departure|fids|resource|servlet|portlet/i.test(u) && !/\.(css|png|jpe?g|svg|woff2?|ico|gif)(\?|$)/i.test(u)) found.candidates.push(abs(u, l));
+    }
+  }
+  found.candidates = [...new Set(found.candidates.filter(Boolean))].slice(0, 60);
+  return found;
 }
