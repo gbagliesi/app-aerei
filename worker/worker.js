@@ -35,7 +35,7 @@ export default {
     const json = (obj, status = 200, extra = {}) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
 
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(STAFF_MONITOR), 'GVA'] });
-    if (url.pathname === '/probe') return json(await probeAdr());
+    if (url.pathname === '/probe') return json(await probeSite(url.searchParams.get('site') || 'fco'));
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);
     if (!STAFF_MONITOR[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
 
@@ -170,8 +170,11 @@ function fmtReg(r) {
   return r;
 }
 
-// ---------- ricognizione del sito ADR (Fiumicino) per trovare la fonte dei voli ----------
-async function probeAdr() {
+// ---------- ricognizione dei siti (Fiumicino, Bari) per trovare la fonte dei voli ----------
+const PROBE_SITES = { fco: 'https://www.adr.it/', bri: 'https://www.aeroportidipuglia.it/' };
+async function probeSite(site) {
+  const homeUrl = PROBE_SITES[site.toLowerCase()];
+  if (!homeUrl) return { error: `sito ${site} non previsto`, sites: Object.keys(PROBE_SITES) };
   const found = { pages: [], candidates: [] };
   const grab = async u => {
     try {
@@ -182,8 +185,8 @@ async function probeAdr() {
     } catch (e) { found.pages.push({ url: u, error: String(e) }); return ''; }
   };
   const abs = (h, base) => { try { return new URL(h.replace(/&amp;/g, '&'), base).href; } catch { return null; } };
-  const home = await grab('https://www.adr.it/');
-  const links = [...new Set([...home.matchAll(/href="([^"]*(?:partenz|departur|voli|flight)[^"]*)"/gi)].map(m => abs(m[1], 'https://www.adr.it/')).filter(Boolean))].slice(0, 6);
+  const home = await grab(homeUrl);
+  const links = [...new Set([...home.matchAll(/href="([^"]*(?:partenz|departur|voli|flight)[^"]*)"/gi)].map(m => abs(m[1], homeUrl)).filter(Boolean))].slice(0, 6);
   found.links = links;
   for (const l of links.slice(0, 3)) {
     const html = await grab(l);
