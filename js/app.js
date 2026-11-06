@@ -1,9 +1,9 @@
-import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey } from './api.js';
+import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg } from './api.js';
 import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle } from './demo.js';
 
-const APP_VERSION = '1.3 · volo precedente stimato + ADS-B';
+const APP_VERSION = '1.4 · voli del giorno per aereo';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -48,7 +48,7 @@ const favAttrs = (type, item) => `data-fav="${type}" data-item='${esc(JSON.strin
 // ---------- ricerca ----------
 function searchBox() {
   return `<form class="search" id="search" autocomplete="off">
-    <input id="q" type="search" placeholder="Aeroporto (FCO, Milano…) o volo (AZ610)" aria-label="Cerca aeroporto o volo">
+    <input id="q" type="search" placeholder="Aeroporto (FCO, Milano…), volo (FR1234) o aereo (EI-DCL)" aria-label="Cerca aeroporto o volo">
     <button>Cerca</button>
     <ul id="suggest" class="suggest" hidden></ul>
   </form>`;
@@ -64,6 +64,7 @@ function bindSearch() {
     e.preventDefault();
     const v = q.value.trim().toUpperCase().replace(/\s+/g, '');
     if (!v) return;
+    if (/^[A-Z0-9]{1,2}-[A-Z0-9]{2,5}$/.test(v) || /^N\d{1,5}[A-Z]{0,2}$/.test(v)) { location.hash = `#/aircraft/${v}/${isoDate(new Date())}`; return; }
     if (/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(v) && !/^[A-Z]{3}$/.test(v)) location.hash = `#/flight/${v}/${isoDate(new Date())}`;
     else if (/^[A-Z]{3}$/.test(v)) location.hash = `#/airport/${v}/dep`;
     else { const a = searchAirports(v)[0]; if (a) location.hash = `#/airport/${a.iata}/dep`; }
@@ -211,7 +212,7 @@ async function viewFlight(number, date, depHint) {
     <div id="leg">${legCard(f, 'Questo volo')}</div>
     <div class="card"><div class="leghead"><span class="eyebrow">Posizione dell'aereo</span><span id="livemeta" class="sub"></span></div><div id="map" class="map"></div></div>
     <div class="card" id="aircraft"><span class="eyebrow">Aeromobile</span>
-      <p><b>${esc(f.aircraft?.reg || 'Non ancora assegnato')}</b>${f.aircraft?.model ? ` · ${esc(f.aircraft.model)}` : ''}${f.aircraft?.hex ? ` · ICAO24 <code>${esc(f.aircraft.hex)}</code>` : ''}</p></div>
+      <p>${f.aircraft?.reg ? `<a href="#/aircraft/${encodeURIComponent(f.aircraft.reg)}/${date}"><b>${esc(f.aircraft.reg)}</b></a> · <a href="#/aircraft/${encodeURIComponent(f.aircraft.reg)}/${date}">tutti i voli di oggi di questo aereo ›</a>` : '<b>Non ancora assegnato</b>'}${f.aircraft?.model ? ` · ${esc(f.aircraft.model)}` : ''}${f.aircraft?.hex ? ` · ICAO24 <code>${esc(f.aircraft.hex)}</code>` : ''}</p></div>
     <div id="inbound"><div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="loading">Cerco la tratta precedente…</p></div></div>`;
   bindStars($app);
 
@@ -249,7 +250,7 @@ async function viewFlight(number, date, depHint) {
     document.getElementById('inbound').innerHTML = html;
     if (inbound && r.method === 'guess' && !f.aircraft?.reg && inbound.aircraft?.reg) {
       document.getElementById('aircraft').innerHTML = `<span class="eyebrow">Aeromobile (probabile)</span>
-        <p><b>${esc(inbound.aircraft.reg)}</b>${inbound.aircraft.model ? ` · ${esc(inbound.aircraft.model)}` : ''}${inbound.aircraft.hex ? ` · ICAO24 <code>${esc(inbound.aircraft.hex)}</code>` : ''}</p>
+        <p><a href="#/aircraft/${encodeURIComponent(inbound.aircraft.reg)}/${date}"><b>${esc(inbound.aircraft.reg)}</b></a> · <a href="#/aircraft/${encodeURIComponent(inbound.aircraft.reg)}/${date}">tutti i voli di oggi ›</a>${inbound.aircraft.model ? ` · ${esc(inbound.aircraft.model)}` : ''}${inbound.aircraft.hex ? ` · ICAO24 <code>${esc(inbound.aircraft.hex)}</code>` : ''}</p>
         <p class="hint">Ricavato dalla rete ADS-B seguendo il volo precedente ${esc(inbound.number)}: la compagnia non ha ancora confermato l'aereo.</p>`;
     }
   } catch (e) { document.getElementById('inbound').innerHTML = errorBox(e); }
@@ -282,6 +283,43 @@ async function viewFlight(number, date, depHint) {
     } catch { /* riprova al giro successivo */ }
   });
 }
+
+
+// ---------- Aeromobile: tutti i voli del giorno ----------
+async function viewAircraft(reg, date) {
+  reg = reg.toUpperCase();
+  const day = d => isoDate(new Date(new Date(`${date}T12:00:00`).getTime() + d * 86400e3));
+  $app.innerHTML = `<div class="loading">Cerco i voli di ${esc(reg)}…</div>`;
+  let list;
+  try { list = await getFlightsByReg(reg, date); } catch (e) { $app.innerHTML = errorBox(e); return; }
+  list = [...list].sort((a, b) => new Date(a.dep?.sched?.utc || 0) - new Date(b.dep?.sched?.utc || 0));
+  const model = list.find(f => f.aircraft?.model)?.aircraft.model || '';
+  $app.innerHTML = `
+    <div class="pagehead">
+      <div><h1>✈︎ ${esc(reg)}</h1><p class="sub">${esc(model)}${model ? ' · ' : ''}${esc(new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }))}</p></div>
+      <div class="daynav"><a class="ghost" href="#/aircraft/${encodeURIComponent(reg)}/${day(-1)}">‹ Ieri</a><a class="ghost" href="#/aircraft/${encodeURIComponent(reg)}/${day(1)}">Domani ›</a></div>
+    </div>
+    <p class="sub" id="acpos"></p>
+    ${list.length ? `<div class="board">
+      <div class="row head rot"><span>Partenza</span><span>Volo</span><span>Tratta</span><span>Arrivo</span><span>Stato</span></div>
+      ${list.map(f => `<a class="row rot ${AIR.includes(f.status) ? 'live' : ''}" href="${flightLink(f)}">
+        <span class="t">${timeCell(f.dep?.sched, f.dep?.revised, f.dep?.actual)}</span>
+        <span class="num"><b>${esc(f.number)}</b><small>${esc(f.airline?.name || '')}</small></span>
+        <span class="dest"><b>${esc(f.dep?.iata || '—')} → ${esc(f.arr?.iata || '—')}</b><small>${esc(apName(f.dep?.iata))} – ${esc(apName(f.arr?.iata))}</small></span>
+        <span class="t">${timeCell(f.arr?.sched, f.arr?.revised, f.arr?.actual)}</span>
+        <span>${statusBadge(f.status)}</span></a>`).join('')}
+    </div>
+    <p class="hint">Le tratte future compaiono solo quando la compagnia ha assegnato quest'aereo: per le low cost spesso si vedono man mano durante la giornata.</p>`
+    : `<p class="hint">Nessun volo trovato per ${esc(reg)} in questa data. Controlla le marche (es. EI-DCL) o prova il giorno prima/dopo.</p>`}`;
+  const flying = list.find(f => AIR.includes(f.status));
+  if (flying) {
+    const pos = await getLivePosition(flying).catch(() => null);
+    const el = document.getElementById('acpos');
+    if (el) el.innerHTML = pos ? `Ora in volo come <a href="${flightLink(flying)}"><b>${esc(flying.number)}</b></a> ${esc(flying.dep.iata)} → ${esc(flying.arr.iata)} · ${pos.alt != null ? `${Math.round(pos.alt).toLocaleString('it-IT')} ft` : ''} · fonte ${esc(pos.source)}`
+      : `Ora in volo come <a href="${flightLink(flying)}"><b>${esc(flying.number)}</b></a>`;
+  }
+}
+const AIR = ['Departed', 'EnRoute', 'Approaching'];
 
 // ---------- Impostazioni ----------
 function viewSettings() {
@@ -347,6 +385,7 @@ function route() {
   if (parts[0] === 'airport' && parts[1]) return viewAirport(parts[1], parts[2] === 'arr' ? 'arr' : 'dep');
   if (parts[0] === 'route' && parts[1] && parts[2]) return viewAirport(parts[1], 'dep', parts[2].toUpperCase());
   if (parts[0] === 'flight' && parts[1]) return viewFlight(parts[1].toUpperCase(), parts[2] || isoDate(new Date()), params.get('dep'));
+  if (parts[0] === 'aircraft' && parts[1]) return viewAircraft(parts[1], parts[2] || isoDate(new Date()));
   if (parts[0] === 'settings') return viewSettings();
   return viewHome();
 }

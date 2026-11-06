@@ -119,3 +119,6 @@ dd.big { font-size: 1.3rem; color: var(--amber); line-height: 1.1; }
   .pagehead { flex-direction: column; }
 }
 .okmsg { background: #0f3a2c; color: var(--green); border-radius: 10px; padding: .8rem 1rem; margin: .8rem 0; }
+.board .row.rot { grid-template-columns: 5.2rem 7.5rem 1fr 5.2rem 8.5rem; }
+.board .row.live { background: #0d2a22; }
+@media (max-width: 640px) { .board .row.rot { grid-template-columns: 3.8rem 1fr 3.8rem; grid-template-areas: "t dest t2" "t num st"; } .board .row.rot .t:nth-of-type(4) { grid-area: t2; text-align: right; } }
