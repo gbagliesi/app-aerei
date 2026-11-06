@@ -168,11 +168,20 @@ function mergeOfficial(flights, official, sideKey, iata) {
   return flights;
 }
 
+// Esito dell'ultima lettura del tabellone ufficiale, per mostrarlo sotto il tabellone
+export const officialInfo = {};
 async function withOfficial(flights, iata, nature) {
+  const k = `${iata}:${nature}`;
   try {
+    if (!(getSettings().workerUrl || '').trim()) { officialInfo[k] = { error: 'indirizzo del Worker non impostato in Impostazioni' }; return flights; }
     const off = await getOfficial(iata, nature);
-    return mergeOfficial(flights, off, nature === 'D' ? 'dep' : 'arr', iata);
-  } catch { return flights; }
+    mergeOfficial(flights, off, nature === 'D' ? 'dep' : 'arr', iata);
+    officialInfo[k] = { count: off?.length || 0, matched: flights.filter(f => f._official).length };
+    return flights;
+  } catch (e) {
+    officialInfo[k] = { error: String(e.message || e) };
+    return flights;
+  }
 }
 
 async function enrichLegs(legs) {

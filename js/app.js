@@ -1,9 +1,19 @@
-import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, OFFICIAL_AIRPORTS } from './api.js';
+import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, OFFICIAL_AIRPORTS, officialInfo } from './api.js';
 import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
 
-const APP_VERSION = '2.1 · tabelloni ufficiali di Pisa, Firenze, Bari, Brindisi e Ginevra';
+function officialNote(iata, dir, list) {
+  if (!OFFICIAL_AIRPORTS[iata] || getSettings().provider !== 'aerodatabox') return '';
+  const i = officialInfo[`${iata}:${dir === 'dep' ? 'D' : 'A'}`];
+  if (!i) return '';
+  if (i.error) return `<p class="hint">⚠ Tabellone ufficiale non disponibile: ${esc(i.error)}</p>`;
+  const n = list.filter(x => x._official).length;
+  if (!n) return `<p class="hint">⚠ Tabellone ufficiale letto (${i.count} voli) ma nessun volo abbinato a quelli di AeroDataBox</p>`;
+  return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
+}
+
+const APP_VERSION = '2.2 · tabelloni ufficiali (Pisa, Firenze, Bari, Brindisi, Ginevra) con diagnostica';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -154,7 +164,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
         <a href="#/airport/${iata}/arr" class="${dir === 'arr' ? 'active' : ''}">🛬 Arrivi</a>
         <input id="filter" type="search" placeholder="Filtra: città, volo, compagnia" value="${esc(filter)}">
       </div>`}
-      ${data && (data.departures.concat(data.arrivals)).some(x => x._official) ? '<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto</p>' : ''}
+      ${data ? officialNote(iata, isRoute ? 'dep' : dir, list) : ''}
       <div id="board">${data ? boardTable(filtered, isRoute ? 'dep' : dir, filter) : '<div class="loading">Caricamento tabellone…</div>'}</div>
       <p class="updated" id="updated"></p>`;
     bindStars($app, render);
