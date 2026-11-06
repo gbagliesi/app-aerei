@@ -62,7 +62,8 @@ async function toscana(airport, nature, log) {
   log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0, start: t.slice(0, 300) });
   if (!r.ok) throw new Error(`Toscana Aeroporti: errore ${r.status}`);
   const data = JSON.parse(t);
-  const list = Array.isArray(data) ? data : data.result || data.flights || [];
+  const root = data?.RESPONSE?.result ?? data?.result ?? data;
+  const list = Array.isArray(root) ? root : root?.elements || root?.flights || [];
   // orari dell'API in ora locale di Roma: li confronto con l'ora di Roma attuale espressa allo stesso modo
   const localMs = v => (v ? Date.parse(v.slice(0, 16) + ':00Z') : NaN);
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value]));
