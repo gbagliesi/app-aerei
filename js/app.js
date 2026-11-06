@@ -246,6 +246,11 @@ async function viewFlight(number, date, depHint) {
       }
     }
     document.getElementById('inbound').innerHTML = html;
+    if (inbound && r.method === 'guess' && !f.aircraft?.reg && inbound.aircraft?.reg) {
+      document.getElementById('aircraft').innerHTML = `<span class="eyebrow">Aeromobile (probabile)</span>
+        <p><b>${esc(inbound.aircraft.reg)}</b>${inbound.aircraft.model ? ` · ${esc(inbound.aircraft.model)}` : ''}${inbound.aircraft.hex ? ` · ICAO24 <code>${esc(inbound.aircraft.hex)}</code>` : ''}</p>
+        <p class="hint">Ricavato dalla rete ADS-B seguendo il volo precedente ${esc(inbound.number)}: la compagnia non ha ancora confermato l'aereo.</p>`;
+    }
   } catch (e) { document.getElementById('inbound').innerHTML = errorBox(e); }
 
   // tracking live (stesso aeromobile: se il volo non è partito, si segue sulla tratta precedente)

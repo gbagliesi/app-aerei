@@ -193,7 +193,14 @@ export async function getInbound(flight) {
     });
     const back = cands.filter(a => a.dep?.iata && a.dep.iata === flight.arr?.iata)
       .sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc))[0];
-    if (back) return { inbound: back, method: 'guess' };
+    if (back) {
+      // se il volo precedente è in aria, ricavo marche e ICAO24 reali dalla rete ADS-B
+      if (!back.aircraft?.reg && AIRBORNE.includes(back.status) && back.callSign) {
+        const a = await adsbByCallsign(back.callSign);
+        if (a?.reg) back.aircraft = { ...back.aircraft, reg: a.reg, hex: a.hex, model: back.aircraft?.model || a.model };
+      }
+      return { inbound: back, method: 'guess' };
+    }
   }
 
   return {
@@ -203,12 +210,37 @@ export async function getInbound(flight) {
   };
 }
 
+
+/** Cerca un aereo in volo sulla rete ADS-B per nominativo radio (es. RYR5HT): restituisce marche, ICAO24 e posizione. */
+async function adsbByCallsign(cs) {
+  cs = (cs || '').replace(/\s+/g, '').toUpperCase();
+  if (!cs) return null;
+  return cached(`cs:${cs}`, 10e3, async () => {
+    try {
+      const r = await fetch(`https://api.adsb.lol/v2/callsign/${cs}`);
+      if (!r.ok) return null;
+      const a = (await r.json()).ac?.[0];
+      if (!a) return null;
+      return {
+        reg: a.r, hex: a.hex?.toLowerCase(), model: a.t,
+        pos: a.lat != null ? { lat: a.lat, lon: a.lon, alt: a.alt_baro === 'ground' ? 0 : a.alt_baro, gs: a.gs, track: a.track, at: new Date(Date.now() - (a.seen_pos || 0) * 1000).toISOString(), source: 'adsb.lol' } : null,
+      };
+    } catch { return null; }
+  });
+}
+const AIRBORNE = ['Departed', 'EnRoute', 'Approaching'];
+
 /** Posizione live dell'aereo: prima AeroDataBox (se già nel volo), poi adsb.lol, poi OpenSky. */
 export async function getLivePosition(flight) {
   if (isDemo()) return demo.livePosition(flight);
   if (flight.location) return flight.location;
   const hex = flight.aircraft?.hex;
-  if (!hex) return null;
+  if (!hex) {
+    if (!AIRBORNE.includes(flight.status) || !flight.callSign) return null;
+    const a = await adsbByCallsign(flight.callSign);
+    if (a?.reg && !flight.aircraft?.reg) flight.aircraft = { ...flight.aircraft, reg: a.reg, hex: a.hex };
+    return a?.pos || null;
+  }
   return cached(`live:${hex}`, 10e3, async () => {
     try {
       const r = await fetch(`https://api.adsb.lol/v2/hex/${hex}`);
