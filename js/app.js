@@ -3,7 +3,7 @@ import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
 
-const APP_VERSION = '2.0 · tabelloni ufficiali di Pisa, Firenze e Ginevra';
+const APP_VERSION = '2.1 · tabelloni ufficiali di Pisa, Firenze, Bari, Brindisi e Ginevra';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];

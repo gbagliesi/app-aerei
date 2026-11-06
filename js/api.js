@@ -93,7 +93,7 @@ const ownInfo = own => own ? { iata: own.iata, icao: own.icao, name: own.name } 
 
 
 // ---------- tabelloni ufficiali via Cloudflare Worker (Pisa, Firenze, Ginevra) ----------
-export const OFFICIAL_AIRPORTS = { PSA: 'Europe/Rome', FLR: 'Europe/Rome', GVA: 'Europe/Zurich' };
+export const OFFICIAL_AIRPORTS = { PSA: 'Europe/Rome', FLR: 'Europe/Rome', BRI: 'Europe/Rome', BDS: 'Europe/Rome', FOG: 'Europe/Rome', TAR: 'Europe/Rome', GVA: 'Europe/Zurich' };
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {
   const base = (workerUrl || '').trim().replace(/\/+$/, '');
@@ -135,7 +135,7 @@ function mapStatus(t) {
   if (/in volo|en ?route|airborne|flying|en vol/.test(t)) return 'EnRoute';
   if (/decoll|partito|departed|parti|airborne|take ?off/.test(t)) return 'Departed';
   if (/chius|closed|fermé|ferme/.test(t)) return 'GateClosed';
-  if (/imbarco|boarding|embarq/.test(t)) return 'Boarding';
+  if (/imbarco|boarding|embarq|ultima chiamata|gate aperto|last call/.test(t)) return 'Boarding';
   if (/ritard|delay|retard/.test(t)) return 'Delayed';
   if (/check/.test(t)) return 'CheckIn';
   return null;
@@ -145,7 +145,7 @@ function mapStatus(t) {
 function mergeOfficial(flights, official, sideKey, iata) {
   if (!official?.length) return flights;
   const tz = OFFICIAL_AIRPORTS[iata];
-  const byNum = new Map(official.map(o => [o.number, o]));
+  const byNum = new Map(official.flatMap(o => [...(o.codeshare || []).map(c => [c, o]), [o.number, o]]));
   for (const f of flights) {
     const side = f[sideKey];
     if (!side || side.iata !== iata) continue;

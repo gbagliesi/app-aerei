@@ -1,4 +1,4 @@
-// Cloudflare Worker per "Tabellone Voli": legge i tabelloni ufficiali di Pisa, Firenze e Ginevra
+// Cloudflare Worker per "Tabellone Voli": legge i tabelloni ufficiali di Pisa, Firenze, Ginevra e degli aeroporti pugliesi
 // (che il browser non può leggere direttamente) e li restituisce in un formato unico.
 //
 //   GET /board?airport=PSA&nature=D   (D = partenze, A = arrivi)  →  { flights: [...] }
@@ -11,6 +11,8 @@ const CACHE_SECONDS = 90;
 
 // Toscana Aeroporti: API pubblica usata dai siti pisa-airport.com e firenze-airport.it
 const TOSCANA = { PSA: 'psa', FLR: 'flr' };
+// Aeroporti di Puglia: backend pubblico dell'app ufficiale (nessuna autenticazione)
+const PUGLIA = ['BRI', 'BDS', 'FOG', 'TAR'];
 
 export default {
   async fetch(request, env, ctx) {
@@ -28,9 +30,9 @@ export default {
     const nature = url.searchParams.get('nature') === 'A' ? 'A' : 'D';
     const json = (obj, status = 200, extra = {}) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
 
-    if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), 'GVA'] });
+    if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, 'GVA'] });
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);
-    if (!TOSCANA[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
+    if (!TOSCANA[airport] && !PUGLIA.includes(airport) && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
 
     const debug = url.pathname === '/debug';
     const cacheKey = new Request(`https://cache.local/board/${airport}/${nature}`);
@@ -41,7 +43,7 @@ export default {
 
     const log = [];
     try {
-      const flights = airport === 'GVA' ? await geneva(nature, log) : await toscana(airport, nature, log);
+      const flights = airport === 'GVA' ? await geneva(nature, log) : PUGLIA.includes(airport) ? await puglia(airport, nature, log) : await toscana(airport, nature, log);
       const body = { airport, nature, fetchedAt: new Date().toISOString(), count: flights.length, flights };
       if (debug) return json({ ...body, flights: flights.slice(0, 5), log });
       if (flights.length) ctx.waitUntil(caches.default.put(cacheKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${CACHE_SECONDS}` } })));
@@ -96,6 +98,40 @@ async function toscana(airport, nature, log) {
 
 const clock = s => { const m = /(\d{1,2})[:.](\d{2})/.exec((s || '').replace(/^\d{4}-\d\d-\d\dT/, '')); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null; };
 const normNum = s => (s || '').trim().toUpperCase().replace(/\s+/g, '').replace(/^([A-Z][A-Z0-9]{1,2}?)0+(\d)/, '$1$2');
+
+// ---------- Aeroporti di Puglia (Bari, Brindisi, Foggia, Taranto) ----------
+// POST https://info.aeroportidipuglia.it/getVoliApp/  campi: aeroporto, lingua, bound (0 partenze, 1 arrivi)
+async function puglia(airport, nature, log) {
+  const u = 'https://info.aeroportidipuglia.it/getVoliApp/';
+  const t0 = Date.now();
+  const r = await fetch(u, {
+    method: 'POST', signal: AbortSignal.timeout(15000),
+    headers: { 'User-Agent': 'tabellone-voli personale (Cloudflare Worker)', 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ aeroporto: airport, lingua: 'IT', bound: nature === 'A' ? '1' : '0' }),
+  });
+  const t = await r.text();
+  log.push({ url: u, airport, status: r.status, length: t.length, ms: Date.now() - t0, start: t.slice(0, 300) });
+  if (!r.ok) throw new Error(`Aeroporti di Puglia: errore ${r.status}`);
+  const list = JSON.parse(t);
+  if (!Array.isArray(list)) return [];
+  // "06/11/2026 05:50:00" (ora di Roma) → "2026-11-06T05:50"
+  const iso = s => { const m = /(\d\d)\/(\d\d)\/(\d{4}) (\d\d):(\d\d)/.exec(s || ''); return m ? `${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}` : null; };
+  const ms = v => (v ? Date.parse(v + ':00Z') : NaN);
+  return list.map(f => {
+    const sched = iso(f.ST), est = iso(f.ET), act = iso(f.AT);
+    let status = (f.NOTE || f.CLS || '').trim() || null;
+    if (!status && est && sched && ms(est) - ms(sched) >= 15 * 60e3) status = 'Ritardato';
+    const done = /decoll|atterr/i.test(status || '');
+    return {
+      number: normNum((f.VOLO || '').replace(/\s+/g, '')), sched: clock(sched), schedDate: sched,
+      est: clock(est || act), actual: done ? clock(act || est) : null,
+      status, statusCode: f.CLS || null, gate: f.GATE || null, checkin: f.CHECK_IN || null, stand: f.POS || null,
+      belt: null, reg: null, type: null, city: f.DESTINAZIONE || null, cityCode: f.PROVDEST || null,
+      airline: f.descrizione || null,
+      codeshare: [f.CODESHARE_1, f.CODESHARE_2, f.CODESHARE_3, f.CODESHARE_4].filter(Boolean).map(c => normNum(c.replace(/\s+/g, ''))),
+    };
+  }).filter(f => f.number && f.sched);
+}
 
 // ---------- Ginevra: feed pubblico dell'app dell'aeroporto ----------
 async function geneva(nature, log) {

@@ -14,6 +14,7 @@ export const AIRPORTS = [
   ['CTA','LICC','Catania Fontanarossa','Catania',37.4668,15.0664],
   ['PMO','LICJ','Palermo Falcone Borsellino','Palermo',38.1760,13.0910],
   ['BRI','LIBD','Bari Karol Wojtyła','Bari',41.1389,16.7606],
+  ['BDS','LIBR','Brindisi Papola Casale','Brindisi',40.6576,17.9470],
   ['CAG','LIEE','Cagliari Elmas','Cagliari',39.2515,9.0543],
   ['TRN','LIMF','Torino Caselle','Torino',45.2008,7.6496],
   ['LHR','EGLL','London Heathrow','Londra',51.4700,-0.4543],
