@@ -91,6 +91,104 @@ function normFlight(f, dir, own) {
 }
 const ownInfo = own => own ? { iata: own.iata, icao: own.icao, name: own.name } : {};
 
+
+// ---------- tabelloni ufficiali via Cloudflare Worker (Pisa, Firenze, Ginevra) ----------
+export const OFFICIAL_AIRPORTS = { PSA: 'Europe/Rome', FLR: 'Europe/Rome', GVA: 'Europe/Zurich' };
+
+export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {
+  const base = (workerUrl || '').trim().replace(/\/+$/, '');
+  if (!base || !OFFICIAL_AIRPORTS[iata]) return null;
+  return cached(`off:${base}:${iata}:${nature}`, 90e3, async () => {
+    const r = await fetch(`${base}/board?airport=${iata}&nature=${nature}`);
+    if (!r.ok) throw new Error(`Worker: errore ${r.status}`);
+    const j = await r.json();
+    return j.flights || [];
+  });
+}
+
+const tzOffset = (tz, dateStr) => {
+  try {
+    const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'longOffset' }).formatToParts(new Date(`${dateStr}T12:00:00Z`));
+    const v = p.find(x => x.type === 'timeZoneName')?.value || 'GMT+01:00';
+    return v === 'GMT' ? '+00:00' : v.replace('GMT', '');
+  } catch { return '+01:00'; }
+};
+
+/** Orario ufficiale "HH:MM" → oggetto tempo, nello stesso giorno dell'orario programmato (o il giorno dopo). */
+function clockToTime(hhmm, ref, tz) {
+  if (!hhmm || !ref?.local) return null;
+  const date = ref.local.slice(0, 10), refHM = ref.local.slice(11, 16);
+  let d = date;
+  const mins = s => +s.slice(0, 2) * 60 + +s.slice(3, 5);
+  if (mins(hhmm) - mins(refHM) < -12 * 60) d = isoDate(new Date(new Date(`${date}T12:00:00`).getTime() + 86400e3));
+  else if (mins(hhmm) - mins(refHM) > 12 * 60) d = isoDate(new Date(new Date(`${date}T12:00:00`).getTime() - 86400e3));
+  const o = tzOffset(tz, d);
+  return { local: `${d} ${hhmm}${o}`, utc: new Date(`${d}T${hhmm}:00${o}`).toISOString() };
+}
+
+function mapStatus(t) {
+  t = (t || '').toLowerCase();
+  if (!t) return null;
+  if (/cancel|annul|soppress/.test(t)) return 'Canceled';
+  if (/dirott|divert|dérout/.test(t)) return 'Diverted';
+  if (/atterr|landed|arrived|arrivato|atterri/.test(t)) return 'Arrived';
+  if (/in volo|en ?route|airborne/.test(t)) return 'EnRoute';
+  if (/decoll|partito|departed|parti|airborne|take ?off/.test(t)) return 'Departed';
+  if (/chius|closed|fermé|ferme/.test(t)) return 'GateClosed';
+  if (/imbarco|boarding|embarq/.test(t)) return 'Boarding';
+  if (/ritard|delay|retard/.test(t)) return 'Delayed';
+  if (/check/.test(t)) return 'CheckIn';
+  return null;
+}
+
+/** Arricchisce i voli AeroDataBox con i dati ufficiali dell'aeroporto (gate, orari stimati, stato, marche). */
+function mergeOfficial(flights, official, sideKey, iata) {
+  if (!official?.length) return flights;
+  const tz = OFFICIAL_AIRPORTS[iata];
+  const byNum = new Map(official.map(o => [o.number, o]));
+  for (const f of flights) {
+    const side = f[sideKey];
+    if (!side || side.iata !== iata) continue;
+    const o = byNum.get(f.number);
+    if (!o) continue;
+    if (o.gate) side.gate = o.gate;
+    if (o.checkin) side.checkIn = o.checkin;
+    if (o.belt) side.belt = o.belt;
+    const est = clockToTime(o.est, side.sched, tz);
+    if (est) side.revised = est;
+    const act = clockToTime(o.actual, side.sched, tz);
+    if (act) side.actual = act;
+    const st = mapStatus(o.status);
+    if (st && !(st === 'Delayed' && ['Departed', 'EnRoute', 'Approaching', 'Arrived'].includes(f.status))) f.status = st;
+    if (sideKey === 'arr' && o.actual && f.status !== 'Canceled') f.status = 'Arrived';
+    if (o.reg && !f.aircraft?.reg) f.aircraft = { ...f.aircraft, reg: o.reg, model: f.aircraft?.model || o.type };
+    side.officialStatus = o.status || null;
+    f._official = true;
+  }
+  return flights;
+}
+
+async function withOfficial(flights, iata, nature) {
+  try {
+    const off = await getOfficial(iata, nature);
+    return mergeOfficial(flights, off, nature === 'D' ? 'dep' : 'arr', iata);
+  } catch { return flights; }
+}
+
+async function enrichLegs(legs) {
+  for (const iata of new Set(legs.flatMap(l => [l.dep?.iata, l.arr?.iata]).filter(c => OFFICIAL_AIRPORTS[c]))) {
+    await withOfficial(legs, iata, 'D');
+    await withOfficial(legs, iata, 'A');
+  }
+  return legs;
+}
+
+/** Verifica il Worker con il tabellone partenze di Pisa. */
+export async function testWorker(url) {
+  const r = await getOfficial('PSA', 'D', url);
+  return r?.length || 0;
+}
+
 // ---------- API pubblica ----------
 
 /** Tabellone: { departures: [...], arrivals: [...] } da 2h fa a 10h avanti. */
@@ -101,10 +199,10 @@ export async function getBoard(iata) {
     const q = 'offsetMinutes=-120&durationMinutes=720&withLeg=true&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=false';
     const data = await adb(`/flights/airports/iata/${iata}?${q}`);
     const own = { iata, ...(airportByIata(iata) || {}) };
-    return {
-      departures: (data?.departures || []).map(f => normFlight(f, 'dep', own)),
-      arrivals: (data?.arrivals || []).map(f => normFlight(f, 'arr', own)),
-    };
+    const departures = (data?.departures || []).map(f => normFlight(f, 'dep', own));
+    const arrivals = (data?.arrivals || []).map(f => normFlight(f, 'arr', own));
+    if (OFFICIAL_AIRPORTS[iata]) await Promise.all([withOfficial(departures, iata, 'D'), withOfficial(arrivals, iata, 'A')]);
+    return { departures, arrivals };
   });
 }
 
@@ -114,7 +212,7 @@ export async function getFlight(number, date) {
   if (isDemo()) return demo.flight(number, date);
   return cached(`flight:${number}:${date}`, 60e3, async () => {
     const data = await adb(`/flights/number/${encodeURIComponent(number)}/${date}?withAircraftImage=false&withLocation=true`);
-    return (data || []).map(f => normFlight(f));
+    return enrichLegs((data || []).map(f => normFlight(f)));
   });
 }
 

@@ -4,7 +4,7 @@ const FKEY = 'aerei.favorites.v1';
 
 const read = (k, d) => { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return d; } };
 
-export const getSettings = () => read(SKEY, { provider: 'demo', apiKey: '', refreshSec: 60 });
+export const getSettings = () => read(SKEY, { provider: 'demo', apiKey: '', refreshSec: 60, workerUrl: '' });
 export const saveSettings = s => localStorage.setItem(SKEY, JSON.stringify(s));
 
 const emptyFav = { airports: [], routes: [], flights: [], aircraft: [] };

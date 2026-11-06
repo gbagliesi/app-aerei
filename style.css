@@ -130,3 +130,4 @@ dd.big { font-size: 1.3rem; color: var(--amber); line-height: 1.1; }
 .board .row span small[title] { display: block; color: var(--muted); font-size: .7rem; }
 .card.predict { border-color: #6b4a12; background: linear-gradient(180deg, #2a1f0a, var(--panel)); }
 .card.predict p { margin: .4rem 0; }
+.hint.official { color: var(--green); margin: -.3rem 0 .6rem; }
