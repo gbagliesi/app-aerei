@@ -132,7 +132,7 @@ function mapStatus(t) {
   if (/cancel|annul|soppress/.test(t)) return 'Canceled';
   if (/dirott|divert|dérout/.test(t)) return 'Diverted';
   if (/atterr|landed|arrived|arrivato|atterri/.test(t)) return 'Arrived';
-  if (/in volo|en ?route|airborne/.test(t)) return 'EnRoute';
+  if (/in volo|en ?route|airborne|flying|en vol/.test(t)) return 'EnRoute';
   if (/decoll|partito|departed|parti|airborne|take ?off/.test(t)) return 'Departed';
   if (/chius|closed|fermé|ferme/.test(t)) return 'GateClosed';
   if (/imbarco|boarding|embarq/.test(t)) return 'Boarding';

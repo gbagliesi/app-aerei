@@ -35,7 +35,7 @@ export default {
     const json = (obj, status = 200, extra = {}) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
 
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(STAFF_MONITOR), 'GVA'] });
-    if (url.pathname === '/probe') return json(await probeSite(url.searchParams.get('site') || 'fco'));
+    if (url.pathname === '/probe') return json(url.searchParams.get('page') ? await probePage(url.searchParams.get('page')) : await probeSite(url.searchParams.get('site') || 'fco'));
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);
     if (!STAFF_MONITOR[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
 
@@ -65,12 +65,16 @@ async function staffMonitor(airport, nature, log) {
     let cookie = '';
     // la sessione si apre con le partenze; gli arrivi la richiedono
     const get = async u => {
-      const r = await fetch(u, { headers: { 'User-Agent': UA, 'Accept': 'text/html,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9', 'Referer': `${base}.html`, ...(cookie ? { Cookie: cookie } : {}) } });
+      const t0 = Date.now();
+      let r;
+      try {
+        r = await fetch(u, { signal: AbortSignal.timeout(20000), headers: { 'User-Agent': UA, 'Accept': 'text/html,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9', 'Referer': `${base}.html`, ...(cookie ? { Cookie: cookie } : {}) } });
+      } catch (e) { log.push({ url: u, error: String(e), ms: Date.now() - t0 }); return ''; }
       const sc = r.headers.get('set-cookie') || '';
       const m = /JSESSIONID=([^;,\s]+)/i.exec(sc);
       if (m) cookie = `JSESSIONID=${m[1]}`;
       const t = await r.text();
-      log.push({ url: u, status: r.status, length: t.length, start: t.slice(0, 300) });
+      log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0, start: t.slice(0, 300) });
       return r.ok && t.length > 200 ? t : '';
     };
     try {
@@ -197,4 +201,16 @@ async function probeSite(site) {
   }
   found.candidates = [...new Set(found.candidates.filter(Boolean))].slice(0, 60);
   return found;
+}
+
+// Estratto di una pagina voli (solo siti degli aeroporti previsti): dove compaiono i numeri di volo e quali script/dati carica
+async function probePage(page) {
+  let u;
+  try { u = new URL(page); } catch { return { error: 'indirizzo non valido' }; }
+  if (!/(^|\.)(aeroportidipuglia\.it|adr\.it)$/.test(u.hostname)) return { error: 'sito non previsto' };
+  const r = await fetch(u.href, { signal: AbortSignal.timeout(20000), headers: { 'User-Agent': UA, 'Accept-Language': 'it-IT,it;q=0.9' } });
+  const html = await r.text();
+  const i = html.search(/\b(FR|AZ|W6|W4|U2|VY|LH|AF|KL|BA|EN|V7|DY|EW)\s?\d{2,4}\b/);
+  const urls = [...new Set([...html.matchAll(/["'](https?:\/\/[^"'\s]+|\/[^"'\s]+)["']/g)].map(m => m[1]).filter(x => /ajax|api|json|wp-json|admin-ajax|flight|voli|partenz|arriv|fids|\.js(\?|$)/i.test(x) && !/\.(css|png|jpe?g|svg|woff2?|ico|gif)(\?|$)/i.test(x)))].slice(0, 60);
+  return { url: u.href, status: r.status, length: html.length, flightAt: i, excerpt: i >= 0 ? html.slice(Math.max(0, i - 1500), i + 2500) : html.slice(0, 3000), urls };
 }
