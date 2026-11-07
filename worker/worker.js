@@ -1,5 +1,5 @@
-// Cloudflare Worker per "Tabellone Voli": legge i tabelloni ufficiali di Pisa, Firenze, Ginevra e degli aeroporti pugliesi
-// (che il browser non può leggere direttamente) e li restituisce in un formato unico.
+// Cloudflare Worker per "Tabellone Voli": legge i tabelloni ufficiali di Pisa, Firenze, Ginevra, Fiumicino,
+// Ciampino e degli aeroporti pugliesi (che il browser non può leggere direttamente) e li restituisce in un formato unico.
 //
 //   GET /board?airport=PSA&nature=D   (D = partenze, A = arrivi)  →  { flights: [...] }
 //   GET /debug?airport=PSA&nature=D                                 →  diagnostica (URL provati, inizio risposta)
@@ -13,6 +13,11 @@ const CACHE_SECONDS = 90;
 const TOSCANA = { PSA: 'psa', FLR: 'flr' };
 // Aeroporti di Puglia: backend pubblico dell'app ufficiale (nessuna autenticazione)
 const PUGLIA = ['BRI', 'BDS', 'FOG', 'TAR'];
+// Aeroporti di Roma: pagina pubblica "Voli in tempo reale" di adr.it (portlet Liferay, HTML)
+const ADR = {
+  FCO: 'https://www.adr.it/web/aeroporti-di-roma-en/pax-fco-realtime-flight',
+  CIA: 'https://www.adr.it/pax-cia-voli-in-tempo-reale',
+};
 
 export default {
   async fetch(request, env, ctx) {
@@ -30,9 +35,9 @@ export default {
     const nature = url.searchParams.get('nature') === 'A' ? 'A' : 'D';
     const json = (obj, status = 200, extra = {}) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
 
-    if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, 'GVA'] });
+    if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA'] });
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);
-    if (!TOSCANA[airport] && !PUGLIA.includes(airport) && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
+    if (!TOSCANA[airport] && !PUGLIA.includes(airport) && !ADR[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
 
     const debug = url.pathname === '/debug';
     const cacheKey = new Request(`https://cache.local/board/${airport}/${nature}`);
@@ -43,7 +48,7 @@ export default {
 
     const log = [];
     try {
-      const flights = airport === 'GVA' ? await geneva(nature, log) : PUGLIA.includes(airport) ? await puglia(airport, nature, log) : await toscana(airport, nature, log);
+      const flights = airport === 'GVA' ? await geneva(nature, log) : ADR[airport] ? await adr(airport, nature, log) : PUGLIA.includes(airport) ? await puglia(airport, nature, log) : await toscana(airport, nature, log);
       const body = { airport, nature, fetchedAt: new Date().toISOString(), count: flights.length, flights };
       if (debug) return json({ ...body, flights: flights.slice(0, 5), log });
       if (flights.length) ctx.waitUntil(caches.default.put(cacheKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${CACHE_SECONDS}` } })));
@@ -152,6 +157,52 @@ async function geneva(nature, log) {
       delay: f.delay_minuts != null ? +f.delay_minuts : null,
     };
   }).filter(f => f.number);
+}
+
+// ---------- Aeroporti di Roma (Fiumicino, Ciampino) ----------
+// Tabellone "Voli in tempo reale" di adr.it: HTML server-rendered di una portlet Liferay (nessuna API JSON pubblica).
+// Attenzione alle etichette della pagina inglese, tradotte male: "Actual time:" sta sull'orario PREVISTO.
+// I blocchi HTML sono affidabili: date-estimated = orario previsto, date-actual = orario effettivo
+// (verificato sulle etichette italiane "Orario previsto"/"Orario effettivo" della stessa riga).
+// Sui voli partiti adr.it mostra solo il previsto; l'effettivo esiste solo sugli arrivi atterrati.
+// _delta=200 è il massimo accettato dalla portlet (500 dà di nuovo 200): una sola richiesta fino a 200 voli.
+async function adr(airport, nature, log) {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
+  const u = ADR[airport]
+    + '?p_p_id=3_WAR_realtimeflightsportlet&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view'
+    + `&_3_WAR_realtimeflightsportlet_tab=${nature === 'A' ? 'arrival' : 'departure'}`
+    + '&_3_WAR_realtimeflightsportlet_searchType=standard'
+    + `&_3_WAR_realtimeflightsportlet_codScaOpe=${airport}`
+    + `&_3_WAR_realtimeflightsportlet_date=${today}`
+    + '&_3_WAR_realtimeflightsportlet_orario=00:00-24:00'
+    + '&_3_WAR_realtimeflightsportlet_delta=200';
+  const t0 = Date.now();
+  const r = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'text/html' } });
+  const t = await r.text();
+  const rows = [...t.matchAll(/<tr[^>]*data-qa-id="row"[^>]*>([\s\S]*?)<\/tr>/g)].map(m => m[1]);
+  log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0, rows: rows.length });
+  if (r.status !== 200 || !rows.length) throw new Error(`Aeroporti di Roma: nessun dato (HTTP ${r.status})`);
+  return rows.map(html => {
+    const flat = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    const cells = /class="[^"]*lfr-scheduled-time-column[^"]*"[^>]*>([\s\S]*?)<\/td>/.exec(html)?.[1] || '';
+    const sched = /class="date-estimated__time"[^>]*>\s*(\d{1,2}:\d{2})/.exec(cells)?.[1] || null;
+    const act = /class="date-actual__time"[^>]*>\s*(\d{1,2}:\d{2})/.exec(cells)?.[1] || null;
+    // prima coppia codice+numero = volo della riga; se c'è "Operato da", l'ultima è il vettore effettivo
+    const nums = [...flat.matchAll(/\b([A-Z][A-Z0-9]|\d[A-Z])\s?(\d{1,4})\b/g)].map(m => normNum(m[0]));
+    const status = /(?:Flight status|Stato volo):\s*([A-Za-zÀ-ÿ'’ ]+?)(?:\s+Tracking|\s+Activate|\s+Traccia|\s+Attiva|\s+Dettagli|\s+Details|\s+Check-in|$)/.exec(flat)?.[1]?.trim() || null;
+    // città dalla sua cella (card-fg__dest: negli arrivi la colonna si chiama lfr-flight-departure-column,
+    // nelle partenze lfr-flight-destination-column; e ci sono accentate estese: Brașov, CHIȘINĂU)
+    const dest = /class="[^"]*card-fg__dest[^"]*"[^>]*>([\s\S]*?)<\/td>/.exec(html)?.[1]?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const cityM = /^(.*?)\s*\(([A-Z]{3})\)/.exec(dest || '');
+    // il tabellone raggruppa per data programmata: schedDate è la data richiesta
+    const schedDate = sched ? `${today}T${sched.padStart(5, '0')}` : null;
+    return {
+      number: nums[0] || null, sched, schedDate, est: act, actual: act,
+      status, gate: null, checkin: null, stand: null, belt: null, reg: null, type: null,
+      city: cityM?.[1]?.trim() || null, cityCode: cityM?.[2] || null,
+      codeshare: /Operato da/.test(flat) && nums.length > 1 ? [nums[nums.length - 1]] : undefined,
+    };
+  }).filter(f => f.number && f.sched);
 }
 
 // Marche nel formato con trattino (EI-DWS, F-HPNB, HB-JQW, N123AB)

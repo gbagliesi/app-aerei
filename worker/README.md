@@ -3,8 +3,10 @@
 L'app gira nel browser, che non può leggere direttamente i tabelloni dei siti degli aeroporti.
 Questo piccolo Worker (gratuito) li legge al posto suo e li restituisce all'app.
 
-Aeroporti supportati: **Pisa (PSA)**, **Firenze (FLR)**, **Ginevra (GVA)**.
-Fonti: l'API pubblica dei siti di Toscana Aeroporti (Pisa, Firenze) e il feed dell'app dell'aeroporto di Ginevra.
+Aeroporti supportati: **Pisa (PSA)**, **Firenze (FLR)**, **Ginevra (GVA)**, **Fiumicino (FCO)**, **Ciampino (CIA)**.
+Fonti: l'API pubblica dei siti di Toscana Aeroporti (Pisa, Firenze), il feed dell'app dell'aeroporto di Ginevra
+e la pagina "Voli in tempo reale" di adr.it per Fiumicino e Ciampino (HTML, una richiesta fino a 200 voli;
+l'aeroporto non pubblica l'orario effettivo delle partenze, solo degli arrivi).
 Dati: gate, check-in, nastro, orario stimato e stato; per Ginevra anche le marche dell'aereo.
 
 ## Pubblicarlo (una volta sola, ~5 minuti)
