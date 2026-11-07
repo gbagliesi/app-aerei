@@ -13,7 +13,7 @@ function officialNote(iata, dir, list) {
   return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
 }
 
-const APP_VERSION = '2.3 · risparmio unità AeroDataBox, tabellone ufficiale se la quota è finita';
+const APP_VERSION = '2.4 · pagina volo anche senza AeroDataBox · risparmio unità AeroDataBox, tabellone ufficiale se la quota è finita';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -244,7 +244,7 @@ function legCard(f, title, cls = '') {
 async function viewFlight(number, date, depHint) {
   $app.innerHTML = `<div class="loading">Cerco il volo ${esc(number)}…</div>`;
   let legs;
-  try { legs = await getFlight(number, date); } catch (e) { $app.innerHTML = errorBox(e); return; }
+  try { legs = await getFlight(number, date, depHint); } catch (e) { $app.innerHTML = errorBox(e); return; }
   if (!legs.length) { $app.innerHTML = `<div class="error">Nessun volo ${esc(number)} trovato il ${esc(date)}.</div><p><a href="#/">← Torna ai preferiti</a></p>`; return; }
   let f = legs.find(l => l.dep?.iata === depHint) || legs[0];
   document.title = `${f.number} ${f.dep?.iata || ''}→${f.arr?.iata || ''} · Voli`;
@@ -259,6 +259,7 @@ async function viewFlight(number, date, depHint) {
     ${legs.length > 1 ? `<div class="tabs">${legs.map(l => `<a href="#/flight/${encodeURIComponent(number)}/${date}?dep=${l.dep.iata}" class="${l === f ? 'active' : ''}">${l.dep.iata} → ${l.arr.iata}</a>`).join('')}</div>` : ''}
     <p class="links">Tratta <b>${esc(f.dep.iata)} → ${esc(f.arr.iata)}</b> ${star(isFavorite('routes', { from: f.dep.iata, to: f.arr.iata }), favAttrs('routes', { from: f.dep.iata, to: f.arr.iata }))}
       · <a href="#/route/${f.dep.iata}/${f.arr.iata}">altri voli su questa tratta</a> · <a href="#/airport/${f.dep.iata}/dep">tabellone ${esc(f.dep.iata)}</a></p>
+    ${f._degraded ? `<p class="hint">⚠ AeroDataBox non disponibile: dati dal tabellone ufficiale dell’aeroporto. ${esc(f._degraded)}</p>` : ''}
     <div id="predict"></div>
     <div id="leg">${legCard(f, 'Questo volo')}</div>
     <div class="card"><div class="leghead"><span class="eyebrow">Posizione dell'aereo</span><span id="livemeta" class="sub"></span></div><div id="map" class="map"></div></div>
@@ -355,7 +356,7 @@ async function viewFlight(number, date, depHint) {
   // ricarica i dati del volo (gate, orari, stato)
   every(getSettings().refreshSec, async () => {
     try {
-      const fresh = (await getFlight(number, date)).find(l => l.dep?.iata === f.dep.iata);
+      const fresh = (await getFlight(number, date, depHint)).find(l => l.dep?.iata === f.dep.iata);
       if (fresh) { Object.assign(f, fresh); if (groundAtDep && AIR.includes(f.status)) f.status = 'OnGround'; document.getElementById('leg').innerHTML = legCard(f, 'Questo volo'); }
     } catch { /* riprova al giro successivo */ }
   });

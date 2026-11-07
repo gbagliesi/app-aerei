@@ -279,7 +279,7 @@ export async function getBoard(iata) {
 }
 
 /** Tabellone costruito solo dai dati ufficiali dell'aeroporto (senza AeroDataBox). */
-async function officialOnly(iata, nature) {
+async function officialOnly(iata, nature, window = true) {
   const k = `${iata}:${nature}`;
   let off;
   try { off = await getOfficial(iata, nature); } catch (e) { officialInfo[k] = { error: String(e.message || e) }; return []; }
@@ -294,21 +294,58 @@ async function officialOnly(iata, nature) {
       number: o.number, airline: { name: o.airline || null, iata: o.number.slice(0, 2) }, status: 'Expected', aircraft: { reg: o.reg || null, model: o.type || null },
       dep: nature === 'D' ? mine : other, arr: nature === 'D' ? other : mine, _officialOnly: true,
     };
-  }).filter(f => { const t = Date.parse((f.dep.sched || f.arr.sched).utc); return t > now - 2 * 3600e3 && t < now + 10 * 3600e3; });
+  }).filter(f => { if (!window) return true; const t = Date.parse((f.dep.sched || f.arr.sched).utc); return t > now - 2 * 3600e3 && t < now + 10 * 3600e3; });
   mergeOfficial(flights, off, nature === 'D' ? 'dep' : 'arr', iata);
-  officialInfo[k] = { count: off.length, matched: flights.length };
+  if (window) officialInfo[k] = { count: off.length, matched: flights.length };
   return flights.sort((a, b) => Date.parse((a.dep.sched || a.arr.sched).utc) - Date.parse((b.dep.sched || b.arr.sched).utc));
 }
 
 /** Tutte le tratte di un volo in una data (YYYY-MM-DD). */
-export async function getFlight(number, date) {
+export async function getFlight(number, date, depHint) {
   number = number.toUpperCase().replace(/\s+/g, '');
   if (isDemo()) return demo.flight(number, date);
-  return cached(`flight:${number}:${date}`, 60e3, async () => {
-    const data = await adbCached(`/flights/number/${encodeURIComponent(number)}/${date}?withAircraftImage=false&withLocation=true`, 5 * 60e3);
-    return enrichLegs((data || []).map(f => normFlight(f)));
-  });
+  try {
+    return await cached(`flight:${number}:${date}`, 60e3, async () => {
+      const data = await adbCached(`/flights/number/${encodeURIComponent(number)}/${date}?withAircraftImage=false&withLocation=true`, 5 * 60e3);
+      return enrichLegs((data || []).map(f => normFlight(f)));
+    });
+  } catch (e) {
+    // AeroDataBox non disponibile: cerco il volo nei tabelloni ufficiali
+    const legs = await officialFlight(number, date, depHint).catch(() => []);
+    if (!legs.length) throw e;
+    legs.forEach(l => { l._degraded = e.message || String(e); });
+    return legs;
+  }
 }
+
+/** Ricostruisce un volo dai tabelloni ufficiali (partenza e, se c'è, arrivo). */
+async function officialFlight(number, date, depHint) {
+  if (!(getSettings().workerUrl || '').trim()) return [];
+  const codes = Object.keys(OFFICIAL_AIRPORTS);
+  const depCodes = depHint && OFFICIAL_AIRPORTS[depHint] ? [depHint] : codes;
+  const sameDay = f => (f.dep.sched || f.arr.sched)?.local?.slice(0, 10) === date;
+  let leg = null;
+  for (const c of depCodes) {
+    leg = (await officialOnly(c, 'D', false)).find(f => f.number === number && sameDay(f));
+    if (leg) break;
+  }
+  // arrivo: completo con il tabellone arrivi ufficiale della destinazione, se disponibile
+  const arrCodes = leg ? (OFFICIAL_AIRPORTS[leg.arr.iata] ? [leg.arr.iata] : []) : codes;
+  for (const c of arrCodes) {
+    const a = (await officialOnly(c, 'A', false)).find(f => f.number === number && (!leg || f.dep.iata === leg.dep.iata));
+    if (!a) continue;
+    if (leg) leg.arr = { ...leg.arr, ...a.arr };
+    else if (sameDay(a)) leg = a;
+    break;
+  }
+  if (!leg) return [];
+  for (const side of [leg.dep, leg.arr]) {
+    const ap = airportByIata(side.iata);
+    if (ap) Object.assign(side, { name: side.name || ap.name, lat: ap.lat, lon: ap.lon });
+  }
+  return [leg];
+}
+
 
 /** Voli effettuati da un aeromobile (marche) in una data. */
 export async function getFlightsByReg(reg, date) {
