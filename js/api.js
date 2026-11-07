@@ -140,7 +140,7 @@ const ownInfo = own => own ? { iata: own.iata, icao: own.icao, name: own.name } 
 
 
 // ---------- tabelloni ufficiali via Cloudflare Worker (Fiumicino, Ciampino, Pisa, Firenze, Puglia, Ginevra) ----------
-export const OFFICIAL_AIRPORTS = { FCO: 'Europe/Rome', CIA: 'Europe/Rome', PSA: 'Europe/Rome', FLR: 'Europe/Rome', FCO: 'Europe/Rome', CIA: 'Europe/Rome', BRI: 'Europe/Rome', BDS: 'Europe/Rome', FOG: 'Europe/Rome', TAR: 'Europe/Rome', GVA: 'Europe/Zurich' };
+export const OFFICIAL_AIRPORTS = { PSA: 'Europe/Rome', FLR: 'Europe/Rome', FCO: 'Europe/Rome', CIA: 'Europe/Rome', BRI: 'Europe/Rome', BDS: 'Europe/Rome', FOG: 'Europe/Rome', TAR: 'Europe/Rome', GVA: 'Europe/Zurich' };
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {
   const base = (workerUrl || '').trim().replace(/\/+$/, '');
