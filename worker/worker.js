@@ -165,23 +165,39 @@ async function geneva(nature, log) {
 // I blocchi HTML sono affidabili: date-estimated = orario previsto, date-actual = orario effettivo
 // (verificato sulle etichette italiane "Orario previsto"/"Orario effettivo" della stessa riga).
 // Sui voli partiti adr.it mostra solo il previsto; l'effettivo esiste solo sugli arrivi atterrati.
-// _delta=200 è il massimo accettato dalla portlet (500 dà di nuovo 200): una sola richiesta fino a 200 voli.
+// _delta=200 è il massimo per pagina (a Fiumicino il giorno intero sono 800+ voli): si paginano con
+// _cur limitando _orario alla finestra del tabellone (la portlet accetta orari arbitrari, verificato),
+// così Fiumicino sono 2-3 richieste e Ciampino una.
 async function adr(airport, nature, log) {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).reduce((a, x) => (a[x.type] = x.value, a), {});
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date());
-  const u = ADR[airport]
+  const fmt = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  const nowMin = +parts.hour * 60 + +parts.minute;
+  const toMin = s => { const m = /(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; };
+  // finestra dell'app (da 2 ore fa a 10 ore avanti, con margine), chiusa dentro la giornata odierna
+  const from = fmt(Math.max(0, nowMin - 130)), to = fmt(Math.min(1440, nowMin + 610));
+  const base = ADR[airport]
     + '?p_p_id=3_WAR_realtimeflightsportlet&p_p_lifecycle=0&p_p_state=normal&p_p_mode=view'
     + `&_3_WAR_realtimeflightsportlet_tab=${nature === 'A' ? 'arrival' : 'departure'}`
     + '&_3_WAR_realtimeflightsportlet_searchType=standard'
     + `&_3_WAR_realtimeflightsportlet_codScaOpe=${airport}`
     + `&_3_WAR_realtimeflightsportlet_date=${today}`
-    + '&_3_WAR_realtimeflightsportlet_orario=00:00-24:00'
+    + `&_3_WAR_realtimeflightsportlet_orario=${from}-${to}`
     + '&_3_WAR_realtimeflightsportlet_delta=200';
-  const t0 = Date.now();
-  const r = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'text/html' } });
-  const t = await r.text();
-  const rows = [...t.matchAll(/<tr[^>]*data-qa-id="row"[^>]*>([\s\S]*?)<\/tr>/g)].map(m => m[1]);
-  log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0, rows: rows.length });
-  if (r.status !== 200 || !rows.length) throw new Error(`Aeroporti di Roma: nessun dato (HTTP ${r.status})`);
+  const rows = [];
+  let status = 0, ms = 0, pages = 0, covered = false;
+  for (let cur = 1; cur <= 8 && !covered; cur++) {
+    const t0 = Date.now();
+    const r = await fetch(`${base}&_3_WAR_realtimeflightsportlet_cur=${cur}`, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'text/html' } });
+    status = r.status; ms += Date.now() - t0;
+    if (status !== 200) break;
+    const page = [...(await r.text()).matchAll(/<tr[^>]*data-qa-id="row"[^>]*>([\s\S]*?)<\/tr>/g)].map(m => m[1]);
+    rows.push(...page); pages++;
+    const lastSched = toMin(/class="date-estimated__time"[^>]*>\s*(\d{1,2}:\d{2})/.exec(page[page.length - 1] || '')?.[1]);
+    covered = page.length < 200 || (lastSched != null && lastSched >= nowMin + 580); // ultima pagina o finestra piena
+  }
+  log.push({ url: `${base}&_cur=1..${pages}`, status, rows: rows.length, pages, ms });
+  if (status !== 200 || !rows.length) throw new Error(`Aeroporti di Roma: nessun dato (HTTP ${status})`);
   return rows.map(html => {
     const flat = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
     const cells = /class="[^"]*lfr-scheduled-time-column[^"]*"[^>]*>([\s\S]*?)<\/td>/.exec(html)?.[1] || '';

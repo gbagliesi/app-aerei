@@ -44,7 +44,7 @@ export function adbBlocked() {
   try { const b = JSON.parse(localStorage.getItem(BKEY)); return b && Date.now() < b.until ? b : null; } catch { return null; }
 }
 export const clearAdbBlock = () => localStorage.removeItem(BKEY);
-const QUOTA_MSG = 'Hai esaurito le unità mensili del tuo piano AeroDataBox su RapidAPI: si azzerano alla data di rinnovo mensile dell’abbonamento. Per Pisa, Firenze, Bari, Brindisi e Ginevra il tabellone arriva comunque dai siti ufficiali.';
+const QUOTA_MSG = 'Hai esaurito le unità mensili del tuo piano AeroDataBox su RapidAPI: si azzerano alla data di rinnovo mensile dell’abbonamento. Per Fiumicino, Ciampino, Pisa, Firenze, Bari, Brindisi, Foggia, Taranto e Ginevra il tabellone arriva comunque dai siti ufficiali.';
 
 /** Chiamata AeroDataBox con cache persistente (ttlMs). */
 async function adbCached(path, ttlMs) {
@@ -139,8 +139,8 @@ function normFlight(f, dir, own) {
 const ownInfo = own => own ? { iata: own.iata, icao: own.icao, name: own.name } : {};
 
 
-// ---------- tabelloni ufficiali via Cloudflare Worker (Pisa, Firenze, Ginevra) ----------
-export const OFFICIAL_AIRPORTS = { PSA: 'Europe/Rome', FLR: 'Europe/Rome', BRI: 'Europe/Rome', BDS: 'Europe/Rome', FOG: 'Europe/Rome', TAR: 'Europe/Rome', GVA: 'Europe/Zurich' };
+// ---------- tabelloni ufficiali via Cloudflare Worker (Fiumicino, Ciampino, Pisa, Firenze, Puglia, Ginevra) ----------
+export const OFFICIAL_AIRPORTS = { FCO: 'Europe/Rome', CIA: 'Europe/Rome', PSA: 'Europe/Rome', FLR: 'Europe/Rome', BRI: 'Europe/Rome', BDS: 'Europe/Rome', FOG: 'Europe/Rome', TAR: 'Europe/Rome', GVA: 'Europe/Zurich' };
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {
   const base = (workerUrl || '').trim().replace(/\/+$/, '');
@@ -179,6 +179,7 @@ function mapStatus(t) {
   if (/cancel|annul|soppress/.test(t)) return 'Canceled';
   if (/dirott|divert|dérout/.test(t)) return 'Diverted';
   if (/atterr|landed|arrived|arrivato|atterri/.test(t)) return 'Arrived';
+  if (/in arrivo|avvicin|approach/.test(t)) return 'Approaching';
   if (/in volo|en ?route|airborne|flying|en vol/.test(t)) return 'EnRoute';
   if (/decoll|partito|departed|parti|airborne|take ?off/.test(t)) return 'Departed';
   if (/chius|closed|fermé|ferme/.test(t)) return 'GateClosed';
