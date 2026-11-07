@@ -13,7 +13,7 @@ function officialNote(iata, dir, list) {
   return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
 }
 
-const APP_VERSION = '2.5 · tabelloni ufficiali anche per Fiumicino e Ciampino';
+const APP_VERSION = '2.6 · tornando al tabellone riprende dalla posizione precedente';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -558,14 +558,49 @@ function viewSettings() {
 // ---------- router ----------
 function updateBanner() { document.getElementById('demo-banner').hidden = getSettings().provider === 'aerodatabox'; }
 
+// ---------- posizione di scroll: tornando indietro (es. dal volo al tabellone) si riparte da dove si era ----------
+// ogni voce della cronologia riceve un id; la posizione si salva per id, così un link nuovo apre in cima
+// e il tasto Indietro ripristina la posizione salvata.
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+const SCROLL_KEY = 'scrollPos';
+const scrollPos = (() => { try { return JSON.parse(sessionStorage.getItem(SCROLL_KEY)) || {}; } catch { return {}; } })();
+let restoring = false, userScrolled = false, scrollSaveT = 0;
+const entryId = () => history.state?.sid;
+window.addEventListener('scroll', () => {
+  if (restoring || !entryId()) return;
+  scrollPos[entryId()] = Math.round(window.scrollY);
+  clearTimeout(scrollSaveT);
+  scrollSaveT = setTimeout(() => { try { sessionStorage.setItem(SCROLL_KEY, JSON.stringify(scrollPos)); } catch {} }, 300);
+}, { passive: true });
+['wheel', 'touchmove', 'keydown'].forEach(ev => window.addEventListener(ev, () => { userScrolled = true; }, { passive: true }));
+let routeSeq = 0;
+function restoreScroll(seq, y) {
+  if (seq !== routeSeq) return;
+  // aspetta che la pagina sia abbastanza alta (tabellone caricato), poi riporta lo scroll
+  requestAnimationFrame(() => {
+    if (seq === routeSeq && !userScrolled) window.scrollTo(0, y);
+    restoring = false;
+  });
+}
+
 function route() {
   clearPage();
+  const seq = ++routeSeq;
+  let saved = 0;
+  if (entryId()) saved = scrollPos[entryId()] || 0;
+  else history.replaceState({ ...(history.state || {}), sid: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` }, '');
+  restoring = saved > 0; userScrolled = false;
   document.title = 'Tabellone Voli';
   const [path, qs] = location.hash.slice(1).split('?');
   const parts = path.split('/').filter(Boolean).map(decodeURIComponent);
   const params = new URLSearchParams(qs || '');
   document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === (parts[0] || 'home')));
   window.scrollTo(0, 0);
+  const p = renderView(parts, params);
+  if (saved > 0) Promise.resolve(p).catch(() => {}).finally(() => restoreScroll(seq, saved));
+}
+
+function renderView(parts, params) {
   if (parts[0] === 'airport' && parts[1]) return viewAirport(parts[1], parts[2] === 'arr' ? 'arr' : 'dep');
   if (parts[0] === 'route' && parts[1] && parts[2]) return viewAirport(parts[1], 'dep', parts[2].toUpperCase());
   if (parts[0] === 'flight' && parts[1]) return viewFlight(parts[1].toUpperCase(), parts[2] || isoDate(new Date()), params.get('dep'));
