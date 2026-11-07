@@ -13,7 +13,7 @@ function officialNote(iata, dir, list) {
   return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
 }
 
-const APP_VERSION = '2.7 · tasto Indietro, ritorno sulla riga del volo aperto';
+const APP_VERSION = '2.8 · voli in code sharing accorpati in una riga';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -121,7 +121,7 @@ function viewHome() {
 // ---------- Tabellone ----------
 function boardTable(list, dir, filter = '') {
   const f = filter.trim().toLowerCase();
-  const rows = list.filter(x => !f || [x.number, x.airline?.name, x.dep?.iata, x.dep?.name, x.arr?.iata, x.arr?.name].some(v => String(v || '').toLowerCase().includes(f)));
+  const rows = list.filter(x => !f || [x.number, ...(x.codeshares || []), x.airline?.name, x.dep?.iata, x.dep?.name, x.arr?.iata, x.arr?.name].some(v => String(v || '').toLowerCase().includes(f)));
   if (!rows.length) return `<p class="hint">Nessun volo${f ? ' corrisponde al filtro' : ' nella finestra da 2 ore fa a 10 ore avanti'}.</p>`;
   const now = Date.now();
   let marked = false;
@@ -134,7 +134,7 @@ function boardTable(list, dir, filter = '') {
       return `${nowLine}<div class="row ${x.status === 'Canceled' ? 'cancel' : ''}" role="row" tabindex="0" data-href="${flightLink(x)}">
         <span class="t">${timeCell(side?.sched, side?.revised, side?.actual)}</span>
         <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x), true) : esc(x.airline?.name || '')}</small></span>
-        <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}</small></span>
+        <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <span class="cs" title="Stesso volo in code sharing">· anche ${x.codeshares.map(esc).join(' ')}</span>` : ''}</small></span>
         <span class="gate">${esc((dir === 'dep' ? side?.gate : side?.belt) || '—')}</span>
         <span>${statusBadge(x.status)}</span>
       </div>`;

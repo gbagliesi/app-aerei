@@ -131,6 +131,7 @@ function normFlight(f, dir, own) {
     airline: { name: f.airline?.name, iata: f.airline?.iata },
     status: f.status || 'Unknown',
     isCargo: f.isCargo,
+    codeshareStatus: f.codeshareStatus,
     aircraft: { reg: f.aircraft?.reg, hex: f.aircraft?.modeS?.toLowerCase(), model: f.aircraft?.model },
     dep, arr,
     location: normLocation(f.location),
@@ -253,7 +254,7 @@ export async function testWorker(url) {
  *  Se AeroDataBox non risponde (es. quota finita) e l'aeroporto ha il tabellone ufficiale, uso solo quello. */
 export async function getBoard(iata) {
   iata = iata.toUpperCase();
-  if (isDemo()) return demo.board(iata);
+  if (isDemo()) { const b = await demo.board(iata); return { departures: mergeCodeshares(b.departures, 'dep'), arrivals: mergeCodeshares(b.arrivals, 'arr') }; }
   let base, degraded = null;
   try {
     base = await cached(`board:${iata}`, 60e3, async () => {
@@ -272,11 +273,49 @@ export async function getBoard(iata) {
     if (degraded) {
       const [d, a] = await Promise.all([officialOnly(iata, 'D'), officialOnly(iata, 'A')]);
       if (!d.length && !a.length) throw new Error(degraded);
-      return { departures: d, arrivals: a, degraded };
+      return { departures: mergeCodeshares(d, 'dep'), arrivals: mergeCodeshares(a, 'arr'), degraded };
     }
     await Promise.all([withOfficial(departures, iata, 'D'), withOfficial(arrivals, iata, 'A')]);
   }
-  return { departures, arrivals };
+  return { departures: mergeCodeshares(departures, 'dep'), arrivals: mergeCodeshares(arrivals, 'arr') };
+}
+
+/** Accorpa i voli in code sharing: stesso orario programmato e stessa destinazione/provenienza diventano
+ *  una riga sola, col numero del vettore che opera il volo e le altre sigle in `codeshares`. */
+const withMkt = f => (f._mkt?.length && !f.codeshares ? { ...f, codeshares: f._mkt.filter(n => n !== f.number) } : f);
+export function mergeCodeshares(list, dir) {
+  const groups = new Map(), out = [];
+  for (const f of list) {
+    const own = dir === 'dep' ? f.dep : f.arr, other = dir === 'dep' ? f.arr : f.dep;
+    const where = other?.iata || (other?.name || '').toLowerCase();
+    const t = own?.sched?.utc;
+    if (!t || !where) { out.push(withMkt(f)); continue; }
+    const k = `${t}|${where}`;
+    let g = groups.get(k);
+    if (!g) { g = []; groups.set(k, g); out.push(g); }
+    g.push(f);
+  }
+  const clash = (a, b) => (a && b && a !== b);
+  return out.flatMap(g => {
+    if (!Array.isArray(g)) return [g];
+    if (g.length === 1) return [withMkt(g[0])];
+    // sottogruppi: due voli con gate o marche diverse sono voli distinti, non codeshare
+    const subs = [];
+    for (const f of g) {
+      const side = dir === 'dep' ? f.dep : f.arr;
+      const s = subs.find(s => s.every(x => { const xs = dir === 'dep' ? x.dep : x.arr; return !clash(xs?.gate, side?.gate) && !clash(x.aircraft?.reg, f.aircraft?.reg); }));
+      if (s) s.push(f); else subs.push([f]);
+    }
+    return subs.map(s => {
+      if (s.length === 1) return withMkt(s[0]);
+      const score = f => (s.some(x => x._opBy === f.number) ? 4 : 0) + (f.codeshareStatus === 'IsOperator' ? 4 : 0)
+        + ((f._mkt || []).some(n => s.some(x => x.number === n)) ? 4 : 0) + (f._opBy && f._opBy !== f.number ? -2 : 0)
+        + (f.aircraft?.reg ? 1 : 0) + (f._official ? 1 : 0);
+      const main = s.reduce((a, b) => (score(b) > score(a) ? b : a));
+      const others = [...new Set([...s.filter(f => f !== main).map(f => f.number), ...(main._mkt || []), ...(main.codeshares || [])])].filter(n => n !== main.number);
+      return { ...main, codeshares: others };
+    });
+  });
 }
 
 /** Tabellone costruito solo dai dati ufficiali dell'aeroporto (senza AeroDataBox). */
@@ -294,6 +333,8 @@ async function officialOnly(iata, nature, window = true) {
     return {
       number: o.number, airline: { name: o.airline || null, iata: o.number.slice(0, 2) }, status: 'Expected', aircraft: { reg: o.reg || null, model: o.type || null },
       dep: nature === 'D' ? mine : other, arr: nature === 'D' ? other : mine, _officialOnly: true,
+      // Aeroporti di Roma: una riga per sigla, "Operato da" indica il vettore; Toscana Aeroporti: la riga del vettore elenca le altre sigle
+      ...(['FCO', 'CIA'].includes(iata) ? { _opBy: o.codeshare?.[0] } : { _mkt: o.codeshare || [] }),
     };
   }).filter(f => { if (!window) return true; const t = Date.parse((f.dep.sched || f.arr.sched).utc); return t > now - 2 * 3600e3 && t < now + 10 * 3600e3; });
   mergeOfficial(flights, off, nature === 'D' ? 'dep' : 'arr', iata);
