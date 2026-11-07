@@ -13,12 +13,13 @@ function officialNote(iata, dir, list) {
   return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
 }
 
-const APP_VERSION = '2.2 · tabelloni ufficiali (Pisa, Firenze, Bari, Brindisi, Ginevra) con diagnostica';
+const APP_VERSION = '2.3 · risparmio unità AeroDataBox, tabellone ufficiale se la quota è finita';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
 const clearPage = () => { timers.forEach(clearInterval); timers = []; maps.forEach(m => m.remove()); maps = []; };
-const every = (sec, fn) => timers.push(setInterval(fn, sec * 1000));
+// gli aggiornamenti automatici si fermano quando la scheda o l'app non sono in primo piano
+const every = (sec, fn) => timers.push(setInterval(() => { if (!document.hidden) fn(); }, sec * 1000));
 
 // ---------- utilità ----------
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -164,7 +165,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
         <a href="#/airport/${iata}/arr" class="${dir === 'arr' ? 'active' : ''}">🛬 Arrivi</a>
         <input id="filter" type="search" placeholder="Filtra: città, volo, compagnia" value="${esc(filter)}">
       </div>`}
-      ${data ? officialNote(iata, isRoute ? 'dep' : dir, list) : ''}
+      ${data?.degraded ? `<p class="hint">⚠ AeroDataBox non disponibile, mostro solo il tabellone ufficiale dell’aeroporto. ${esc(data.degraded)}</p>` : data ? officialNote(iata, isRoute ? 'dep' : dir, list) : ''}
       <div id="board">${data ? boardTable(filtered, isRoute ? 'dep' : dir, filter) : '<div class="loading">Caricamento tabellone…</div>'}</div>
       <p class="updated" id="updated"></p>`;
     bindStars($app, render);

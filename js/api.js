@@ -7,17 +7,59 @@ import * as demo from './demo.js';
 const ADB_HOST = 'aerodatabox.p.rapidapi.com';
 const cache = new Map();
 
+const inflight = new Map();
 async function cached(key, ttlMs, fn) {
   const hit = cache.get(key);
   if (hit && Date.now() - hit.t < ttlMs) return hit.v;
-  const v = await fn();
-  cache.set(key, { t: Date.now(), v });
+  // una sola richiesta alla volta per la stessa chiave
+  if (inflight.has(key)) return inflight.get(key);
+  const p = (async () => { try { const v = await fn(); cache.set(key, { t: Date.now(), v }); return v; } finally { inflight.delete(key); } })();
+  inflight.set(key, p);
+  return p;
+}
+
+// ---------- risparmio unità AeroDataBox ----------
+// Le risposte di AeroDataBox restano salvate nel browser (anche dopo un ricaricamento) per qualche minuto,
+// così aprire più volte lo stesso tabellone o volo non consuma unità del piano.
+const PKEY = 'aerei.adbcache.';
+const BKEY = 'aerei.adbBlocked';
+function pget(k, ttl) {
+  try { const x = JSON.parse(localStorage.getItem(PKEY + k)); return x && Date.now() - x.t < ttl ? x.v : undefined; } catch { return undefined; }
+}
+function pput(k, v) {
+  const val = JSON.stringify({ t: Date.now(), v });
+  for (let i = 0; i < 20; i++) {
+    try { localStorage.setItem(PKEY + k, val); return; } catch {
+      // spazio finito: elimino la voce più vecchia e riprovo
+      const keys = Object.keys(localStorage).filter(x => x.startsWith(PKEY));
+      if (!keys.length) return;
+      let oldest = keys[0], ot = Infinity;
+      for (const x of keys) { try { const t = JSON.parse(localStorage.getItem(x)).t; if (t < ot) { ot = t; oldest = x; } } catch { oldest = x; break; } }
+      localStorage.removeItem(oldest);
+    }
+  }
+}
+/** Se la quota è finita non chiamo più AeroDataBox per qualche ora (ogni chiamata fallita è inutile). */
+export function adbBlocked() {
+  try { const b = JSON.parse(localStorage.getItem(BKEY)); return b && Date.now() < b.until ? b : null; } catch { return null; }
+}
+export const clearAdbBlock = () => localStorage.removeItem(BKEY);
+const QUOTA_MSG = 'Hai esaurito le unità mensili del tuo piano AeroDataBox su RapidAPI: si azzerano alla data di rinnovo mensile dell’abbonamento. Per Pisa, Firenze, Bari, Brindisi e Ginevra il tabellone arriva comunque dai siti ufficiali.';
+
+/** Chiamata AeroDataBox con cache persistente (ttlMs). */
+async function adbCached(path, ttlMs) {
+  const hit = pget(path, ttlMs);
+  if (hit !== undefined) return hit;
+  const v = await adb(path);
+  pput(path, v);
   return v;
 }
 
-async function adb(path, key = getSettings().apiKey) {
+async function adb(path, key = getSettings().apiKey, force = false) {
   const apiKey = (key || '').trim();
   if (!apiKey) throw new Error('Manca la chiave API AeroDataBox: aggiungila in Impostazioni.');
+  const blk = !force && adbBlocked();
+  if (blk) throw new Error(blk.msg);
   let res;
   try {
     res = await fetch(`https://${ADB_HOST}${path}`, { headers: { 'X-RapidAPI-Key': apiKey, 'X-RapidAPI-Host': ADB_HOST } });
@@ -30,7 +72,11 @@ async function adb(path, key = getSettings().apiKey) {
   let hint;
   if (m.includes('not subscribed')) hint = 'La chiave è giusta ma non sei iscritto ad AeroDataBox: su RapidAPI apri AeroDataBox → Pricing e premi Subscribe sul piano Basic.';
   else if (m.includes('invalid api key') || res.status === 401) hint = 'Chiave non riconosciuta: ricopiala dalla riga X-RapidAPI-Key, senza spazi o caratteri in più.';
-  else if (res.status === 429 || m.includes('quota') || m.includes('rate limit')) hint = 'Limite di richieste del piano raggiunto: riprova più tardi o alza l’intervallo di aggiornamento.';
+  else if (m.includes('monthly') || (m.includes('quota') && !m.includes('second'))) {
+    localStorage.setItem(BKEY, JSON.stringify({ until: Date.now() + 6 * 3600e3, msg: QUOTA_MSG }));
+    throw new Error(QUOTA_MSG);
+  }
+  else if (res.status === 429 || m.includes('rate limit')) hint = 'Troppe richieste in poco tempo: riprova tra qualche secondo.';
   else if (m.includes('tier') || m.includes('plan')) hint = 'Questa funzione non è inclusa nel tuo piano AeroDataBox.';
   else hint = `Errore API (${res.status}).`;
   throw new Error(`${hint}${msg ? ` [RapidAPI: "${msg}"]` : ''}`);
@@ -38,8 +84,9 @@ async function adb(path, key = getSettings().apiKey) {
 
 /** Verifica una chiave con una chiamata leggera. */
 export async function testKey(key) {
-  await adb('/airports/iata/FCO', key);
-  const fids = await adb('/flights/airports/iata/FCO?offsetMinutes=0&durationMinutes=60&withLeg=false&direction=Departure', key);
+  await adb('/airports/iata/FCO', key, true);
+  clearAdbBlock();
+  const fids = await adb('/flights/airports/iata/FCO?offsetMinutes=0&durationMinutes=60&withLeg=false&direction=Departure', key, true);
   return (fids?.departures || []).length;
 }
 
@@ -200,19 +247,57 @@ export async function testWorker(url) {
 
 // ---------- API pubblica ----------
 
-/** Tabellone: { departures: [...], arrivals: [...] } da 2h fa a 10h avanti. */
+/** Tabellone: { departures: [...], arrivals: [...] } da 2h fa a 10h avanti.
+ *  AeroDataBox si aggiorna al massimo ogni 15 minuti; gate, orari e stato ufficiali ogni 90 secondi.
+ *  Se AeroDataBox non risponde (es. quota finita) e l'aeroporto ha il tabellone ufficiale, uso solo quello. */
 export async function getBoard(iata) {
   iata = iata.toUpperCase();
   if (isDemo()) return demo.board(iata);
-  return cached(`board:${iata}`, 3 * 60e3, async () => {
-    const q = 'offsetMinutes=-120&durationMinutes=720&withLeg=true&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=false';
-    const data = await adb(`/flights/airports/iata/${iata}?${q}`);
-    const own = { iata, ...(airportByIata(iata) || {}) };
-    const departures = (data?.departures || []).map(f => normFlight(f, 'dep', own));
-    const arrivals = (data?.arrivals || []).map(f => normFlight(f, 'arr', own));
-    if (OFFICIAL_AIRPORTS[iata]) await Promise.all([withOfficial(departures, iata, 'D'), withOfficial(arrivals, iata, 'A')]);
-    return { departures, arrivals };
-  });
+  let base, degraded = null;
+  try {
+    base = await cached(`board:${iata}`, 60e3, async () => {
+      const q = 'offsetMinutes=-120&durationMinutes=720&withLeg=true&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=false';
+      const data = await adbCached(`/flights/airports/iata/${iata}?${q}`, 15 * 60e3);
+      const own = { iata, ...(airportByIata(iata) || {}) };
+      return { departures: (data?.departures || []).map(f => normFlight(f, 'dep', own)), arrivals: (data?.arrivals || []).map(f => normFlight(f, 'arr', own)) };
+    });
+  } catch (e) {
+    if (!OFFICIAL_AIRPORTS[iata] || !(getSettings().workerUrl || '').trim()) throw e;
+    degraded = e.message || String(e);
+    base = { departures: [], arrivals: [] };
+  }
+  const departures = structuredClone(base.departures), arrivals = structuredClone(base.arrivals);
+  if (OFFICIAL_AIRPORTS[iata]) {
+    if (degraded) {
+      const [d, a] = await Promise.all([officialOnly(iata, 'D'), officialOnly(iata, 'A')]);
+      if (!d.length && !a.length) throw new Error(degraded);
+      return { departures: d, arrivals: a, degraded };
+    }
+    await Promise.all([withOfficial(departures, iata, 'D'), withOfficial(arrivals, iata, 'A')]);
+  }
+  return { departures, arrivals };
+}
+
+/** Tabellone costruito solo dai dati ufficiali dell'aeroporto (senza AeroDataBox). */
+async function officialOnly(iata, nature) {
+  const k = `${iata}:${nature}`;
+  let off;
+  try { off = await getOfficial(iata, nature); } catch (e) { officialInfo[k] = { error: String(e.message || e) }; return []; }
+  const tz = OFFICIAL_AIRPORTS[iata], own = { iata, ...(airportByIata(iata) || {}) };
+  const now = Date.now();
+  const flights = (off || []).filter(o => o.schedDate).map(o => {
+    const d = o.schedDate.slice(0, 10), hm = o.schedDate.slice(11, 16), z = tzOffset(tz, d);
+    const sched = { local: `${d} ${hm}${z}`, utc: new Date(`${d}T${hm}:00${z}`).toISOString() };
+    const mine = { iata, icao: own.icao, name: own.name, sched };
+    const other = { iata: o.cityCode || null, name: o.city ? o.city.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()) : null };
+    return {
+      number: o.number, airline: { name: o.airline || null, iata: o.number.slice(0, 2) }, status: 'Expected', aircraft: { reg: o.reg || null, model: o.type || null },
+      dep: nature === 'D' ? mine : other, arr: nature === 'D' ? other : mine, _officialOnly: true,
+    };
+  }).filter(f => { const t = Date.parse((f.dep.sched || f.arr.sched).utc); return t > now - 2 * 3600e3 && t < now + 10 * 3600e3; });
+  mergeOfficial(flights, off, nature === 'D' ? 'dep' : 'arr', iata);
+  officialInfo[k] = { count: off.length, matched: flights.length };
+  return flights.sort((a, b) => Date.parse((a.dep.sched || a.arr.sched).utc) - Date.parse((b.dep.sched || b.arr.sched).utc));
 }
 
 /** Tutte le tratte di un volo in una data (YYYY-MM-DD). */
@@ -220,7 +305,7 @@ export async function getFlight(number, date) {
   number = number.toUpperCase().replace(/\s+/g, '');
   if (isDemo()) return demo.flight(number, date);
   return cached(`flight:${number}:${date}`, 60e3, async () => {
-    const data = await adb(`/flights/number/${encodeURIComponent(number)}/${date}?withAircraftImage=false&withLocation=true`);
+    const data = await adbCached(`/flights/number/${encodeURIComponent(number)}/${date}?withAircraftImage=false&withLocation=true`, 5 * 60e3);
     return enrichLegs((data || []).map(f => normFlight(f)));
   });
 }
@@ -228,8 +313,8 @@ export async function getFlight(number, date) {
 /** Voli effettuati da un aeromobile (marche) in una data. */
 export async function getFlightsByReg(reg, date) {
   if (isDemo()) return demo.byReg(reg, date);
-  return cached(`reg:${reg}:${date}`, 5 * 60e3, async () => {
-    const data = await adb(`/flights/reg/${encodeURIComponent(reg)}/${date}?withAircraftImage=false&withLocation=true`);
+  return cached(`reg:${reg}:${date}`, 60e3, async () => {
+    const data = await adbCached(`/flights/reg/${encodeURIComponent(reg)}/${date}?withAircraftImage=false&withLocation=true`, 15 * 60e3);
     return (data || []).map(f => normFlight(f));
   });
 }
@@ -239,7 +324,7 @@ export async function getAirportInfo(iata) {
   const local = airportByIata(iata);
   if (local || isDemo()) return local || null;
   return cached(`ap:${iata}`, 24 * 3600e3, async () => {
-    const a = await adb(`/airports/iata/${iata}`);
+    const a = await adbCached(`/airports/iata/${iata}`, 30 * 86400e3);
     return a && { iata, icao: a.icao, name: a.shortName || a.fullName, city: a.municipalityName, lat: a.location?.lat, lon: a.location?.lon };
   }).catch(() => null);
 }
