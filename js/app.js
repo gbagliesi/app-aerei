@@ -13,7 +13,7 @@ function officialNote(iata, dir, list) {
   return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
 }
 
-const APP_VERSION = '2.8 · voli in code sharing accorpati in una riga';
+const APP_VERSION = '2.9 · code sharing compatti (+N, tocca per vederli)';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -134,7 +134,7 @@ function boardTable(list, dir, filter = '') {
       return `${nowLine}<div class="row ${x.status === 'Canceled' ? 'cancel' : ''}" role="row" tabindex="0" data-href="${flightLink(x)}">
         <span class="t">${timeCell(side?.sched, side?.revised, side?.actual)}</span>
         <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x), true) : esc(x.airline?.name || '')}</small></span>
-        <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <span class="cs" title="Stesso volo in code sharing">· anche ${x.codeshares.map(esc).join(' ')}</span>` : ''}</small></span>
+        <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <button class="csbtn" type="button" title="Anche: ${esc(x.codeshares.join(' '))}">+${x.codeshares.length} code sharing</button>` : ''}</small>${x.codeshares?.length ? `<small class="cslist" hidden>anche ${x.codeshares.map(esc).join(' ')}</small>` : ''}</span>
         <span class="gate">${esc((dir === 'dep' ? side?.gate : side?.belt) || '—')}</span>
         <span>${statusBadge(x.status)}</span>
       </div>`;
@@ -627,6 +627,9 @@ function renderView(parts, params) {
 }
 
 document.addEventListener('click', e => {
+  // "+N code sharing": mostra/nasconde l'elenco delle altre sigle senza aprire il volo
+  const cs = e.target.closest('.csbtn');
+  if (cs) { const l = cs.closest('.dest')?.querySelector('.cslist'); if (l) { l.hidden = !l.hidden; cs.classList.toggle('open', !l.hidden); } return; }
   const row = e.target.closest('.row[data-href]');
   if (!row || e.target.closest('a, button')) return;
   if (e.metaKey || e.ctrlKey) window.open(row.dataset.href, '_blank'); else { rememberRow(row.dataset.href); location.hash = row.dataset.href; }
