@@ -13,7 +13,7 @@ function officialNote(iata, dir, list) {
   return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
 }
 
-const APP_VERSION = '2.6 · tornando al tabellone riprende dalla posizione precedente';
+const APP_VERSION = '2.7 · tasto Indietro, ritorno sulla riga del volo aperto';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -570,26 +570,43 @@ window.addEventListener('scroll', () => {
   if (restoring || !entryId()) return;
   scrollPos[entryId()] = Math.round(window.scrollY);
   clearTimeout(scrollSaveT);
-  scrollSaveT = setTimeout(() => { try { sessionStorage.setItem(SCROLL_KEY, JSON.stringify(scrollPos)); } catch {} }, 300);
+  scrollSaveT = setTimeout(() => saveScroll(), 300);
 }, { passive: true });
-['wheel', 'touchmove', 'keydown'].forEach(ev => window.addEventListener(ev, () => { userScrolled = true; }, { passive: true }));
+// solo rotella/tastiera: su iPhone il gesto "indietro" genera eventi touch e bloccava il ripristino
+['wheel', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (restoring) userScrolled = true; }, { passive: true }));
+const saveScroll = () => { try { sessionStorage.setItem(SCROLL_KEY, JSON.stringify(scrollPos)); } catch {} };
+// ricorda quale riga del tabellone è stata aperta, per tornarci sopra
+const rememberRow = href => { if (entryId()) { scrollPos[entryId()] = Math.round(window.scrollY); scrollPos[`${entryId()}:row`] = href; saveScroll(); } };
 let routeSeq = 0;
-function restoreScroll(seq, y) {
+function restoreScroll(seq, y, href) {
   if (seq !== routeSeq) return;
-  // aspetta che la pagina sia abbastanza alta (tabellone caricato), poi riporta lo scroll
+  // aspetta che la pagina sia disegnata (tabellone caricato), poi torna sulla riga aperta o alla posizione salvata
   requestAnimationFrame(() => {
-    if (seq === routeSeq && !userScrolled) window.scrollTo(0, y);
+    if (seq === routeSeq && !userScrolled) {
+      const row = href && [...document.querySelectorAll('.row[data-href]')].find(r => r.dataset.href === href);
+      if (row) {
+        row.scrollIntoView({ block: 'center' });
+        row.classList.add('lastseen');
+        setTimeout(() => row.classList.remove('lastseen'), 2500);
+      } else window.scrollTo(0, y);
+    }
     restoring = false;
   });
 }
+// tasto Indietro: visibile quando c'è una pagina precedente dentro l'app
+let curDepth = 0;
+const $back = document.getElementById('back');
+if ($back) $back.onclick = () => history.back();
 
 function route() {
   clearPage();
   const seq = ++routeSeq;
-  let saved = 0;
-  if (entryId()) saved = scrollPos[entryId()] || 0;
-  else history.replaceState({ ...(history.state || {}), sid: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}` }, '');
-  restoring = saved > 0; userScrolled = false;
+  let saved = 0, savedRow = null;
+  if (entryId()) { saved = scrollPos[entryId()] || 0; savedRow = scrollPos[`${entryId()}:row`] || null; }
+  else history.replaceState({ ...(history.state || {}), sid: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, depth: curDepth + 1 }, '');
+  curDepth = history.state?.depth || 1;
+  if ($back) $back.hidden = curDepth <= 1;
+  restoring = saved > 0 || !!savedRow; userScrolled = false;
   document.title = 'Tabellone Voli';
   const [path, qs] = location.hash.slice(1).split('?');
   const parts = path.split('/').filter(Boolean).map(decodeURIComponent);
@@ -597,7 +614,7 @@ function route() {
   document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === (parts[0] || 'home')));
   window.scrollTo(0, 0);
   const p = renderView(parts, params);
-  if (saved > 0) Promise.resolve(p).catch(() => {}).finally(() => restoreScroll(seq, saved));
+  if (restoring) Promise.resolve(p).catch(() => {}).finally(() => restoreScroll(seq, saved, savedRow));
 }
 
 function renderView(parts, params) {
@@ -612,9 +629,9 @@ function renderView(parts, params) {
 document.addEventListener('click', e => {
   const row = e.target.closest('.row[data-href]');
   if (!row || e.target.closest('a, button')) return;
-  if (e.metaKey || e.ctrlKey) window.open(row.dataset.href, '_blank'); else location.hash = row.dataset.href;
+  if (e.metaKey || e.ctrlKey) window.open(row.dataset.href, '_blank'); else { rememberRow(row.dataset.href); location.hash = row.dataset.href; }
 });
-document.addEventListener('keydown', e => { const row = e.target.closest?.('.row[data-href]'); if (row && e.key === 'Enter') location.hash = row.dataset.href; });
+document.addEventListener('keydown', e => { const row = e.target.closest?.('.row[data-href]'); if (row && e.key === 'Enter') { rememberRow(row.dataset.href); location.hash = row.dataset.href; } });
 window.addEventListener('hashchange', route);
 updateBanner();
 route();

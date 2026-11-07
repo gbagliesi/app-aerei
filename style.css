@@ -15,6 +15,10 @@ code { font-family: var(--mono); }
 .topbar { position: sticky; top: 0; z-index: 1000; display: flex; justify-content: space-between; align-items: center; padding: .6rem 1rem; padding-top: max(.6rem, env(safe-area-inset-top)); background: rgba(11,18,32,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
 .brand { display: flex; align-items: center; gap: .5rem; color: var(--text); font-weight: 700; }
 .topbar nav { display: flex; gap: .3rem; }
+.topbar .left { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+.backbtn { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: .35rem .7rem; font: inherit; cursor: pointer; white-space: nowrap; }
+.backbtn[hidden] { display: none; }
+.board .row.lastseen { outline: 2px solid #4da3ff; outline-offset: -2px; background: rgba(77,163,255,.15); transition: background .6s; }
 .topbar nav a { color: var(--muted); padding: .35rem .7rem; border-radius: 8px; }
 .topbar nav a.active { color: var(--text); background: var(--panel2); }
 .banner { background: #2a2208; color: #f7d774; text-align: center; padding: .4rem 1rem; font-size: .85rem; }
