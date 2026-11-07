@@ -13,7 +13,7 @@ function officialNote(iata, dir, list) {
   return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
 }
 
-const APP_VERSION = '2.4 · pagina volo anche senza AeroDataBox · risparmio unità AeroDataBox, tabellone ufficiale se la quota è finita';
+const APP_VERSION = '2.5 · tabelloni ufficiali anche per Fiumicino e Ciampino';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
