@@ -28,6 +28,6 @@ jobs:
           for a in MXP AMS ZRH; do
             curl -s -w " -> $a %{http_code} %{time_total}s\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=$a&nature=D" | tail -c 300
           done
-          for a in MXP LIN GOA VCE; do
+          for a in MXP HKG; do
             echo "== $a"; curl -s "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/debug?airport=$a&nature=D" | grep -o '"count":[0-9]*\|"log":.*' | head -c 1200; echo
           done

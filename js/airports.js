@@ -37,6 +37,7 @@ export const AIRPORTS = [
   ['LIS','LPPT','Lisboa Humberto Delgado','Lisbona',38.7742,-9.1342],
   ['ATH','LGAV','Athens Eleftherios Venizelos','Atene',37.9364,23.9445],
   ['IST','LTFM','Istanbul','Istanbul',41.2753,28.7519],
+  ['HKG','VHHH','Hong Kong','Hong Kong',22.3080,113.9185],
   ['DXB','OMDB','Dubai International','Dubai',25.2532,55.3657],
   ['DOH','OTHH','Doha Hamad','Doha',25.2731,51.6081],
   ['JFK','KJFK','New York JFK','New York',40.6413,-73.7781],

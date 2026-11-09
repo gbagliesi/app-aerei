@@ -7,7 +7,7 @@ Aeroporti supportati: **Pisa (PSA)**, **Firenze (FLR)**, **Fiumicino (FCO)**, **
 **Milano Malpensa (MXP)** e **Linate (LIN)**, **Bologna (BLQ)**, **Catania (CTA)**, **Palermo (PMO)**,
 **Torino (TRN)**, **Cagliari (CAG)**, **Ginevra (GVA)**, **Zurigo (ZRH)**, **Francoforte (FRA)**, **Monaco (MUC)**,
 **Madrid (MAD)**, **Barcellona (BCN)**, **Lisbona (LIS)**, **Londra Gatwick (LGW)**, **Stansted (STN)**, **Luton (LTN)**, **City (LCY)**,
-**Lione (LYS)**, **Parigi Beauvais (BVA)**, **Amsterdam (AMS)**, **Genova (GOA)**, **Venezia (VCE)**.
+**Lione (LYS)**, **Parigi Beauvais (BVA)**, **Amsterdam (AMS)**, **Genova (GOA)**, **Venezia (VCE)**, **Hong Kong (HKG)**.
 
 Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
 - Pisa, Firenze: API dei siti di Toscana Aeroporti. Puglia: backend dell'app ufficiale. Ginevra: feed dell'app.

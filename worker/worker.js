@@ -29,7 +29,7 @@ const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
   MAD: (n, log) => aena('MAD', n, log), BCN: (n, log) => aena('BCN', n, log),
-  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol, GOA: genova, VCE: venezia,
+  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol, GOA: genova, VCE: venezia, HKG: hongKong,
 };
 
 export default {
@@ -1016,4 +1016,45 @@ async function venezia(nature, log) {
       codeshare: nums.slice(1),
     };
   }).filter(f => f.number && f.sched);
+}
+
+// ---------- Hong Kong (AAHK) ----------
+// Open data dell'aeroporto (data.gov.hk): GET /flightinfo-rest/rest/flights/past?date=YYYY-MM-DD&arrival=&cargo=false&lang=en,
+// nessuna chiave. Risponde con un elenco di giornate, ognuna con i voli in ora di Hong Kong; lo stato è un testo
+// ("Dep 01:28 (09/11/2026)", "At gate 13:20", "Est at 14:05", "Boarding", "Cancelled"...).
+async function hongKong(nature, log) {
+  const A = nature === 'A', tz = 'Asia/Hong_Kong';
+  const dates = [...new Set([localNow(tz, -150).date, localNow(tz, 630).date])];
+  const days = (await Promise.all(dates.map((d, i) => getText(`https://www.hongkongairport.com/flightinfo-rest/rest/flights/past?date=${d}&lang=en&cargo=false&arrival=${A}`, log, { name: 'Hong Kong', quiet: i > 0 })
+    .then(t => JSON.parse(t)).catch(e => (i ? [] : Promise.reject(e)))))).flat();
+  const seen = new Set(), out = [];
+  for (const day of days) {
+    for (const f of day.list || []) {
+      const nums = (f.flight || []).map(x => normNum((x.no || '').replace(/\s+/g, ''))).filter(Boolean);
+      const sched = day.date && f.time ? `${day.date}T${f.time}` : null;
+      if (!nums[0] || !sched || seen.has(nums[0] + sched)) continue;
+      seen.add(nums[0] + sched);
+      const st = trimOrNull(f.status) || '';
+      // orario nel testo dello stato, con la data se c'è ("(10/11/2026)")
+      const m = /(\d{1,2}:\d{2})(?:\s*\((\d{2})\/(\d{2})\/(\d{4})\))?/.exec(st);
+      const at = m ? `${m[4] ? `${m[4]}-${m[3]}-${m[2]}` : day.date}T${m[1].padStart(5, '0')}` : null;
+      const done = /^(dep|at gate|arrived|landed)/i.test(st);
+      let status;
+      if (/cancel/i.test(st)) status = 'Cancellato';
+      else if (/divert/i.test(st)) status = 'Dirottato';
+      else if (done) status = A ? 'Atterrato' : 'Decollato';
+      else if (/^est/i.test(st)) status = at && at > sched ? 'Ritardato' : null;
+      else status = statusIt(st, nature) || null;
+      const place = A ? f.origin : f.destination;
+      out.push({
+        number: nums[0], sched: clock(f.time), schedDate: sched, est: at ? clock(at.slice(11)) : null, actual: done && at ? clock(at.slice(11)) : null,
+        estAt: at, actualAt: done ? at : null, status, statusCode: trimOrNull(f.statusCode),
+        gate: A ? null : trimOrNull(f.gate), checkin: A ? null : trimOrNull(f.aisle), stand: A ? trimOrNull(f.stand) : null, belt: A ? trimOrNull(f.baggage) : null,
+        reg: null, type: null, terminal: trimOrNull(f.terminal),
+        city: null, cityCode: Array.isArray(place) ? place[place.length - 1] : trimOrNull(place), airline: null,
+        codeshare: nums.slice(1),
+      });
+    }
+  }
+  return out;
 }
