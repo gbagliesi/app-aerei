@@ -20,7 +20,11 @@ const ADR = {
   CIA: 'https://www.adr.it/pax-cia-voli-in-tempo-reale',
 };
 // Altri aeroporti: funzione che legge il tabellone (definite più sotto)
-const PROBE_HOSTS = ['veniceairport.it', 'veneziaairport.it', 'aeroportodigenova.it', 'airport.genova.it', 'geasar.it', 'aeroportodialghero.it', 'milanbergamoairport.it', 'orioaeroporto.it', 'aeroportodinapoli.it', 'gesac.it'];
+const PROBE_HOSTS = ['veniceairport.it', 'veneziaairport.it', 'aeroportodigenova.it', 'airport.genova.it', 'geasar.it', 'aeroportodialghero.it', 'milanbergamoairport.it', 'orioaeroporto.it', 'aeroportodinapoli.it', 'gesac.it',
+  // grandi hub e USA (prova 2026-11-09)
+  'hongkongairport.com', 'changiairport.com', 'dubaiairports.ae', 'dohahamadairport.com', 'zayedinternationalairport.ae', 'abudhabiairport.ae',
+  'tokyo-haneda.com', 'narita-airport.jp', 'bcia.com.cn', 'istairport.com', 'jfkairport.com', 'newarkairport.com', 'flylax.com', 'flysfo.com',
+  'dfwairport.com', 'atl.com', 'flychicago.com', 'iah.org', 'fly2houston.com', 'mia-airport.com', 'flydenver.com', 'iflyorlando.com', 'orlandoairports.net'];
 const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
