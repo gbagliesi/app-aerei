@@ -20,7 +20,7 @@ const ADR = {
   CIA: 'https://www.adr.it/pax-cia-voli-in-tempo-reale',
 };
 // Altri aeroporti: funzione che legge il tabellone (definite più sotto)
-const PROBE_HOSTS = ['veniceairport.it', 'aeroportodigenova.it', 'airport.genova.it', 'geasar.it', 'aeroportodialghero.it', 'milanbergamoairport.it', 'orioaeroporto.it', 'aeroportodinapoli.it', 'gesac.it'];
+const PROBE_HOSTS = ['veniceairport.it', 'veneziaairport.it', 'aeroportodigenova.it', 'airport.genova.it', 'geasar.it', 'aeroportodialghero.it', 'milanbergamoairport.it', 'orioaeroporto.it', 'aeroportodinapoli.it', 'gesac.it'];
 const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
@@ -55,7 +55,10 @@ export default {
       try {
         const r = await fetch(target, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'application/json, text/html;q=0.9, */*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8' } });
         const t = await r.text();
-        return json({ url: target, status: r.status, ms: Date.now() - t0, length: t.length, server: r.headers.get('server'), start: t.slice(0, 600) });
+        const grep = url.searchParams.get('grep');
+        let matches;
+        if (grep) { try { matches = [...new Set((t.match(new RegExp(grep, 'gi')) || []))].slice(0, 60); } catch (e) { matches = [String(e.message)]; } }
+        return json({ url: target, status: r.status, ms: Date.now() - t0, length: t.length, server: r.headers.get('server'), type: r.headers.get('content-type'), start: t.slice(0, 600), matches });
       } catch (e) { return json({ url: target, error: String(e.message || e) }, 502); }
     }
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);

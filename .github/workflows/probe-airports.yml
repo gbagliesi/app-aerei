@@ -1,24 +1,27 @@
 # Prova diagnostica (solo avvio manuale): una richiesta normale dal Worker ai siti degli aeroporti non supportati.
+# Ogni riga di PROBES: URL|regex facoltativa da cercare nella risposta.
 name: Probe airports
 
 on:
   workflow_dispatch:
+    inputs:
+      probes:
+        description: 'URL|regex separati da spazio'
+        required: false
+        default: ''
 
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
       - name: Probe
+        env:
+          PROBES: ${{ inputs.probes }}
         run: |
-          T=$(TZ=Europe/Rome date +%H:%M)
-          for u in \
-            "https://www.veniceairport.it/" \
-            "https://www.airport.genova.it/" \
-            "https://www.geasar.it/wp-json/olbia-airport/v1/flights/search?limit=0&type=operative&from_time=$T" \
-            "https://www.aeroportodialghero.it/wp-json/alghero-airport/v1/flights/search?limit=0&type=operative&from_time=$T" \
-            "https://www.milanbergamoairport.it/it/voli-tempo-reale/" \
-            "https://www.aeroportodinapoli.it/partenze" ; do
+          [ -n "$PROBES" ] || PROBES="https://www.veneziaairport.it/it_it/|[\"'][^\"']*(volo|voli|flight|partenz|arriv|departure)[^\"']*[\"'] https://www.airport.genova.it/|[\"'][^\"']*(volo|voli|flight|partenz|arriv|wp-json)[^\"']*[\"']"
+          for p in $PROBES; do
+            u="${p%%|*}"; g=""; [ "$u" != "$p" ] && g="${p#*|}"
             echo "=== $u"
-            curl -s -G "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/probe" --data-urlencode "url=$u" | cut -c1-900
+            curl -s -G "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/probe" --data-urlencode "url=$u" --data-urlencode "grep=$g" | head -c 6000
             echo
           done
