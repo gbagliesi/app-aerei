@@ -10,12 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cloudflare/wrangler-action@v3
+      - uses: actions/setup-node@v4
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4"
-          command: deploy worker/worker.js --name tabelloni-voli --compatibility-date 2024-09-23 --keep-vars
+          node-version: 22
+      - name: Deploy
+        env:
+          RAW_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # toglie spazi, a capo e un eventuale "Bearer" incollati per errore; il token non viene mai stampato
+          T=$(printf %s "$RAW_TOKEN" | tr -d '[:space:]'); T=${T#Bearer}
+          echo "::add-mask::$T"
+          echo "token: ${#T} caratteri, di cui non alfanumerici: $(printf %s "$T" | tr -d 'A-Za-z0-9_-' | wc -c)"
+          CLOUDFLARE_API_TOKEN="$T" npx -y wrangler@4 deploy worker/worker.js --name tabelloni-voli --compatibility-date 2024-09-23 --keep-vars
       - name: Verifica
         run: |
           for a in MXP AMS ZRH; do
