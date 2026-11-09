@@ -66,6 +66,7 @@ export default {
 
     const debug = url.pathname === '/debug';
     const cacheKey = new Request(`https://cache.local/board/${airport}/${nature}`);
+    const staleKey = new Request(`https://cache.local/stale/${airport}/${nature}`);
     if (!debug) {
       const hit = await caches.default.match(cacheKey);
       if (hit) return json(await hit.json(), 200, { 'X-Cache': 'HIT' });
@@ -76,9 +77,17 @@ export default {
       const flights = OTHER[airport] ? await OTHER[airport](nature, log, env) : airport === 'GVA' ? await geneva(nature, log) : ADR[airport] ? await adr(airport, nature, log) : PUGLIA.includes(airport) ? await puglia(airport, nature, log) : await toscana(airport, nature, log);
       const body = { airport, nature, fetchedAt: new Date().toISOString(), count: flights.length, flights };
       if (debug) return json({ ...body, flights: flights.slice(0, 5), log });
-      if (flights.length) ctx.waitUntil(caches.default.put(cacheKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${CACHE_SECONDS}` } })));
+      if (flights.length) ctx.waitUntil(Promise.all([
+        caches.default.put(cacheKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${CACHE_SECONDS}` } })),
+        // copia di riserva per 3 ore: si usa solo se il sito dell'aeroporto non risponde
+        caches.default.put(staleKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': 'max-age=10800' } })),
+      ]));
       return json(body);
     } catch (e) {
+      if (!debug) {
+        const old = await caches.default.match(staleKey);
+        if (old) return json({ ...(await old.json()), stale: true }, 200, { 'X-Cache': 'STALE' });
+      }
       return json({ error: String(e.message || e), log: debug ? log : undefined }, 502);
     }
   },
@@ -332,9 +341,8 @@ async function sea(code, nature, log, env) {
     const u = `https://apiextra.seamilano.eu/ols-flights/v1/it/operative/flights/lists?movementType=${nature === 'A' ? 'A' : 'D'}&dateFrom=${d}+00:00&dateTo=${d}+23:59&loadingType=P&airportReferenceIata=${code}&mfFlightType=P`;
     const t0 = Date.now();
     // la prima risposta della giornata a volte supera i 15 s: attesa più lunga e un secondo tentativo
-    const get = () => fetch(u, { signal: AbortSignal.timeout(20000), headers: { 'keyId': key, 'Accept': 'application/json', 'User-Agent': UA } });
-    const r = await get().catch(() => get());
-    const t = await r.text();
+    const get = async () => { const r = await fetch(u, { signal: AbortSignal.timeout(20000), headers: { 'keyId': key, 'Accept': 'application/json', 'User-Agent': UA } }); return [r, await r.text()]; };
+    const [r, t] = await get().catch(() => get());
     log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0, start: t.slice(0, 200) });
     if (!r.ok) { if (all.length) continue; throw new Error(`SEA: errore ${r.status}${r.status === 401 ? ' (chiave keyId non valida)' : ''}`); }
     all.push(...(JSON.parse(t).data || []));
