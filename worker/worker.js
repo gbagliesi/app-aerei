@@ -837,34 +837,67 @@ async function beauvais(nature, log) {
 }
 
 // ---------- Amsterdam Schiphol ----------
-// Public Flight API ufficiale (developer.schiphol.nl, v4): richiede le credenziali gratuite, da salvare come
-// segreti del Worker SCHIPHOL_APP_ID e SCHIPHOL_APP_KEY. 20 voli per pagina; orari ISO con fuso.
+// Public Flight API 4.2 ufficiale (developer.schiphol.nl). L'app registrata sul portale dà client_id e client_secret
+// (segreti del Worker SCHIPHOL_APP_ID e SCHIPHOL_APP_KEY) che si scambiano con un token JWT (OAuth client_credentials);
+// SCHIPHOL_TOKEN_URL e SCHIPHOL_AUDIENCE, se servono, si impostano come variabili. 20 voli per pagina; orari ISO con fuso.
 const AMS_STATES = { SCH: null, DEL: 'Ritardato', WIL: 'Attendere in sala', GTO: 'Gate aperto', BRD: 'Imbarco', GCH: 'Cambio gate',
   GCL: 'Ultima chiamata', GTD: 'Gate chiuso', DEP: 'Decollato', CNX: 'Cancellato', TOM: 'Domani', AIR: 'In volo', EXP: 'In arrivo',
   FIR: 'In arrivo', LND: 'Atterrato', FIB: 'Atterrato', ARR: 'Atterrato', DIV: 'Dirottato' };
+let amsToken = null;
+async function schipholToken(env, log) {
+  if (amsToken && amsToken.until > Date.now()) return amsToken.value;
+  const id = env.SCHIPHOL_APP_ID, secret = env.SCHIPHOL_APP_KEY;
+  const url = env.SCHIPHOL_TOKEN_URL || 'https://login.schiphol.nl/oauth/token';
+  const form = { grant_type: 'client_credentials', scope: 'openid' };
+  if (env.SCHIPHOL_AUDIENCE) form.audience = env.SCHIPHOL_AUDIENCE;
+  const tries = [
+    { body: new URLSearchParams({ ...form, client_id: id, client_secret: secret }), headers: {} },
+    { body: new URLSearchParams(form), headers: { 'Authorization': 'Basic ' + btoa(`${id}:${secret}`) } },
+  ];
+  let last = '';
+  for (const [i, t] of tries.entries()) {
+    const t0 = Date.now();
+    const r = await fetch(url, { method: 'POST', signal: AbortSignal.timeout(15000), body: t.body,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json', ...t.headers } });
+    const txt = await r.text();
+    let j = {};
+    try { j = JSON.parse(txt); } catch {}
+    log.push({ url: `${url} (token, tentativo ${i + 1})`, status: r.status, length: txt.length, ms: Date.now() - t0, start: j.access_token ? 'token ok' : txt.slice(0, 200) });
+    if (r.ok && j.access_token) {
+      amsToken = { value: j.access_token, until: Date.now() + Math.max(60, (+j.expires_in || 3600) - 120) * 1000 };
+      return amsToken.value;
+    }
+    last = `${r.status} ${j.error_description || j.error || j.message || ''}`.trim();
+  }
+  throw new Error(`Schiphol: token non ottenuto (${last})`);
+}
 async function schiphol(nature, log, env) {
-  const id = env && env.SCHIPHOL_APP_ID, key = env && env.SCHIPHOL_APP_KEY;
-  if (!id || !key) throw new Error('Schiphol: mancano i segreti SCHIPHOL_APP_ID e SCHIPHOL_APP_KEY nel Worker');
+  if (!env || !env.SCHIPHOL_APP_ID || !env.SCHIPHOL_APP_KEY) throw new Error('Schiphol: mancano i segreti SCHIPHOL_APP_ID e SCHIPHOL_APP_KEY nel Worker');
   const A = nature === 'A', tz = 'Europe/Amsterdam';
   const iso = n => `${n.date}T${n.hm}:00`;
-  const base = `https://api.schiphol.nl/public-flights/flights?flightDirection=${A ? 'A' : 'D'}&includedelays=false&sort=%2BscheduleTime`
+  const base = `https://api.schiphol.nl/public/public-flights/v4/flights?flightDirection=${A ? 'A' : 'D'}&includedelays=false&sort=%2BscheduleTime`
     + `&searchDateTimeField=scheduleDateTime&fromDateTime=${iso(localNow(tz, -180))}&toDateTime=${iso(localNow(tz, 660))}`;
-  const headers = { 'Accept': 'application/json', 'ResourceVersion': 'v4', 'app_id': id, 'app_key': key };
+  const token = await schipholToken(env, log);
+  const headers = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
   const page = async p => {
     const t0 = Date.now();
-    let r = await fetch(`${base}&page=${p}`, { signal: AbortSignal.timeout(15000), headers });
-    // Alcuni account accettano le credenziali solo come parametri dell'indirizzo: secondo tentativo
-    if (r.status === 401 || r.status === 403) r = await fetch(`${base}&page=${p}&app_id=${encodeURIComponent(id)}&app_key=${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(15000), headers: { 'Accept': 'application/json', 'ResourceVersion': 'v4' } });
+    const r = await fetch(`${base}&page=${p}`, { signal: AbortSignal.timeout(15000), headers });
     const t = r.status === 204 ? '' : await r.text();
     log.push({ url: `${base}&page=${p}`, status: r.status, length: t.length, ms: Date.now() - t0, start: p ? undefined : t.slice(0, 160) });
-    if (!r.ok) throw new Error(`Schiphol: errore ${r.status}${r.status === 401 || r.status === 403 ? ' (credenziali non valide)' : ''}`);
-    return { flights: t ? JSON.parse(t).flights || [] : [], link: r.headers.get('link') || '' };
+    if (r.status === 401 || r.status === 403) amsToken = null;
+    if (!r.ok) throw new Error(`Schiphol: errore ${r.status}${r.status === 401 || r.status === 403 ? ' (token rifiutato)' : ''}`);
+    const link = r.headers.get('link') || '';
+    return { flights: t ? JSON.parse(t).flights || [] : [], link, next: /rel="?next"?/.test(link) };
   };
   const first = await page(0);
-  const last = Math.min(+(/[?&]page=(\d+)[^>]*>;\s*rel="last"/.exec(first.link)?.[1] || 0), 40);
+  const last = Math.min(+(/[?&]page=(\d+)[^>]*>;\s*rel="?last"?/.exec(first.link)?.[1] || 0), 40);
   const rest = [];
-  for (let p = 1; p <= last; p += 10) {
-    rest.push(...await Promise.all(Array.from({ length: Math.min(10, last - p + 1) }, (_, i) => page(p + i).catch(() => ({ flights: [] })))));
+  if (last) {
+    for (let p = 1; p <= last; p += 10) {
+      rest.push(...await Promise.all(Array.from({ length: Math.min(10, last - p + 1) }, (_, i) => page(p + i).catch(() => ({ flights: [] })))));
+    }
+  } else if (first.next) {
+    for (let p = 1, more = true; more && p <= 40; p++) { const x = await page(p).catch(() => ({ flights: [] })); rest.push(x); more = x.next; }
   }
   const seen = new Set();
   return [first, ...rest].flatMap(x => x.flights).filter(f => {
@@ -875,7 +908,7 @@ async function schiphol(nature, log, env) {
     seen.add(k);
     return true;
   }).map(f => {
-    const sched = utcToLocal(f.scheduleDateTime, tz);
+    const sched = utcToLocal(f.scheduleDateTime, tz) || (f.scheduleDate && f.scheduleTime ? `${f.scheduleDate}T${f.scheduleTime.slice(0, 5)}` : null);
     const est = utcToLocal(A ? f.estimatedLandingTime : f.publicEstimatedOffBlockTime, tz);
     const act = utcToLocal(A ? f.actualLandingTime : f.actualOffBlockTime, tz);
     const code = (f.publicFlightState?.flightStates || []).slice(-1)[0] || null;
@@ -886,7 +919,7 @@ async function schiphol(nature, log, env) {
       number: normNum(f.flightName), sched: clock(sched?.slice(11)), schedDate: sched, est: clock((act || est || '').slice(11)), actual: act ? clock(act.slice(11)) : null,
       estAt: act || est || null, actualAt: act || null, status, statusCode: code,
       gate: trimOrNull(f.gate), checkin: null, stand: null, belt: A ? (f.baggageClaim?.belts || []).join(', ') || null : null,
-      reg: fmtReg(f.aircraftRegistration), type: trimOrNull(t.iataSub || t.iataMain), terminal: f.terminal != null ? String(f.terminal) : null,
+      reg: fmtReg(f.aircraftRegistration), type: trimOrNull(t.iataSub || t.iatasub || t.iataMain || t.iatamain), terminal: f.terminal != null ? String(f.terminal) : null,
       city: null, cityCode: (f.route?.destinations || [])[A ? 0 : (f.route?.destinations || []).length - 1] || null, airline: null,
       codeshare: (f.codeshares?.codeshares || []).map(normNum).filter(n => n && n !== normNum(f.flightName)),
     };

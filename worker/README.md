@@ -19,7 +19,7 @@ Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
 - Madrid, Barcellona: tabellone di aena.es. Lisbona: proxy voli di aeroportolisboa.pt. Cagliari: JSON di sogaer.it.
   Torino, Luton, Beauvais: tabelloni HTML dei siti. Gatwick: FetchFlights del sito. Stansted: API GraphQL del sito.
   London City: API voli del sito. Lione: `/api/flights/list` di lyonaeroports.com.
-- Amsterdam: Public Flight API ufficiale di Schiphol (developer.schiphol.nl). Servono le credenziali gratuite, salvate
+- Amsterdam: Public Flight API 4.2 ufficiale di Schiphol (developer.schiphol.nl, token OAuth). Client ID e secret dell'app, salvati
   come segreti del Worker `SCHIPHOL_APP_ID` e `SCHIPHOL_APP_KEY` (Settings → Variables and Secrets, tipo Secret).
 - Non disponibili (protezioni anti-bot o chiave/registrazione): Napoli, Venezia, Genova, Orio al Serio, Olbia, Alghero,
   Heathrow, Parigi CDG/Orly.
