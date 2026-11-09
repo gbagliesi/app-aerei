@@ -23,7 +23,6 @@ function sourcesNote(iata, dir, list, degraded) {
 // Aeroporti senza tabellone ufficiale leggibile dal Worker (siti protetti): link alla pagina ufficiale
 const SITE_BOARDS = {
   NAP: { dep: 'https://www.aeroportodinapoli.it/partenze', arr: 'https://www.aeroportodinapoli.it/arrivi', name: 'aeroportodinapoli.it' },
-  VCE: { dep: 'https://www.veniceairport.it/', name: 'veniceairport.it' },
   BGY: { dep: 'https://www.milanbergamoairport.it/it/voli-tempo-reale/', name: 'milanbergamoairport.it' },
   OLB: { dep: 'https://www.geasar.it/voli/i-voli-di-oggi/?type=departures', arr: 'https://www.geasar.it/voli/i-voli-di-oggi/?type=arrivals', name: 'geasar.it' },
   AHO: { dep: 'https://www.aeroportodialghero.it/voli/i-voli-di-oggi/?type=departures', arr: 'https://www.aeroportodialghero.it/voli/i-voli-di-oggi/?type=arrivals', name: 'aeroportodialghero.it' },
@@ -39,7 +38,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '3.5 · Genova dal sito ufficiale';
+const APP_VERSION = '3.6 · Venezia dal sito ufficiale';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];

@@ -28,7 +28,6 @@ jobs:
           for a in MXP AMS ZRH; do
             curl -s -o /dev/null -w "$a %{http_code}\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=$a&nature=D"
           done
-          for a in GOA VCE; do for n in D A; do
-            echo "== $a $n"; curl -s "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=$a&nature=$n" | head -c 1500; echo
-          done; done
-          echo "== debug VCE"; curl -s "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/debug?airport=VCE&nature=D" | head -c 3000; echo
+          for a in MXP LIN GOA VCE; do
+            echo "== $a"; curl -s "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/debug?airport=$a&nature=D" | grep -o '"count":[0-9]*\|"log":.*' | head -c 1200; echo
+          done

@@ -999,7 +999,7 @@ async function venezia(nature, log) {
       stand: null, belt: A ? trimOrNull(typeof f.belt === 'object' ? f.belt?.name : f.belt || f.baggage_claim) : null, reg: null, type: null, terminal: null,
       city: titleCase((A ? f.origin?.name : f.destination?.name) || f.destination?.name || f.origin?.name),
       cityCode: trimOrNull((A ? f.origin?.code : f.destination?.code) || null), airline: trimOrNull(f.airline?.name),
-      codeshare: nums.slice(1), _rawTime: tm,
+      codeshare: nums.slice(1),
     };
   }).filter(f => f.number && f.sched);
 }
