@@ -13,7 +13,7 @@ function officialNote(iata, dir, list) {
   return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
 }
 
-const APP_VERSION = '2.9 · code sharing compatti (+N, tocca per vederli)';
+const APP_VERSION = '3.0 · tabelloni ufficiali di Milano, Bologna, Catania, Palermo, Zurigo, Francoforte e Monaco';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -505,8 +505,8 @@ function viewSettings() {
       <label class="radio"><input type="radio" name="provider" value="aerodatabox" ${s.provider === 'aerodatabox' ? 'checked' : ''}> <span><b>AeroDataBox</b> · dati reali (tabelloni con gate, voli per numero e per aeromobile)</span></label>
       <label>Chiave API RapidAPI per AeroDataBox<input name="apiKey" type="password" value="${esc(s.apiKey)}" placeholder="incolla qui la X-RapidAPI-Key"></label>
       <p class="hint">Come ottenerla: crea un account su RapidAPI, abbonati ad <a href="https://rapidapi.com/aedbx-aedbx/api/aerodatabox" target="_blank" rel="noopener">AeroDataBox</a> (c'è un piano gratuito con poche centinaia di chiamate al mese, quelli a pagamento partono da pochi euro), poi copia la chiave. La chiave resta solo in questo browser.</p>
-      <label>Indirizzo del tuo Cloudflare Worker (tabelloni ufficiali di Pisa, Firenze, Ginevra)<input name="workerUrl" type="url" value="${esc(s.workerUrl || '')}" placeholder="https://tabellone-voli.tuonome.workers.dev"></label>
-      <p class="hint">Facoltativo. Con il Worker, per questi aeroporti gate, orari stimati e stato arrivano dal tabellone dell'aeroporto (per Ginevra anche le marche dell'aereo). Istruzioni: <a href="https://github.com/gbagliesi/app-aerei/blob/main/worker/README.md" target="_blank" rel="noopener">worker/README.md</a>. <button type="button" class="ghost" id="testw">Prova il Worker</button></p>
+      <label>Indirizzo del tuo Cloudflare Worker (tabelloni ufficiali degli aeroporti)<input name="workerUrl" type="url" value="${esc(s.workerUrl || '')}" placeholder="https://tabellone-voli.tuonome.workers.dev"></label>
+      <p class="hint">Facoltativo. Con il Worker, per questi aeroporti gate, orari stimati e stato arrivano dal tabellone dell'aeroporto (per Milano, Ginevra, Zurigo e Francoforte anche le marche dell'aereo). Istruzioni: <a href="https://github.com/gbagliesi/app-aerei/blob/main/worker/README.md" target="_blank" rel="noopener">worker/README.md</a>. <button type="button" class="ghost" id="testw">Prova il Worker</button></p>
       <div id="testwres"></div>
       <label>Aggiornamento automatico tabelloni (secondi)<input name="refreshSec" type="number" min="30" max="600" value="${s.refreshSec}"></label>
       <p class="hint">Ogni aggiornamento consuma una chiamata API: con il piano gratuito conviene 120–300 secondi.</p>

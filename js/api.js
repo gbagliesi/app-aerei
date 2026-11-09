@@ -44,7 +44,7 @@ export function adbBlocked() {
   try { const b = JSON.parse(localStorage.getItem(BKEY)); return b && Date.now() < b.until ? b : null; } catch { return null; }
 }
 export const clearAdbBlock = () => localStorage.removeItem(BKEY);
-const QUOTA_MSG = 'Hai esaurito le unità mensili del tuo piano AeroDataBox su RapidAPI: si azzerano alla data di rinnovo mensile dell’abbonamento. Per Fiumicino, Ciampino, Pisa, Firenze, Bari, Brindisi, Foggia, Taranto e Ginevra il tabellone arriva comunque dai siti ufficiali.';
+const QUOTA_MSG = 'Hai esaurito le unità mensili del tuo piano AeroDataBox su RapidAPI: si azzerano alla data di rinnovo mensile dell’abbonamento. Per Fiumicino, Ciampino, Pisa, Firenze, Bari, Brindisi, Foggia, Taranto, Milano, Bologna, Catania, Palermo, Ginevra, Zurigo, Francoforte e Monaco il tabellone arriva comunque dai siti ufficiali.';
 
 /** Chiamata AeroDataBox con cache persistente (ttlMs). */
 async function adbCached(path, ttlMs) {
@@ -140,8 +140,13 @@ function normFlight(f, dir, own) {
 const ownInfo = own => own ? { iata: own.iata, icao: own.icao, name: own.name } : {};
 
 
-// ---------- tabelloni ufficiali via Cloudflare Worker (Fiumicino, Ciampino, Pisa, Firenze, Puglia, Ginevra) ----------
-export const OFFICIAL_AIRPORTS = { PSA: 'Europe/Rome', FLR: 'Europe/Rome', FCO: 'Europe/Rome', CIA: 'Europe/Rome', BRI: 'Europe/Rome', BDS: 'Europe/Rome', FOG: 'Europe/Rome', TAR: 'Europe/Rome', GVA: 'Europe/Zurich' };
+// ---------- tabelloni ufficiali via Cloudflare Worker ----------
+// (Fiumicino, Ciampino, Pisa, Firenze, Puglia, Milano, Bologna, Catania, Palermo, Ginevra, Zurigo, Francoforte, Monaco)
+export const OFFICIAL_AIRPORTS = {
+  PSA: 'Europe/Rome', FLR: 'Europe/Rome', FCO: 'Europe/Rome', CIA: 'Europe/Rome', BRI: 'Europe/Rome', BDS: 'Europe/Rome', FOG: 'Europe/Rome', TAR: 'Europe/Rome',
+  MXP: 'Europe/Rome', LIN: 'Europe/Rome', BLQ: 'Europe/Rome', CTA: 'Europe/Rome', PMO: 'Europe/Rome',
+  GVA: 'Europe/Zurich', ZRH: 'Europe/Zurich', FRA: 'Europe/Berlin', MUC: 'Europe/Berlin',
+};
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {
   const base = (workerUrl || '').trim().replace(/\/+$/, '');
@@ -161,6 +166,13 @@ const tzOffset = (tz, dateStr) => {
     return v === 'GMT' ? '+00:00' : v.replace('GMT', '');
   } catch { return '+01:00'; }
 };
+
+/** Data e ora locali complete "YYYY-MM-DDTHH:MM" → oggetto tempo. */
+function localToTime(v, tz) {
+  if (!v || !/^\d{4}-\d\d-\d\dT\d\d:\d\d/.test(v)) return null;
+  const d = v.slice(0, 10), hm = v.slice(11, 16), o = tzOffset(tz, d);
+  return { local: `${d} ${hm}${o}`, utc: new Date(`${d}T${hm}:00${o}`).toISOString() };
+}
 
 /** Orario ufficiale "HH:MM" → oggetto tempo, nello stesso giorno dell'orario programmato (o il giorno dopo). */
 function clockToTime(hhmm, ref, tz) {
@@ -203,9 +215,10 @@ function mergeOfficial(flights, official, sideKey, iata) {
     if (o.gate) side.gate = o.gate;
     if (o.checkin) side.checkIn = o.checkin;
     if (o.belt) side.belt = o.belt;
-    const est = clockToTime(o.est, side.sched, tz);
+    if (o.terminal && !side.terminal) side.terminal = o.terminal;
+    const est = localToTime(o.estAt, tz) || clockToTime(o.est, side.sched, tz);
     if (est) side.revised = est;
-    const act = clockToTime(o.actual, side.sched, tz);
+    const act = localToTime(o.actualAt, tz) || clockToTime(o.actual, side.sched, tz);
     if (act) side.actual = act;
     const st = mapStatus(o.status);
     if (st && !(st === 'Delayed' && ['Departed', 'EnRoute', 'Approaching', 'Arrived'].includes(f.status))) f.status = st;

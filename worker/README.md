@@ -3,11 +3,20 @@
 L'app gira nel browser, che non può leggere direttamente i tabelloni dei siti degli aeroporti.
 Questo piccolo Worker (gratuito) li legge al posto suo e li restituisce all'app.
 
-Aeroporti supportati: **Pisa (PSA)**, **Firenze (FLR)**, **Ginevra (GVA)**, **Fiumicino (FCO)**, **Ciampino (CIA)**.
-Fonti: l'API pubblica dei siti di Toscana Aeroporti (Pisa, Firenze), il feed dell'app dell'aeroporto di Ginevra
-e la pagina "Voli in tempo reale" di adr.it per Fiumicino e Ciampino (HTML, una richiesta fino a 200 voli;
-l'aeroporto non pubblica l'orario effettivo delle partenze, solo degli arrivi).
-Dati: gate, check-in, nastro, orario stimato e stato; per Ginevra anche le marche dell'aereo.
+Aeroporti supportati: **Pisa (PSA)**, **Firenze (FLR)**, **Fiumicino (FCO)**, **Ciampino (CIA)**, **Bari, Brindisi, Foggia, Taranto**,
+**Milano Malpensa (MXP)** e **Linate (LIN)**, **Bologna (BLQ)**, **Catania (CTA)**, **Palermo (PMO)**,
+**Ginevra (GVA)**, **Zurigo (ZRH)**, **Francoforte (FRA)**, **Monaco (MUC)**.
+
+Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
+- Pisa, Firenze: API dei siti di Toscana Aeroporti. Puglia: backend dell'app ufficiale. Ginevra: feed dell'app.
+- Fiumicino, Ciampino: pagina "Voli in tempo reale" di adr.it (HTML).
+- Milano: API SEA dei siti milanomalpensa-airport.com / milanolinate-airport.com (header `keyId`, la chiave pubblica del sito;
+  se SEA la cambia, impostala nella variabile `SEA_KEY_ID` del Worker).
+- Zurigo: `flightdata.flughafen-zuerich.ch/flights` (JSON). Francoforte: JSON del sito frankfurt-airport.com.
+- Catania: API GraphQL del sito aeroporto.catania.it. Monaco, Palermo, Bologna: tabelloni HTML dei siti.
+
+Dati: gate, check-in, nastro, orario stimato e stato (dove l'aeroporto li pubblica); marche dell'aereo per Milano,
+Ginevra, Zurigo e Francoforte. Monaco non pubblica il gate nell'elenco; Palermo e Bologna solo i voli di oggi.
 
 ## Pubblicarlo (una volta sola, ~5 minuti)
 

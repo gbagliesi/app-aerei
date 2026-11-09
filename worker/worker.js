@@ -1,5 +1,6 @@
 // Cloudflare Worker per "Tabellone Voli": legge i tabelloni ufficiali di Pisa, Firenze, Ginevra, Fiumicino,
-// Ciampino e degli aeroporti pugliesi (che il browser non può leggere direttamente) e li restituisce in un formato unico.
+// Ciampino, degli aeroporti pugliesi, di Milano (MXP, LIN), Bologna, Catania, Palermo, Zurigo, Francoforte e Monaco
+// (che il browser non può leggere direttamente) e li restituisce in un formato unico.
 //
 //   GET /board?airport=PSA&nature=D   (D = partenze, A = arrivi)  →  { flights: [...] }
 //   GET /debug?airport=PSA&nature=D                                 →  diagnostica (URL provati, inizio risposta)
@@ -18,6 +19,11 @@ const ADR = {
   FCO: 'https://www.adr.it/web/aeroporti-di-roma-en/pax-fco-realtime-flight',
   CIA: 'https://www.adr.it/pax-cia-voli-in-tempo-reale',
 };
+// Altri aeroporti: funzione che legge il tabellone (definite più sotto)
+const OTHER = {
+  MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
+  ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
+};
 
 export default {
   async fetch(request, env, ctx) {
@@ -35,9 +41,9 @@ export default {
     const nature = url.searchParams.get('nature') === 'A' ? 'A' : 'D';
     const json = (obj, status = 200, extra = {}) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
 
-    if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA'] });
+    if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA', ...Object.keys(OTHER)] });
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);
-    if (!TOSCANA[airport] && !PUGLIA.includes(airport) && !ADR[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
+    if (!TOSCANA[airport] && !PUGLIA.includes(airport) && !ADR[airport] && !OTHER[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
 
     const debug = url.pathname === '/debug';
     const cacheKey = new Request(`https://cache.local/board/${airport}/${nature}`);
@@ -48,7 +54,7 @@ export default {
 
     const log = [];
     try {
-      const flights = airport === 'GVA' ? await geneva(nature, log) : ADR[airport] ? await adr(airport, nature, log) : PUGLIA.includes(airport) ? await puglia(airport, nature, log) : await toscana(airport, nature, log);
+      const flights = OTHER[airport] ? await OTHER[airport](nature, log, env) : airport === 'GVA' ? await geneva(nature, log) : ADR[airport] ? await adr(airport, nature, log) : PUGLIA.includes(airport) ? await puglia(airport, nature, log) : await toscana(airport, nature, log);
       const body = { airport, nature, fetchedAt: new Date().toISOString(), count: flights.length, flights };
       if (debug) return json({ ...body, flights: flights.slice(0, 5), log });
       if (flights.length) ctx.waitUntil(caches.default.put(cacheKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${CACHE_SECONDS}` } })));
@@ -222,7 +228,7 @@ async function adr(airport, nature, log) {
 }
 
 // Marche nel formato con trattino (EI-DWS, F-HPNB, HB-JQW, N123AB)
-const PREFIX2 = ['EI', 'EC', 'HB', 'OE', 'PH', 'OO', 'SE', 'LN', 'OY', 'OH', 'SX', 'YR', 'TC', 'HA', 'SP', 'OK', 'OM', 'CS', 'TF', 'ES', 'YL', 'LY', 'UR', 'LZ', 'ER', 'S5', '9A', '9H', '4X', 'A6', 'A7', 'A9', 'VP', 'VQ', 'JA', 'HL', 'VH', 'ZS', 'SU', 'CN', 'TS', '5B', 'Z3', 'E7', '4O', 'T7', 'LX', 'EW', 'RA', 'VT', 'B'];
+const PREFIX2 = ['VN', 'UK', 'EI', 'EC', 'HB', 'OE', 'PH', 'OO', 'SE', 'LN', 'OY', 'OH', 'SX', 'YR', 'TC', 'HA', 'SP', 'OK', 'OM', 'CS', 'TF', 'ES', 'YL', 'LY', 'UR', 'LZ', 'ER', 'S5', '9A', '9H', '4X', 'A6', 'A7', 'A9', 'VP', 'VQ', 'JA', 'HL', 'VH', 'ZS', 'SU', 'CN', 'TS', '5B', 'Z3', 'E7', '4O', 'T7', 'LX', 'EW', 'RA', 'VT', 'B'];
 function fmtReg(r) {
   r = (r || '').trim().toUpperCase();
   if (!r) return null;
@@ -231,4 +237,331 @@ function fmtReg(r) {
   if (p2) return `${p2}-${r.slice(2)}`;
   if (/^[DFGIMC]/.test(r) && r.length === 5) return `${r[0]}-${r.slice(1)}`;
   return r;
+}
+
+// ---------- utilità comuni per i nuovi aeroporti ----------
+// Data e ora locali di un fuso: { date: 'YYYY-MM-DD', hm: 'HH:MM', min }
+function localNow(tz, offMin = 0) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date(Date.now() + offMin * 60e3)).map(x => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, hm: `${p.hour}:${p.minute}`, min: +p.hour * 60 + +p.minute };
+}
+const addDays = (date, n) => new Date(Date.parse(`${date}T12:00:00Z`) + n * 86400e3).toISOString().slice(0, 10);
+const hmMin = s => { const m = /(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; };
+// ISO UTC ("...Z") → ora locale "YYYY-MM-DDTHH:MM"
+const utcToLocal = (iso, tz) => {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (isNaN(t)) return null;
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t)).map(x => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+};
+const trimOrNull = v => { const t = (v == null ? '' : String(v)).trim(); return t && t !== '--' ? t : null; };
+const strip = html => (html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
+// Tabelloni in HTML con solo l'orario: assegna la data seguendo l'ordine (quando l'orario torna indietro di
+// oltre 6 ore è il giorno dopo); il tratto con più voli è la data di riferimento `base` (oggi), salvo `fixedStart`.
+function assignDates(rows, base, fixedStart = false) {
+  let day = 0, prev = null;
+  const days = rows.map(r => { const m = hmMin(r.sched); if (prev != null && m != null && m < prev - 360) day++; if (m != null) prev = m; return day; });
+  let ref = 0;
+  if (!fixedStart) {
+    const count = {};
+    days.forEach(d => (count[d] = (count[d] || 0) + 1));
+    ref = +Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || 0;
+  }
+  rows.forEach((r, i) => { r.schedDate = r.sched ? `${addDays(base, days[i] - ref)}T${r.sched}` : null; });
+  return rows;
+}
+// Stati in tedesco/inglese → italiano (come gli altri tabelloni)
+function statusIt(t, nature) {
+  const s = (t || '').trim();
+  const l = s.toLowerCase();
+  if (!l || l === 'geplant' || l === 'scheduled' || l === 'planned') return null;
+  const m = /^(?:gate info|next info|nächste info|gate info um|next info at)\D*(\d{1,2}:\d{2})/i.exec(s);
+  if (m) return /gate/i.test(s) ? `Gate alle ${m[1]}` : `Info alle ${m[1]}`;
+  const map = [
+    [/annul|cancel/, 'Cancellato'], [/umgeleitet|divert/, 'Dirottato'],
+    [/gelandet|landed|auf position|gepäck|baggage|arrived/, 'Atterrato'],
+    [/anflug|approach/, 'In arrivo'],
+    [/gestartet|departed|airborne|en route|unterwegs/, nature === 'A' ? 'In volo' : 'Decollato'],
+    [/rolling|rollt/, 'In rullaggio'],
+    [/letzter aufruf|last call|final call/, 'Ultima chiamata'],
+    [/boarding|einsteigen/, 'Imbarco'],
+    [/gate geschlossen|closed|geschlossen/, 'Gate chiuso'],
+    [/gate offen|gate open/, 'Gate aperto'],
+    [/zum gate|go to gate/, 'Al gate'],
+    [/verspät|delay/, 'Ritardato'],
+    [/check-?in/, 'Check-in'],
+  ];
+  for (const [re, it] of map) if (re.test(l)) return it;
+  return s;
+}
+const isDone = st => /^(Atterrato|Decollato)$/.test(st || '');
+
+// ---------- Milano Malpensa e Linate (SEA) ----------
+// API usata dai siti milanomalpensa-airport.com e milanolinate-airport.com: risponde solo con l'header keyId,
+// la chiave pubblica che il sito stesso manda (se SEA la cambia, si aggiorna la variabile SEA_KEY_ID del Worker).
+// Orari in ora locale "YYYY-MM-DD HH:MM"; una chiamata per giornata.
+const SEA_KEY_DEFAULT = '6bc034ea-ae66-40ce-891e-3dccf63cb2eb';
+async function sea(code, nature, log, env) {
+  const key = (env && env.SEA_KEY_ID) || SEA_KEY_DEFAULT;
+  const dates = [...new Set([localNow('Europe/Rome', -150).date, localNow('Europe/Rome', 630).date])];
+  const all = [];
+  for (const d of dates) {
+    const u = `https://apiextra.seamilano.eu/ols-flights/v1/it/operative/flights/lists?movementType=${nature === 'A' ? 'A' : 'D'}&dateFrom=${d}+00:00&dateTo=${d}+23:59&loadingType=P&airportReferenceIata=${code}&mfFlightType=P`;
+    const t0 = Date.now();
+    const r = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { 'keyId': key, 'Accept': 'application/json', 'User-Agent': UA } });
+    const t = await r.text();
+    log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0, start: t.slice(0, 200) });
+    if (!r.ok) { if (all.length) continue; throw new Error(`SEA: errore ${r.status}${r.status === 401 ? ' (chiave keyId non valida)' : ''}`); }
+    all.push(...(JSON.parse(t).data || []));
+  }
+  const A = nature === 'A';
+  return all.map(f => {
+    const sched = A ? f.scheduledArrivalTime : f.scheduledTime;
+    const est = A ? f.estimatedArrivalTime : f.estimatedTime;
+    const act = A ? f.actualArrivalTime : f.actualTime;
+    const other = (f.routing || []).find(x => x.airportRoutingType === (A ? 'origin' : 'destination')) || {};
+    const mine = (f.routing || []).find(x => x.airportIata === code.toUpperCase()) || {};
+    const desc = trimOrNull(f.statusPubblicDescription);
+    let status = desc ? desc.charAt(0) + desc.slice(1).toLowerCase() : null;
+    if (act) status = A ? 'Atterrato' : 'Decollato';
+    else if (f.statusPubblic === 'FCL') status = 'Gate chiuso';
+    else if (!status && est && sched && hmMin(est.slice(11)) != null && Date.parse(est.replace(' ', 'T') + ':00Z') - Date.parse(sched.replace(' ', 'T') + ':00Z') >= 15 * 60e3) status = 'Ritardato';
+    return {
+      number: normNum(f.flightNumber), sched: clock(sched?.slice(11)), schedDate: sched ? sched.replace(' ', 'T').slice(0, 16) : null,
+      est: clock((act || est || '').slice(11)), actual: act ? clock(act.slice(11)) : null,
+      estAt: (act || est || '').replace(' ', 'T').slice(0, 16) || null, actualAt: act ? act.replace(' ', 'T').slice(0, 16) : null,
+      status, statusCode: f.statusPubblic || null, gate: trimOrNull(f.gate), checkin: trimOrNull(f.checkIn), stand: trimOrNull(f.stand),
+      belt: trimOrNull(f.baggageClaim), reg: fmtReg(f.aircraftRegistration), type: trimOrNull(f.aircraftType),
+      terminal: trimOrNull(mine.terminal)?.replace(/^T/i, '') || null, city: other.airportLabel || other.airportDescription || null, cityCode: other.airportIata || null,
+      airline: f.airlineDescription || null,
+      codeshare: (f.codeShare || []).map(c => normNum(c.codeShareFlightNumber)).filter(Boolean),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Zurigo ----------
+// JSON pubblico del sito (5 giorni, ~2,7 MB): orari in UTC ("...Z"). Per non sprecare CPU del Worker
+// si analizzano solo i voli del giorno giusto (oggetti piatti, senza annidamenti).
+async function zurich(nature, log) {
+  const u = 'https://flightdata.flughafen-zuerich.ch/flights';
+  const t0 = Date.now();
+  const r = await fetch(u, { signal: AbortSignal.timeout(20000), cf: { cacheTtl: 60, cacheEverything: true }, headers: { 'User-Agent': UA, 'Accept': 'application/json' } });
+  const t = await r.text();
+  log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0 });
+  if (!r.ok) throw new Error(`Zurigo: errore ${r.status}`);
+  const tz = 'Europe/Zurich';
+  const days = [...new Set([localNow(tz, -150).date, localNow(tz, 630).date])].map(d => `"SDT":"${d}"`);
+  const type = `"flightType":"${nature === 'A' ? 'A' : 'D'}"`;
+  const body = t.trim().replace(/^\[\{?|\}?\]$/g, '');
+  const list = body.split(/\},\s*\{/).filter(x => x.includes(type) && days.some(d => x.includes(d))).map(x => { try { return JSON.parse(`{${x}}`); } catch { return null; } }).filter(Boolean);
+  const A = nature === 'A';
+  return list.filter(f => f.isCommercial !== false).map(f => {
+    const sched = utcToLocal(A ? f.STA : f.STD, tz), est = utcToLocal(A ? f.ETA : f.ETD, tz), act = utcToLocal(A ? f.ATA : f.ATD, tz);
+    let status = statusIt(f.statusTextEn, nature);
+    if (act && !/Cancellato|Dirottato/.test(status || '')) status = A ? 'Atterrato' : 'Decollato';
+    return {
+      number: normNum(`${f.FLC || ''}${f.FLN || ''}`), sched: clock(sched?.slice(11)), schedDate: sched,
+      est: clock((act || est || '').slice(11)), actual: act ? clock(act.slice(11)) : null,
+      estAt: act || est || null, actualAt: act || null,
+      status, statusCode: f.statusCode != null ? String(f.statusCode) : null, gate: trimOrNull(f.GAT), checkin: trimOrNull(f.CIR),
+      stand: null, belt: trimOrNull(f.BDC), reg: fmtReg(f.REG), type: f.model || trimOrNull(f.TYP), terminal: trimOrNull(f.TER),
+      city: f.cityEn || f.airportName || null, cityCode: (A ? f.POR : f.PDS) || null, airline: f.airline || null,
+      codeshare: (f.codeShare || '').split(',').map(c => normNum(c)).filter(Boolean),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Francoforte ----------
+// JSON pubblico del sito, a pagine: senza il parametro time la pagina 1 parte da "adesso", le pagine 0, -1… vanno indietro.
+// Orari con fuso esplicito (+0100). Le righe "TRS" sono treni (Lufthansa Express Rail): escluse.
+async function frankfurt(nature, log) {
+  const kind = nature === 'A' ? 'arrivals' : 'departures';
+  const pages = [-1, 0, 1, 2, 3, 4, 5, 6];
+  const res = await Promise.all(pages.map(async p => {
+    const u = `https://www.frankfurt-airport.com/de/_jcr_content.flights.json/filter?perpage=100&lang=de-DE&page=${p}&flighttype=${kind}`;
+    try {
+      const t0 = Date.now();
+      const r = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'application/json, text/plain, */*' } });
+      const t = await r.text();
+      log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0 });
+      return r.ok && t ? JSON.parse(t).data || [] : [];
+    } catch (e) { log.push({ url: u, error: String(e.message || e) }); return []; }
+  }));
+  const seen = new Set(), A = nature === 'A';
+  const loc = s => (s ? s.slice(0, 16) : null);
+  const out = [];
+  for (const f of res.flat()) {
+    if (!f || f.ac === 'TRS' || seen.has(f.id)) continue;
+    seen.add(f.id);
+    let status = statusIt(f.status, nature);
+    const est = f.esti || null;
+    const done = isDone(status);
+    out.push({
+      number: normNum(f.fnr), sched: clock(f.sched?.slice(11)), schedDate: loc(f.sched),
+      est: clock(est?.slice(11)), actual: done ? clock((est || f.sched)?.slice(11)) : null,
+      estAt: loc(est), actualAt: done ? loc(est || f.sched) : null,
+      status, statusCode: f.flstatus != null ? String(f.flstatus) : null, gate: trimOrNull(f.gate),
+      checkin: trimOrNull(f.schalter), stand: trimOrNull(f.pos), belt: (f.bag || []).join(', ') || null,
+      reg: fmtReg(f.reg), type: trimOrNull(f.ac), terminal: trimOrNull(f.terminal),
+      city: f.apname || null, cityCode: f.iata || null, airline: f.alname || null,
+      codeshare: (f.cs || []).map(normNum).filter(Boolean),
+    });
+  }
+  if (!out.length) throw new Error('Francoforte: nessun volo (pagine vuote)');
+  return out.sort((a, b) => (a.schedDate < b.schedDate ? -1 : 1));
+}
+
+// ---------- Catania ----------
+// API GraphQL del sito aeroporto.catania.it (nessuna chiave): una chiamata per giornata, fino a 200 voli.
+// Orari "DD/MM/YYYY, HH:MM" in ora locale.
+const CTA_QUERY = 'query flights($offset:Int=0,$size:Int=10,$airport:Airport!,$date:FlightDay!,$keyword:String,$locale:Locale!,$timeRange:String,$type:FlightType!){flights(offsetPagination:{offset:$offset,size:$size},filters:{airport:$airport,date:$date,locale:$locale,type:$type,timeRange:$timeRange,keyword:$keyword}){edges{node{airline terminal scheduledTime rescheduledTime origin flightStatus gate flightNumber estimatedTime destination codesharing{flightNumber airline} checkIn baggageClaim destinationCity originCity divertedTo}} pageInfo{offsetPagination{total hasMore}}}}';
+async function catania(nature, log) {
+  const A = nature === 'A';
+  // TOMORROW è un tentativo (verificato solo TODAY): se l'API non lo accetta resta solo oggi
+  const days = localNow('Europe/Rome').min >= 13 * 60 ? ['TODAY', 'TOMORROW'] : ['TODAY'];
+  const all = [];
+  for (const day of days) {
+    const u = 'https://www.aeroporto.catania.it/api/middleware/flights';
+    try {
+      const t0 = Date.now();
+      const r = await fetch(u, {
+        method: 'POST', signal: AbortSignal.timeout(15000),
+        headers: { 'User-Agent': UA, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ query: CTA_QUERY, variables: { offset: 0, size: 200, airport: 'CTA', date: day, locale: 'IT', type: A ? 'ARRIVALS' : 'DEPARTURES', timeRange: '00:00 - 23:59', keyword: '' } }),
+      });
+      const t = await r.text();
+      log.push({ url: u, day, status: r.status, length: t.length, ms: Date.now() - t0, start: t.slice(0, 200) });
+      if (!r.ok) { if (day === 'TODAY') throw new Error(`Catania: errore ${r.status}`); continue; }
+      all.push(...(JSON.parse(t)?.data?.flights?.edges || []).map(e => e.node));
+    } catch (e) { if (day === 'TODAY') throw e; }
+  }
+  const iso = s => { const m = /(\d\d)\/(\d\d)\/(\d{4}),?\s*(\d\d):(\d\d)/.exec(s || ''); return m ? `${m[3]}-${m[2]}-${m[1]}T${m[4]}:${m[5]}` : null; };
+  const CODES = { LAN: 'Atterrato', DEC: 'Decollato', CNL: 'Cancellato', CAN: 'Cancellato', CANC: 'Cancellato', DIV: 'Dirottato', DIR: 'Dirottato', IMB: 'Imbarco', BOR: 'Imbarco', BRD: 'Imbarco', RIT: 'Ritardato', DEL: 'Ritardato' };
+  return all.map(f => {
+    const sched = iso(f.scheduledTime), est = iso(f.rescheduledTime) || iso(f.estimatedTime);
+    const code = (f.flightStatus || '').trim().toUpperCase();
+    let status = CODES[code] || (code && code !== 'TBD' ? code : null);
+    if (f.divertedTo) status = 'Dirottato';
+    const place = A ? f.origin : f.destination;
+    const pm = /^(.*?)\s*\(([A-Z]{3})\)/.exec(place || '');
+    return {
+      number: normNum(f.flightNumber), sched: clock(sched?.slice(11)), schedDate: sched,
+      est: clock(est?.slice(11)), actual: isDone(status) ? clock((est || sched)?.slice(11)) : null,
+      estAt: est, actualAt: isDone(status) ? est || sched : null,
+      status, statusCode: code || null, gate: trimOrNull(f.gate), checkin: trimOrNull(f.checkIn)?.replace(/\s*>\s*/, '–') || null,
+      stand: null, belt: trimOrNull(f.baggageClaim), reg: null, type: null, terminal: trimOrNull(f.terminal),
+      city: pm ? pm[1] : place || null, cityCode: pm ? pm[2] : null, airline: f.airline || null,
+      codeshare: (f.codesharing || []).map(c => normNum(c.flightNumber)).filter(Boolean),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Monaco di Baviera ----------
+// Frammenti HTML del tabellone di munich-airport.de (/flightsearch, 50 voli per pagina, nessun token).
+// Le righe hanno solo l'orario: la data si ricava dall'ora di partenza della ricerca. Il gate non è nell'elenco.
+async function munich(nature, log) {
+  const tz = 'Europe/Berlin', start = localNow(tz, -130);
+  const kind = nature === 'A' ? 'arrivals' : 'departures';
+  const q = `from=${start.date}T${start.hm}%3A00&allow_scroll_back=1&per_page=50&allow_pagination=1&min_date=${addDays(start.date, -1)}T00%3A00%3A00&max_date=${addDays(start.date, 2)}T00%3A00%3A00`;
+  const pages = await Promise.all([0, 1, 2, 3, 4, 5, 6, 7].map(async p => {
+    const u = `https://www.munich-airport.de/flightsearch/${kind}?${q}&page=${p}`;
+    try {
+      const t0 = Date.now();
+      const r = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'text/html' } });
+      const t = await r.text();
+      log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0 });
+      if (!r.ok) return [];
+      let big = t.slice(Math.max(0, t.indexOf('fp-flights-table-large')));
+      big = big.slice(0, big.indexOf('</table>'));
+      return [...big.matchAll(/<tr data-flight-id="([^"]*)" class="fp-flight-item">([\s\S]*?)<\/tr>/g)].map(m => [m[1], m[2]]);
+    } catch (e) { log.push({ url: u, error: String(e.message || e) }); return []; }
+  }));
+  const seen = new Set(), rows = [];
+  for (const [id, html] of pages.flat()) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const cell = c => strip(new RegExp(`<td class="fp-flight-${c}"[^>]*>([\\s\\S]*?)</td>`).exec(html)?.[1]);
+    const num = /^(.*?)\s*\(([^)]+)\)\s*$/.exec(cell('number'));
+    const [sched, exp] = cell('time-muc').split('|').map(s => trimOrNull(s));
+    const place = /^(.*?)\s*\(([A-Z]{3})\)/.exec(cell('airport'));
+    const status = statusIt(cell('status'), nature);
+    rows.push({
+      number: normNum(num ? num[1] : cell('number')), sched: clock(sched), est: clock(exp), actual: isDone(status) ? clock(exp || sched) : null,
+      status, statusCode: cell('status') || null, gate: null, checkin: null, stand: null, belt: null, reg: null,
+      type: num ? num[2] : null, terminal: trimOrNull(cell('area'))?.replace(/^T/i, '') || null, city: place ? place[1] : cell('airport') || null, cityCode: place ? place[2] : null,
+      airline: /aria-label="([^"]*)"/.exec(html)?.[1] || null,
+    });
+  }
+  return assignDates(rows, start.date, true).filter(f => f.number && f.sched);
+}
+
+// ---------- Palermo ----------
+// Pagina "Voli" di aeroportodipalermo.it: due tabelle HTML (partenze, arrivi) con i voli di oggi.
+async function palermo(nature, log) {
+  const u = 'https://www.aeroportodipalermo.it/voli/';
+  const t0 = Date.now();
+  const r = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'text/html', 'Accept-Language': 'it-IT,it;q=0.9' } });
+  const t = await r.text();
+  log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0 });
+  if (!r.ok) throw new Error(`Palermo: errore ${r.status}`);
+  const A = nature === 'A';
+  let seg = t.slice(Math.max(0, t.indexOf(A ? 'id="nav-arrivi"' : 'id="partenze"')));
+  seg = seg.slice(0, seg.indexOf('</table>'));
+  const rows = [...seg.matchAll(/<tr class="text-uppercase justify-content-center[^"]*">([\s\S]*?)<\/tr>/g)].map(m => m[1]);
+  const today = localNow('Europe/Rome').date;
+  return rows.map(html => {
+    const tds = [...html.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(m => m[1]);
+    const c = tds.map(strip);
+    const volo = tds[2] || '';
+    const number = strip(/<a[^>]*>([\s\S]*?)<\/a>/.exec(volo)?.[1] || c[2]);
+    const shared = [...(/list-shared[^>]*>([\s\S]*?)<\/ul>/.exec(volo)?.[1] || '').matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].map(m => normNum(strip(m[1]))).filter(Boolean);
+    const st = trimOrNull(A ? c[6] : c[7]);
+    const status = st ? st.charAt(0) + st.slice(1).toLowerCase() : null;
+    const sched = clock(c[4]), est = clock(c[5]);
+    return {
+      number: normNum(number), sched, schedDate: sched ? `${today}T${sched}` : null, est, actual: isDone(status) ? est || sched : null,
+      status, statusCode: st, gate: A ? null : trimOrNull((c[6] || '').replace(/^gate\s*/i, '')), checkin: null, stand: null, belt: null,
+      reg: null, type: null, city: c[3] || null, cityCode: null, airline: c[1] || null, codeshare: shared.filter(n => n !== normNum(number)),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Bologna ----------
+// Pagina "Voli in tempo reale" di bologna-airport.it (ASP.NET, schede HTML con i voli di oggi).
+async function bologna(nature, log) {
+  const u = 'https://www.bologna-airport.it/voli/vola-da-bologna/voli-in-tempo-reale/?idC=62178';
+  const t0 = Date.now();
+  const r = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'text/html', 'Accept-Language': 'it,en;q=0.8' } });
+  const t = await r.text();
+  log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0 });
+  if (!r.ok) throw new Error(`Bologna: errore ${r.status}`);
+  const A = nature === 'A';
+  const iD = t.indexOf('id="section-departures"', t.indexOf('<section')), iA = t.indexOf('id="section-arrivals"', iD);
+  const seg = A ? t.slice(iA) : t.slice(iD, iA > 0 ? iA : undefined);
+  const cards = [...seg.matchAll(/<div class="c-flight-info-card__inner">([\s\S]*?)<div class="c-flight-info-card__footer">/g)].map(m => m[1]);
+  const rows = cards.map(html => {
+    const sched = clock(/class="schedule__time"[^>]*>\s*([\d:]+)/.exec(html)?.[1]);
+    const late = clock(/<span class="c-rounded-label[^"]*"[^>]*>\s*([\d:]+)/.exec(html)?.[1]);
+    const body = /c-flight-info-card__body">\s*<p>([\s\S]*?)<\/p>/.exec(html)?.[1] || '';
+    const parts = strip(body).split('|').map(s => s.trim()).filter(Boolean);
+    const nums = parts.slice(1).map(normNum).filter(Boolean);
+    const stHtml = /<div class="flight-status">([\s\S]*?)<\/div>\s*<\/div>/.exec(html)?.[1] || '';
+    const first = /<div><p>([^<]*)<strong>([^<]*)<\/strong>/.exec(stHtml) || /<div><p>([^<]*)<\/p>/.exec(stHtml);
+    const label = (first?.[1] || '').trim(), value = (first?.[2] || '').trim();
+    let status = null, checkin = null, actual = null;
+    if (/^check-in/i.test(label)) checkin = trimOrNull(value);
+    else if (label) status = label;
+    if (/decollato|atterrato/i.test(label)) actual = clock(value);
+    const gate = trimOrNull(/Gate\s*<strong>([^<]*)<\/strong>/.exec(stHtml)?.[1]);
+    const city = strip(/<div class="place">([\s\S]*?)<\/div>/.exec(html)?.[1]);
+    const cm = /^(.*?)\s+([A-Z]{3})$/.exec(city);
+    return {
+      number: nums[0] || null, sched, est: actual || late, actual, status, statusCode: label || null, gate, checkin,
+      stand: null, belt: null, reg: null, type: null, city: cm ? cm[1] : city || null, cityCode: cm ? cm[2] : null,
+      airline: parts[0] || null, codeshare: nums.slice(1),
+    };
+  });
+  return assignDates(rows, localNow('Europe/Rome').date).filter(f => f.number && f.sched);
 }
