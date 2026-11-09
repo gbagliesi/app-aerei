@@ -1,0 +1,22 @@
+# Pubblica il Worker Cloudflare (tabelloni-voli). Si avvia solo a mano (Actions → Deploy Worker → Run workflow),
+# mai da un push. Servono i segreti del repo CLOUDFLARE_API_TOKEN e CLOUDFLARE_ACCOUNT_ID.
+name: Deploy Worker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy worker/worker.js --name tabelloni-voli --compatibility-date 2024-09-23 --keep-vars
+      - name: Verifica
+        run: |
+          for a in MXP AMS ZRH; do
+            curl -s -o /dev/null -w "$a %{http_code}\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=$a&nature=D"
+          done
