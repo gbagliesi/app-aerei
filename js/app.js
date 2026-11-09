@@ -23,7 +23,7 @@ function sourcesNote(iata, dir, list, degraded) {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '3.2 · nuovi tabelloni ufficiali: Madrid, Barcellona, Lisbona, Torino, Cagliari, Londra, Lione, Beauvais';
+const APP_VERSION = '3.3 · Amsterdam Schiphol dall’API ufficiale';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];

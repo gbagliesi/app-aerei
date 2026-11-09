@@ -7,7 +7,7 @@ Aeroporti supportati: **Pisa (PSA)**, **Firenze (FLR)**, **Fiumicino (FCO)**, **
 **Milano Malpensa (MXP)** e **Linate (LIN)**, **Bologna (BLQ)**, **Catania (CTA)**, **Palermo (PMO)**,
 **Torino (TRN)**, **Cagliari (CAG)**, **Ginevra (GVA)**, **Zurigo (ZRH)**, **Francoforte (FRA)**, **Monaco (MUC)**,
 **Madrid (MAD)**, **Barcellona (BCN)**, **Lisbona (LIS)**, **Londra Gatwick (LGW)**, **Stansted (STN)**, **Luton (LTN)**, **City (LCY)**,
-**Lione (LYS)**, **Parigi Beauvais (BVA)**.
+**Lione (LYS)**, **Parigi Beauvais (BVA)**, **Amsterdam (AMS)**.
 
 Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
 - Pisa, Firenze: API dei siti di Toscana Aeroporti. Puglia: backend dell'app ufficiale. Ginevra: feed dell'app.
@@ -19,8 +19,10 @@ Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
 - Madrid, Barcellona: tabellone di aena.es. Lisbona: proxy voli di aeroportolisboa.pt. Cagliari: JSON di sogaer.it.
   Torino, Luton, Beauvais: tabelloni HTML dei siti. Gatwick: FetchFlights del sito. Stansted: API GraphQL del sito.
   London City: API voli del sito. Lione: `/api/flights/list` di lyonaeroports.com.
+- Amsterdam: Public Flight API ufficiale di Schiphol (developer.schiphol.nl). Servono le credenziali gratuite, salvate
+  come segreti del Worker `SCHIPHOL_APP_ID` e `SCHIPHOL_APP_KEY` (Settings → Variables and Secrets, tipo Secret).
 - Non disponibili (protezioni anti-bot o chiave/registrazione): Napoli, Venezia, Genova, Orio al Serio, Olbia, Alghero,
-  Heathrow, Amsterdam, Parigi CDG/Orly.
+  Heathrow, Parigi CDG/Orly.
 
 Dati: gate, check-in, nastro, orario stimato e stato (dove l'aeroporto li pubblica); marche dell'aereo per Milano,
 Ginevra, Zurigo e Francoforte. Monaco non pubblica il gate nell'elenco; Palermo e Bologna solo i voli di oggi.
