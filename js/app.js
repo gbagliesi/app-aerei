@@ -20,10 +20,27 @@ function sourcesNote(iata, dir, list, degraded) {
   if (adb) parts.push(`${adb} solo da AeroDataBox`);
   return `<p class="hint sources official">Fonti: tabellone ufficiale dell’aeroporto (${esc(site)}), che ha la priorità, e AeroDataBox. ${parts.length ? `Voli: ${parts.join('; ')}.` : ''}</p>`;
 }
+// Aeroporti senza tabellone ufficiale leggibile dal Worker (siti protetti): link alla pagina ufficiale
+const SITE_BOARDS = {
+  NAP: { dep: 'https://www.aeroportodinapoli.it/partenze', arr: 'https://www.aeroportodinapoli.it/arrivi', name: 'aeroportodinapoli.it' },
+  VCE: { dep: 'https://www.veniceairport.it/', name: 'veniceairport.it' },
+  GOA: { dep: 'https://www.airport.genova.it/', name: 'airport.genova.it' },
+  BGY: { dep: 'https://www.milanbergamoairport.it/it/voli-tempo-reale/', name: 'milanbergamoairport.it' },
+  OLB: { dep: 'https://www.geasar.it/voli/i-voli-di-oggi/?type=departures', arr: 'https://www.geasar.it/voli/i-voli-di-oggi/?type=arrivals', name: 'geasar.it' },
+  AHO: { dep: 'https://www.aeroportodialghero.it/voli/i-voli-di-oggi/?type=departures', arr: 'https://www.aeroportodialghero.it/voli/i-voli-di-oggi/?type=arrivals', name: 'aeroportodialghero.it' },
+  LHR: { dep: 'https://www.heathrow.com/departures', arr: 'https://www.heathrow.com/arrivals', name: 'heathrow.com' },
+  CDG: { dep: 'https://www.parisaeroport.fr/', name: 'parisaeroport.fr' },
+  ORY: { dep: 'https://www.parisaeroport.fr/', name: 'parisaeroport.fr' },
+};
+const siteLink = (iata, dir) => {
+  const b = SITE_BOARDS[iata];
+  if (!b) return '';
+  return `<p class="links"><a href="${esc((dir === 'arr' && b.arr) || b.dep)}" target="_blank" rel="noopener">↗ Tabellone sul sito ufficiale (${esc(b.name)})</a></p>`;
+};
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '3.3 · Amsterdam Schiphol dall’API ufficiale';
+const APP_VERSION = '3.4 · link ai tabelloni ufficiali per gli aeroporti con sito protetto';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -175,6 +192,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
         <a href="#/airport/${iata}/arr" class="${dir === 'arr' ? 'active' : ''}">🛬 Arrivi</a>
         <input id="filter" type="search" placeholder="Filtra: città, volo, compagnia" value="${esc(filter)}">
       </div>`}
+      ${siteLink(iata, isRoute ? 'dep' : dir)}
       ${data ? sourcesNote(iata, isRoute ? 'dep' : dir, list, data.degraded) : ''}
       <div id="board">${data ? boardTable(filtered, isRoute ? 'dep' : dir, filter) : '<div class="loading">Caricamento tabellone…</div>'}</div>
       <p class="updated" id="updated"></p>`;

@@ -20,6 +20,7 @@ const ADR = {
   CIA: 'https://www.adr.it/pax-cia-voli-in-tempo-reale',
 };
 // Altri aeroporti: funzione che legge il tabellone (definite più sotto)
+const PROBE_HOSTS = ['veniceairport.it', 'aeroportodigenova.it', 'airport.genova.it', 'geasar.it', 'aeroportodialghero.it', 'milanbergamoairport.it', 'orioaeroporto.it', 'aeroportodinapoli.it', 'gesac.it'];
 const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
@@ -44,6 +45,19 @@ export default {
     const json = (obj, status = 200, extra = {}) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
 
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA', ...Object.keys(OTHER)] });
+    // Prova diagnostica: una richiesta normale (nessun aggiramento) verso i siti degli aeroporti non ancora supportati
+    if (url.pathname === '/probe') {
+      const target = url.searchParams.get('url') || '';
+      let host = '';
+      try { host = new URL(target).hostname; } catch {}
+      if (!PROBE_HOSTS.some(h => host === h || host.endsWith('.' + h))) return json({ error: 'host non ammesso' }, 400);
+      const t0 = Date.now();
+      try {
+        const r = await fetch(target, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'application/json, text/html;q=0.9, */*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8' } });
+        const t = await r.text();
+        return json({ url: target, status: r.status, ms: Date.now() - t0, length: t.length, server: r.headers.get('server'), start: t.slice(0, 600) });
+      } catch (e) { return json({ url: target, error: String(e.message || e) }, 502); }
+    }
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);
     if (!TOSCANA[airport] && !PUGLIA.includes(airport) && !ADR[airport] && !OTHER[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
 
