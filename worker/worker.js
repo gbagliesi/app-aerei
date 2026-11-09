@@ -24,7 +24,7 @@ const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
   MAD: (n, log) => aena('MAD', n, log), BCN: (n, log) => aena('BCN', n, log),
-  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais,
+  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol,
 };
 
 export default {
@@ -110,7 +110,7 @@ async function toscana(airport, nature, log) {
 }
 
 const clock = s => { const m = /(\d{1,2})[:.](\d{2})/.exec((s || '').replace(/^\d{4}-\d\d-\d\dT/, '')); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : null; };
-const normNum = s => (s || '').trim().toUpperCase().replace(/\s+/g, '').replace(/^([A-Z][A-Z0-9]{1,2}?)0+(\d)/, '$1$2');
+const normNum = s => (s || '').trim().toUpperCase().replace(/\s+/g, '').replace(/^([A-Z0-9]{2}[A-Z]?)0+(\d)/, '$1$2');
 
 // ---------- Aeroporti di Puglia (Bari, Brindisi, Foggia, Taranto) ----------
 // POST https://info.aeroportidipuglia.it/getVoliApp/  campi: aeroporto, lingua, bound (0 partenze, 1 arrivi)
@@ -832,6 +832,61 @@ async function beauvais(nature, log) {
       number: normNum(c[1]), sched, schedDate: sched ? `${today}T${sched}` : null, est: prev, actual: isDone(status) ? prev : null,
       status, statusCode: st, gate: null, checkin: null, stand: null, belt: null, reg: null, type: null,
       terminal: trimOrNull(c[4])?.replace(/^T/i, '') || null, city: titleCase(c[2]), cityCode: null, airline: titleCase(c[3]),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Amsterdam Schiphol ----------
+// Public Flight API ufficiale (developer.schiphol.nl, v4): richiede le credenziali gratuite, da salvare come
+// segreti del Worker SCHIPHOL_APP_ID e SCHIPHOL_APP_KEY. 20 voli per pagina; orari ISO con fuso.
+const AMS_STATES = { SCH: null, DEL: 'Ritardato', WIL: 'Attendere in sala', GTO: 'Gate aperto', BRD: 'Imbarco', GCH: 'Cambio gate',
+  GCL: 'Ultima chiamata', GTD: 'Gate chiuso', DEP: 'Decollato', CNX: 'Cancellato', TOM: 'Domani', AIR: 'In volo', EXP: 'In arrivo',
+  FIR: 'In arrivo', LND: 'Atterrato', FIB: 'Atterrato', ARR: 'Atterrato', DIV: 'Dirottato' };
+async function schiphol(nature, log, env) {
+  const id = env && env.SCHIPHOL_APP_ID, key = env && env.SCHIPHOL_APP_KEY;
+  if (!id || !key) throw new Error('Schiphol: mancano i segreti SCHIPHOL_APP_ID e SCHIPHOL_APP_KEY nel Worker');
+  const A = nature === 'A', tz = 'Europe/Amsterdam';
+  const iso = n => `${n.date}T${n.hm}:00`;
+  const base = `https://api.schiphol.nl/public-flights/flights?flightDirection=${A ? 'A' : 'D'}&includedelays=false&sort=%2BscheduleTime`
+    + `&searchDateTimeField=scheduleDateTime&fromDateTime=${iso(localNow(tz, -180))}&toDateTime=${iso(localNow(tz, 660))}`;
+  const headers = { 'Accept': 'application/json', 'ResourceVersion': 'v4', 'app_id': id, 'app_key': key };
+  const page = async p => {
+    const t0 = Date.now();
+    const r = await fetch(`${base}&page=${p}`, { signal: AbortSignal.timeout(15000), headers });
+    const t = r.status === 204 ? '' : await r.text();
+    log.push({ url: `${base}&page=${p}`, status: r.status, length: t.length, ms: Date.now() - t0, start: p ? undefined : t.slice(0, 160) });
+    if (!r.ok) throw new Error(`Schiphol: errore ${r.status}${r.status === 401 || r.status === 403 ? ' (credenziali non valide)' : ''}`);
+    return { flights: t ? JSON.parse(t).flights || [] : [], link: r.headers.get('link') || '' };
+  };
+  const first = await page(0);
+  const last = Math.min(+(/[?&]page=(\d+)[^>]*>;\s*rel="last"/.exec(first.link)?.[1] || 0), 40);
+  const rest = [];
+  for (let p = 1; p <= last; p += 10) {
+    rest.push(...await Promise.all(Array.from({ length: Math.min(10, last - p + 1) }, (_, i) => page(p + i).catch(() => ({ flights: [] })))));
+  }
+  const seen = new Set();
+  return [first, ...rest].flatMap(x => x.flights).filter(f => {
+    if (f.mainFlight && f.flightName && f.mainFlight !== f.flightName) return false;
+    if (f.serviceType && !/^[JC]$/.test(f.serviceType)) return false;
+    const k = `${f.id || f.flightName}|${f.scheduleDateTime}`;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).map(f => {
+    const sched = utcToLocal(f.scheduleDateTime, tz);
+    const est = utcToLocal(A ? f.estimatedLandingTime : f.publicEstimatedOffBlockTime, tz);
+    const act = utcToLocal(A ? f.actualLandingTime : f.actualOffBlockTime, tz);
+    const code = (f.publicFlightState?.flightStates || []).slice(-1)[0] || null;
+    let status = code in AMS_STATES ? AMS_STATES[code] : code;
+    if (act && !/Cancellato|Dirottato/.test(status || '')) status = A ? 'Atterrato' : 'Decollato';
+    const t = f.aircraftType || {};
+    return {
+      number: normNum(f.flightName), sched: clock(sched?.slice(11)), schedDate: sched, est: clock((act || est || '').slice(11)), actual: act ? clock(act.slice(11)) : null,
+      estAt: act || est || null, actualAt: act || null, status, statusCode: code,
+      gate: trimOrNull(f.gate), checkin: null, stand: null, belt: A ? (f.baggageClaim?.belts || []).join(', ') || null : null,
+      reg: fmtReg(f.aircraftRegistration), type: trimOrNull(t.iataSub || t.iataMain), terminal: f.terminal != null ? String(f.terminal) : null,
+      city: null, cityCode: (f.route?.destinations || [])[A ? 0 : (f.route?.destinations || []).length - 1] || null, airline: null,
+      codeshare: (f.codeshares?.codeshares || []).map(normNum).filter(n => n && n !== normNum(f.flightName)),
     };
   }).filter(f => f.number && f.sched);
 }
