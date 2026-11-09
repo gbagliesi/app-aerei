@@ -852,7 +852,9 @@ async function schiphol(nature, log, env) {
   const headers = { 'Accept': 'application/json', 'ResourceVersion': 'v4', 'app_id': id, 'app_key': key };
   const page = async p => {
     const t0 = Date.now();
-    const r = await fetch(`${base}&page=${p}`, { signal: AbortSignal.timeout(15000), headers });
+    let r = await fetch(`${base}&page=${p}`, { signal: AbortSignal.timeout(15000), headers });
+    // Alcuni account accettano le credenziali solo come parametri dell'indirizzo: secondo tentativo
+    if (r.status === 401 || r.status === 403) r = await fetch(`${base}&page=${p}&app_id=${encodeURIComponent(id)}&app_key=${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(15000), headers: { 'Accept': 'application/json', 'ResourceVersion': 'v4' } });
     const t = r.status === 204 ? '' : await r.text();
     log.push({ url: `${base}&page=${p}`, status: r.status, length: t.length, ms: Date.now() - t0, start: p ? undefined : t.slice(0, 160) });
     if (!r.ok) throw new Error(`Schiphol: errore ${r.status}${r.status === 401 || r.status === 403 ? ' (credenziali non valide)' : ''}`);
