@@ -25,7 +25,7 @@ const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
   MAD: (n, log) => aena('MAD', n, log), BCN: (n, log) => aena('BCN', n, log),
-  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol, GOA: genova,
+  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol, GOA: genova, VCE: venezia,
 };
 
 export default {
@@ -966,6 +966,40 @@ async function genova(nature, log) {
       gate: A ? null : trimOrNull(f.GATE), checkin: A ? null : trimOrNull(f.CHECKIN), stand: null, belt: A ? trimOrNull(f.BELT_FIDS) : null,
       reg: null, type: null, terminal: null,
       city: titleCase(A ? f.ORIGIN_LOC : f.DESTINATION_LOC), cityCode: trimOrNull(A ? f.ORIGIN : f.DESTINATION), airline: trimOrNull(f.AIRLINE_DESCRIPTION_LOC),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Venezia (SAVE) ----------
+// API Magento del sito veneziaairport.it: POST /it_it/rest/V1/flights/get, 15 voli per pagina, orari ISO con fuso.
+async function venezia(nature, log) {
+  const A = nature === 'A', tz = 'Europe/Rome';
+  const page = async p => JSON.parse(await getText('https://www.veneziaairport.it/it_it/rest/V1/flights/get', log, {
+    name: 'Venezia', method: 'POST', quiet: p > 1, headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: null, date: 'any', type: A ? 'arrivals' : 'departures', page: p, store_code: 'vce_store_it' }) }));
+  const first = await page(1);
+  const per = +first.pagination?.per_page || 15, total = +first.pagination?.total || +first.results?.total || 0;
+  const pages = Math.min(Math.ceil(total / per), 30);
+  const rest = await Promise.all(Array.from({ length: Math.max(0, pages - 1) }, (_, i) => page(i + 2).catch(() => ({}))));
+  const items = [first, ...rest].flatMap(x => x.results?.items || []);
+  const loc = v => (v ? utcToLocal(v, tz) : null);
+  return items.map(f => {
+    const tm = f.time || {};
+    const sched = loc(tm.scheduled || tm.scheduled_time || tm.planned || tm.expected);
+    const est = loc(tm.estimated || tm.expected), act = loc(tm.actual);
+    const st = trimOrNull(f.status?.description);
+    let status = statusIt(st, nature);
+    if (act && !/Cancellato|Dirottato/.test(status || '')) status = A ? 'Atterrato' : 'Decollato';
+    const nums = (f.flights || []).map(x => normNum(x.number)).filter(Boolean);
+    return {
+      number: nums[0], sched: clock(sched?.slice(11)), schedDate: sched, est: clock((act || est || '').slice(11)), actual: act ? clock(act.slice(11)) : null,
+      estAt: act || est || null, actualAt: act || null, status, statusCode: trimOrNull(f.status?.type),
+      gate: A ? null : trimOrNull(typeof f.gate === 'object' ? f.gate?.name || f.gate?.code : f.gate),
+      checkin: A ? null : trimOrNull(typeof f.check_in === 'object' ? f.check_in?.name || f.check_in?.desks : f.check_in),
+      stand: null, belt: A ? trimOrNull(typeof f.belt === 'object' ? f.belt?.name : f.belt || f.baggage_claim) : null, reg: null, type: null, terminal: null,
+      city: titleCase((A ? f.origin?.name : f.destination?.name) || f.destination?.name || f.origin?.name),
+      cityCode: trimOrNull((A ? f.origin?.code : f.destination?.code) || null), airline: trimOrNull(f.airline?.name),
+      codeshare: nums.slice(1), _rawTime: tm,
     };
   }).filter(f => f.number && f.sched);
 }
