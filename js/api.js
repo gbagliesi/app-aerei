@@ -44,7 +44,7 @@ export function adbBlocked() {
   try { const b = JSON.parse(localStorage.getItem(BKEY)); return b && Date.now() < b.until ? b : null; } catch { return null; }
 }
 export const clearAdbBlock = () => localStorage.removeItem(BKEY);
-const QUOTA_MSG = 'Hai esaurito le unità mensili del tuo piano AeroDataBox su RapidAPI: si azzerano alla data di rinnovo mensile dell’abbonamento. Per Fiumicino, Ciampino, Pisa, Firenze, Bari, Brindisi, Foggia, Taranto, Milano, Bologna, Catania, Palermo, Ginevra, Zurigo, Francoforte e Monaco il tabellone arriva comunque dai siti ufficiali.';
+const QUOTA_MSG = 'Hai esaurito le unità mensili del tuo piano AeroDataBox su RapidAPI: si azzerano alla data di rinnovo mensile dell’abbonamento. Per Fiumicino, Ciampino, Pisa, Firenze, Bari, Brindisi, Foggia, Taranto, Milano, Bologna, Catania, Palermo, Ginevra, Zurigo, Francoforte, Monaco, Torino, Cagliari, Madrid, Barcellona, Lisbona, Londra (Gatwick, Stansted, Luton, City), Lione e Parigi Beauvais il tabellone arriva comunque dai siti ufficiali.';
 
 /** Chiamata AeroDataBox con cache persistente (ttlMs). */
 async function adbCached(path, ttlMs) {
@@ -147,6 +147,8 @@ export const OFFICIAL_AIRPORTS = {
   PSA: 'Europe/Rome', FLR: 'Europe/Rome', FCO: 'Europe/Rome', CIA: 'Europe/Rome', BRI: 'Europe/Rome', BDS: 'Europe/Rome', FOG: 'Europe/Rome', TAR: 'Europe/Rome',
   MXP: 'Europe/Rome', LIN: 'Europe/Rome', BLQ: 'Europe/Rome', CTA: 'Europe/Rome', PMO: 'Europe/Rome',
   GVA: 'Europe/Zurich', ZRH: 'Europe/Zurich', FRA: 'Europe/Berlin', MUC: 'Europe/Berlin',
+  MAD: 'Europe/Madrid', BCN: 'Europe/Madrid', LIS: 'Europe/Lisbon', TRN: 'Europe/Rome', CAG: 'Europe/Rome',
+  STN: 'Europe/London', LGW: 'Europe/London', LTN: 'Europe/London', LCY: 'Europe/London', LYS: 'Europe/Paris', BVA: 'Europe/Paris',
 };
 // Da dove arriva il tabellone ufficiale di ogni aeroporto (mostrato nella pagina come fonte)
 export const OFFICIAL_SOURCES = {
@@ -156,6 +158,9 @@ export const OFFICIAL_SOURCES = {
   MXP: 'milanomalpensa-airport.com (SEA)', LIN: 'milanolinate-airport.com (SEA)', BLQ: 'bologna-airport.it',
   CTA: 'aeroporto.catania.it', PMO: 'aeroportodipalermo.it', GVA: 'app Genève Aéroport', ZRH: 'flughafen-zuerich.ch',
   FRA: 'frankfurt-airport.com', MUC: 'munich-airport.de',
+  MAD: 'aena.es', BCN: 'aena.es', LIS: 'aeroportolisboa.pt (ANA)', TRN: 'aeroportoditorino.it', CAG: 'sogaer.it',
+  STN: 'stanstedairport.com', LGW: 'gatwickairport.com', LTN: 'london-luton.co.uk', LCY: 'londoncityairport.com',
+  LYS: 'lyonaeroports.com', BVA: 'aeroportparisbeauvais.com',
 };
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {

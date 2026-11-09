@@ -5,7 +5,9 @@ Questo piccolo Worker (gratuito) li legge al posto suo e li restituisce all'app.
 
 Aeroporti supportati: **Pisa (PSA)**, **Firenze (FLR)**, **Fiumicino (FCO)**, **Ciampino (CIA)**, **Bari, Brindisi, Foggia, Taranto**,
 **Milano Malpensa (MXP)** e **Linate (LIN)**, **Bologna (BLQ)**, **Catania (CTA)**, **Palermo (PMO)**,
-**Ginevra (GVA)**, **Zurigo (ZRH)**, **Francoforte (FRA)**, **Monaco (MUC)**.
+**Torino (TRN)**, **Cagliari (CAG)**, **Ginevra (GVA)**, **Zurigo (ZRH)**, **Francoforte (FRA)**, **Monaco (MUC)**,
+**Madrid (MAD)**, **Barcellona (BCN)**, **Lisbona (LIS)**, **Londra Gatwick (LGW)**, **Stansted (STN)**, **Luton (LTN)**, **City (LCY)**,
+**Lione (LYS)**, **Parigi Beauvais (BVA)**.
 
 Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
 - Pisa, Firenze: API dei siti di Toscana Aeroporti. Puglia: backend dell'app ufficiale. Ginevra: feed dell'app.
@@ -14,6 +16,11 @@ Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
   se SEA la cambia, impostala nella variabile `SEA_KEY_ID` del Worker).
 - Zurigo: `flightdata.flughafen-zuerich.ch/flights` (JSON). Francoforte: JSON del sito frankfurt-airport.com.
 - Catania: API GraphQL del sito aeroporto.catania.it. Monaco, Palermo, Bologna: tabelloni HTML dei siti.
+- Madrid, Barcellona: tabellone di aena.es. Lisbona: proxy voli di aeroportolisboa.pt. Cagliari: JSON di sogaer.it.
+  Torino, Luton, Beauvais: tabelloni HTML dei siti. Gatwick: FetchFlights del sito. Stansted: API GraphQL del sito.
+  London City: API voli del sito. Lione: `/api/flights/list` di lyonaeroports.com.
+- Non disponibili (protezioni anti-bot o chiave/registrazione): Napoli, Venezia, Genova, Orio al Serio, Olbia, Alghero,
+  Heathrow, Amsterdam, Parigi CDG/Orly.
 
 Dati: gate, check-in, nastro, orario stimato e stato (dove l'aeroporto li pubblica); marche dell'aereo per Milano,
 Ginevra, Zurigo e Francoforte. Monaco non pubblica il gate nell'elenco; Palermo e Bologna solo i voli di oggi.

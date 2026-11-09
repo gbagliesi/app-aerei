@@ -23,6 +23,8 @@ const ADR = {
 const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
+  MAD: (n, log) => aena('MAD', n, log), BCN: (n, log) => aena('BCN', n, log),
+  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais,
 };
 
 export default {
@@ -256,7 +258,7 @@ const utcToLocal = (iso, tz) => {
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(t)).map(x => [x.type, x.value]));
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 };
-const trimOrNull = v => { const t = (v == null ? '' : String(v)).trim(); return t && t !== '--' ? t : null; };
+const trimOrNull = v => { const t = (v == null ? '' : String(v)).trim(); return t && t !== '--' && t !== '-' ? t : null; };
 const strip = html => (html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
 // Tabelloni in HTML con solo l'orario: assegna la data seguendo l'ordine (quando l'orario torna indietro di
 // oltre 6 ore è il giorno dopo); il tratto con più voli è la data di riferimento `base` (oggi), salvo `fixedStart`.
@@ -279,19 +281,21 @@ function statusIt(t, nature) {
   if (!l || l === 'geplant' || l === 'scheduled' || l === 'planned') return null;
   const m = /^(?:gate info|next info|nächste info|gate info um|next info at)\D*(\d{1,2}:\d{2})/i.exec(s);
   if (m) return /gate/i.test(s) ? `Gate alle ${m[1]}` : `Info alle ${m[1]}`;
+  if (/^(departing|expected|estimated|prévu|on time|in orario|previsto|scheduled)\b/i.test(s) && !/annul|cancel/i.test(s)) return null;
   const map = [
-    [/annul|cancel/, 'Cancellato'], [/umgeleitet|divert/, 'Dirottato'],
-    [/gelandet|landed|auf position|gepäck|baggage|arrived/, 'Atterrato'],
-    [/anflug|approach/, 'In arrivo'],
-    [/gestartet|departed|airborne|en route|unterwegs/, nature === 'A' ? 'In volo' : 'Decollato'],
-    [/rolling|rollt/, 'In rullaggio'],
-    [/letzter aufruf|last call|final call/, 'Ultima chiamata'],
-    [/boarding|einsteigen/, 'Imbarco'],
-    [/gate geschlossen|closed|geschlossen/, 'Gate chiuso'],
+    [/annul|cancel|soppress/, 'Cancellato'], [/umgeleitet|divert|dérout|dirott/, 'Dirottato'],
+    [/gelandet|landed|auf position|gepäck|baggage|bags|arrived|arrivé|arrive [aà]|atterr|bagagli/, 'Atterrato'],
+    [/anflug|approach|approche|in arrivo/, 'In arrivo'],
+    [/gestartet|departed|airborne|en route|unterwegs|décollé|decoll|partito/, nature === 'A' ? 'In volo' : 'Decollato'],
+    [/rolling|rollt|taxied/, 'In rullaggio'],
+    [/letzter aufruf|last call|final call|ultima chiamata|ultimo avviso|dernier appel/, 'Ultima chiamata'],
+    [/boarding|einsteigen|embarquement|imbarco/, 'Imbarco'],
+    [/gate geschlossen|closed|geschlossen|fermé|chiuso/, 'Gate chiuso'],
     [/gate offen|gate open/, 'Gate aperto'],
-    [/zum gate|go to gate/, 'Al gate'],
-    [/verspät|delay/, 'Ritardato'],
-    [/check-?in/, 'Check-in'],
+    [/zum gate|go to gate|al gate/, 'Al gate'],
+    [/wait in lounge/, 'Attendere in sala'],
+    [/verspät|delay|retard|ritard/, 'Ritardato'],
+    [/check-?in|enregistrement|bag drop|accettazione/, 'Check-in'],
   ];
   for (const [re, it] of map) if (re.test(l)) return it;
   return s;
@@ -564,4 +568,270 @@ async function bologna(nature, log) {
     };
   });
   return assignDates(rows, localNow('Europe/Rome').date).filter(f => f.number && f.sched);
+}
+
+// Orario dentro un testo di stato ("Departed 06:05", "DÉCOLLÉ À 06:09", "PREVISTO ALLE ORE 07:40")
+const timeIn = t => clock(/(\d{1,2}[:.]\d{2})/.exec(t || '')?.[1]);
+const titleCase = v => (v || '').toLowerCase().replace(/(^|[\s\-/(])\S/g, c => c.toUpperCase()) || null;
+async function getText(u, log, opt = {}) {
+  const t0 = Date.now();
+  const r = await fetch(u, { signal: AbortSignal.timeout(opt.timeout || 15000), method: opt.method || 'GET', body: opt.body,
+    headers: { 'User-Agent': UA, 'Accept': opt.accept || 'application/json, text/html;q=0.9, */*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8', ...(opt.headers || {}) } });
+  const t = await r.text();
+  log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0, start: opt.quiet ? undefined : t.slice(0, 160) });
+  if (!r.ok) throw new Error(`${opt.name || 'aeroporto'}: errore ${r.status}`);
+  return t;
+}
+// Righe <tr> di una tabella → celle di testo
+const tableRows = html => [...(html || '').matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].map(m => [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c => strip(c[1])));
+
+// ---------- Madrid e Barcellona (Aena) ----------
+// JSON pubblico di aena.es: oggi e domani (dosDias=si), un array con molti voli (Madrid ~4,5 MB). Per risparmiare CPU
+// si analizzano solo i record nella finestra del tabellone. Orari locali "dd/mm/yyyy" + "HH:MM:SS".
+async function aena(code, nature, log) {
+  const u = `https://www.aena.es/sites/Satellite?pagename=AENA_ConsultarVuelos&airport=${code}&flightType=${nature === 'A' ? 'L' : 'S'}&dosDias=si`;
+  const t = await getText(u, log, { name: 'Aena', timeout: 20000, quiet: true, headers: { 'Accept': 'application/json, text/javascript, */*' } });
+  const tz = 'Europe/Madrid', from = localNow(tz, -180), to = localNow(tz, 660);
+  const key = (d, hm) => `${d}T${hm}`;
+  const lo = key(from.date, from.hm), hi = key(to.date, to.hm);
+  const body = t.trim().replace(/^\[\{?|\}?\]$/g, '');
+  const list = [];
+  for (const x of body.split(/\},\s*\{/)) {
+    const m = /"fecha":"(\d\d)\/(\d\d)\/(\d{4})","horaProgramada":"(\d\d:\d\d)/.exec(x);
+    if (!m) continue;
+    const k = key(`${m[3]}-${m[2]}-${m[1]}`, m[4]);
+    if (k < lo || k > hi) continue;
+    try { list.push(JSON.parse(`{${x}}`)); } catch { /* record non valido */ }
+  }
+  const nul = v => (v == null || v === 'null' || v === '' ? null : String(v).trim());
+  const iso = (d, h) => { const m = /(\d\d)\/(\d\d)\/(\d{4})/.exec(d || ''); return m && h ? `${m[3]}-${m[2]}-${m[1]}T${h.slice(0, 5)}` : null; };
+  const CODES = { INI: 'Check-in', EMB: 'Imbarco', BOR: 'Imbarco', ULL: 'Ultima chiamata', CER: 'Gate chiuso', RET: 'Ritardato', CAN: 'Cancellato',
+    FLY: nature === 'A' ? 'In volo' : 'Decollato', DES: nature === 'A' ? 'In volo' : 'Decollato', LND: 'Atterrato', ATE: 'Atterrato', IBK: 'Atterrato', FNL: 'Atterrato', DIV: 'Dirottato' };
+  return list.map(f => {
+    const sched = iso(f.fecha, f.horaProgramada), est = iso(f.fechaEstimada || f.fecha, nul(f.horaEstimada));
+    const status = CODES[f.estado] || null;
+    const desk = [nul(f.mostradorDesde), nul(f.mostradorHasta)].filter(Boolean);
+    return {
+      number: normNum(`${f.iataCompania || ''}${f.numVuelo || ''}`), sched: clock(sched?.slice(11)), schedDate: sched,
+      est: clock(est?.slice(11)), actual: isDone(status) ? clock(est?.slice(11)) : null, estAt: est, actualAt: isDone(status) ? est : null,
+      status, statusCode: f.estado || null, gate: nul(f.puertaPrimera), checkin: desk.length ? [...new Set(desk)].join('–') : null, stand: null,
+      belt: nul(f.cintaPrimera), reg: null, type: nul(f.tipoAeronave), terminal: nul(f.terminal)?.replace(/^T/i, '') || null,
+      city: titleCase(nul(f.ciudadIataOtro)), cityCode: nul(f.iataOtro), airline: nul(f.nombreCompania),
+      codeshare: (nul(f.iatasCompaniaSecundarios) || '').split(',').map(normNum).filter(Boolean),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Lisbona (ANA) ----------
+// JSON del sito aeroportolisboa.pt: giornata intera, orari locali; niente gate né nastro.
+async function lisbon(nature, log) {
+  const u = `https://www.aeroportolisboa.pt/en/flights_proxy?day=hoje&movtype=${nature === 'A' ? 'A' : 'D'}&IATA=LIS`;
+  const data = JSON.parse(await getText(u, log, { name: 'Lisbona' }));
+  return (data.flights || []).map(f => {
+    const m = /(\d\d)\/(\d\d)\/(\d{4})/.exec(f.day || '');
+    const sched = m && f.time ? `${m[3]}-${m[2]}-${m[1]}T${f.time}` : null;
+    const label = (f.state?.label || '').trim(), val = clock(f.state?.value);
+    const status = statusIt(label, nature);
+    return {
+      number: normNum(f.flightNumber), sched: clock(f.time), schedDate: sched, est: val, actual: isDone(status) ? val : null,
+      status, statusCode: label || null, gate: null, checkin: null, stand: null, belt: null, reg: null, type: null,
+      terminal: trimOrNull(f.terminal)?.replace(/^T/i, '') || null, city: f.destination || null, cityCode: null, airline: titleCase(f.airline),
+      codeshare: Array.isArray(f.sharedAirlinesFlights) ? f.sharedAirlinesFlights.map(c => normNum(c.flightNumber)).filter(Boolean) : [],
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Torino (SAGAT) ----------
+// Pagina "Partenze e arrivi" di aeroportoditorino.it: due tabelle HTML (partenze, arrivi) con data "gg-mm" e ora.
+async function torino(nature, log) {
+  const t = await getText('https://www.aeroportoditorino.it/it/tofly/voli/partenze-arrivi?orario=oggi', log, { name: 'Torino', quiet: true, accept: 'text/html' });
+  const tables = t.match(/<table[\s\S]*?<\/table>/g) || [];
+  const tb = tables[nature === 'A' ? 1 : 0] || '';
+  const year = localNow('Europe/Rome').date.slice(0, 4);
+  return [...tb.matchAll(/<tr class="row-flight[^"]*"[^>]*>([\s\S]*?)<\/tr>/g)].map(m => {
+    const c = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(x => strip(x[1]));
+    const dm = /(\d\d)-(\d\d)/.exec(c[0] || ''), sched = clock(c[1]);
+    const note = trimOrNull(c[4]);
+    const status = statusIt(note, nature);
+    const tm = timeIn(note);
+    return {
+      number: normNum(c[3]), sched, schedDate: dm && sched ? `${year}-${dm[2]}-${dm[1]}T${sched}` : null, est: tm, actual: isDone(status) ? tm : null,
+      status, statusCode: note, gate: null, checkin: nature === 'A' ? null : trimOrNull(c[6]), stand: null, belt: null, reg: null,
+      type: trimOrNull(c[5]), city: titleCase(c[2]), cityCode: null, airline: null,
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Cagliari (SOGAER) ----------
+// JSON di sogaer.it con arrivi e partenze insieme; orari solo "HH:MM": la data dell'orario stimato è in ORDER_KEY (…GGMMHHMM).
+async function cagliari(nature, log) {
+  const data = JSON.parse(await getText('https://www.sogaer.it/it/sogaer/flights', log, { name: 'Cagliari', quiet: true }));
+  const A = nature === 'A';
+  const list = Object.values((A ? data.arrivals : data.departures) || {});
+  const now = localNow('Europe/Rome');
+  return list.filter(f => f.pUBLIC_FLIGHT_FLAG !== 'N').map(f => {
+    const sched = clock(f.sCHEDULED_DATE_TIME), est = clock(f.eSTIMATED_DATE_TIME);
+    const k = String(f.oRDER_KEY || '');
+    const dd = k.length >= 8 ? k.slice(-8, -6) : null, mm = k.length >= 8 ? k.slice(-6, -4) : null;
+    let estDate = dd && mm ? `${now.date.slice(0, 4)}-${mm}-${dd}` : (f.tOMORROWS_FLIGHT ? addDays(now.date, 1) : now.date);
+    let schedDay = estDate;
+    if (sched && est && hmMin(sched) - hmMin(est) > 12 * 60) schedDay = addDays(estDate, -1);
+    else if (sched && est && hmMin(est) - hmMin(sched) > 12 * 60) schedDay = addDays(estDate, 1);
+    const remark = trimOrNull(f.rEMARK_PUB);
+    const status = statusIt(remark, nature);
+    return {
+      number: normNum(f.fLIGHT_HR || `${f.aIRLINE_2 || ''}${f.fLIGHT || ''}`), sched, schedDate: sched ? `${schedDay}T${sched}` : null,
+      est, actual: isDone(status) ? est : null, estAt: est ? `${estDate}T${est}` : null, actualAt: isDone(status) && est ? `${estDate}T${est}` : null,
+      status, statusCode: f.fLIGHT_STATE_PUB1 || null, gate: trimOrNull(f.gATE), checkin: null, stand: null, belt: null, reg: null, type: null,
+      city: titleCase(A ? f.oRIGIN : f.dESTINATION), cityCode: null, airline: f.aIRLINE_DESCRIPTION || null,
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Londra Stansted (MAG) ----------
+// GraphQL pubblico (AWS AppSync) usato da stanstedairport.com; orari ISO in UTC.
+async function stansted(nature, log) {
+  const A = nature === 'A', tz = 'Europe/London';
+  const s = new Date(Date.now() - 3 * 3600e3).toISOString(), e = new Date(Date.now() + 12 * 3600e3).toISOString();
+  const q = A
+    ? 'query($t:String!,$s:AWSDateTime,$e:AWSDateTime){ allArrivals(tenant:$t,startDate:$s,endDate:$e,from:0,size:1000){ flightNumber status scheduledArrivalDateTime estimatedArrivalDateTime actualArrivalDateTime arrivalTerminal airline{name code} departureAirport{code name cityName} arrivalBaggageClaim{number} } }'
+    : 'query($t:String!,$s:AWSDateTime,$e:AWSDateTime){ allDepartures(tenant:$t,startDate:$s,endDate:$e,from:0,size:1000){ flightNumber status scheduledDepartureDateTime estimatedDepartureDateTime actualDepartureDateTime departureTerminal airline{name code} arrivalAirport{code name cityName} departureGate{number name} } }';
+  const t = await getText('https://d3ebfrkw2baepa.cloudfront.net/', log, { name: 'Stansted', method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q, variables: { t: 'STN', s, e } }) });
+  const j = JSON.parse(t);
+  if (j.errors?.length) throw new Error(`Stansted: ${j.errors[0].message}`);
+  const list = (A ? j.data?.allArrivals : j.data?.allDepartures) || [];
+  return list.map(f => {
+    const sched = utcToLocal(A ? f.scheduledArrivalDateTime : f.scheduledDepartureDateTime, tz);
+    const est = utcToLocal(A ? f.estimatedArrivalDateTime : f.estimatedDepartureDateTime, tz);
+    const act = utcToLocal(A ? f.actualArrivalDateTime : f.actualDepartureDateTime, tz);
+    let status = statusIt(f.status, nature);
+    if (act && !/Cancellato|Dirottato/.test(status || '')) status = A ? 'Atterrato' : 'Decollato';
+    const other = A ? f.departureAirport : f.arrivalAirport;
+    return {
+      number: normNum(f.flightNumber), sched: clock(sched?.slice(11)), schedDate: sched, est: clock((act || est || '').slice(11)), actual: act ? clock(act.slice(11)) : null,
+      estAt: act || est || null, actualAt: act || null, status, statusCode: f.status || null,
+      gate: A ? null : trimOrNull(f.departureGate?.number), checkin: null, stand: null, belt: A ? trimOrNull(f.arrivalBaggageClaim?.number) : null,
+      reg: null, type: null, terminal: trimOrNull(A ? f.arrivalTerminal : f.departureTerminal),
+      city: titleCase(other?.cityName || other?.name), cityCode: other?.code || null, airline: titleCase(f.airline?.name),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Londra Gatwick ----------
+// Frammenti HTML di gatwickairport.com a fasce di 2 ore (page=0 è la fascia attuale, -1 la precedente, 1..6 le successive).
+async function gatwick(nature, log) {
+  const A = nature === 'A';
+  const pages = await Promise.all([-1, 0, 1, 2, 3, 4, 5, 6].map(p => getText(`https://www.gatwickairport.com/on/demandware.store/Sites-Gatwick-Site/en_GB/LiveFlights-FetchFlights?page=${p}&terminal=all&destination=${A ? 'A' : 'D'}&search=`, log, { name: 'Gatwick', quiet: true, accept: 'text/html' }).catch(() => '')));
+  const seen = new Set(), rows = [];
+  for (const html of pages) {
+    for (const m of html.matchAll(/<tr class="flight-line[^"]*" id="([^"]+)">([\s\S]*?)<\/tr>/g)) {
+      if (seen.has(m[1])) continue;
+      seen.add(m[1]);
+      const tds = [...m[2].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(x => strip(x[1]));
+      const al = /data-airline="([^"]*)"/.exec(m[2])?.[1], fn = /data-flightNumber="([^"]*)"/.exec(m[2])?.[1];
+      const sched = clock(tds[1]), st = trimOrNull(tds[5]);
+      const status = statusIt(st, nature), tm = timeIn(st);
+      rows.push({
+        number: normNum(al && fn ? `${al}${fn}` : tds[4]), sched, est: /gate info/i.test(st || '') ? null : tm, actual: isDone(status) || status === 'In rullaggio' ? tm : null,
+        status, statusCode: st, gate: A ? null : trimOrNull(tds[6] === '-' ? null : tds[6]), checkin: null, stand: null, belt: null, reg: null, type: null,
+        terminal: trimOrNull(A ? tds[6] : tds[7]), city: tds[2] || null, cityCode: null, airline: null,
+      });
+    }
+  }
+  return assignDates(rows, localNow('Europe/London').date).filter(f => f.number && f.sched);
+}
+
+// ---------- Londra Luton ----------
+// Pagine /departures e /arrivals di london-luton.co.uk (HTML, finestra di circa 12 ore; ogni volo compare due volte).
+async function luton(nature, log) {
+  const t = await getText(`https://www.london-luton.co.uk/${nature === 'A' ? 'arrivals' : 'departures'}`, log, { name: 'Luton', quiet: true, accept: 'text/html' });
+  const seen = new Set(), rows = [];
+  for (const m of t.matchAll(/<[^>]*data-flightno="([^"]*)"[^>]*>/g)) {
+    const tag = m[0];
+    const num = normNum(m[1]), time = clock(/data-flighttime=['"]([^'"]*)/.exec(tag)?.[1]);
+    const k = `${num}|${time}`;
+    if (!num || seen.has(k)) continue;
+    seen.add(k);
+    const st = trimOrNull(strip(/data-flightstatus="([^"]*)"/.exec(tag)?.[1]));
+    const status = statusIt(st, nature), tm = timeIn(st);
+    rows.push({
+      number: num, sched: time, est: tm, actual: isDone(status) ? tm : null, status, statusCode: st,
+      gate: /gate\s+([A-Z0-9]+)/i.exec(st || '')?.[1] || null, checkin: /desk\s+([\w-]+)/i.exec(st || '')?.[1] || null, stand: null, belt: null, reg: null, type: null,
+      city: strip(/data-flightorgdest="([^"]*)"/.exec(tag)?.[1]) || null, cityCode: null, airline: null,
+    });
+  }
+  return assignDates(rows, localNow('Europe/London').date).filter(f => f.number && f.sched);
+}
+
+// ---------- Londra City ----------
+// API JSON apis.londoncityairport.com (Veovo): partenze e arrivi insieme, orari ISO in UTC; marche e tipo dal blocco AIDX.
+async function londonCity(nature, log) {
+  const data = JSON.parse(await getText('https://apis.londoncityairport.com/api/veovo/flight-data', log, { name: 'London City', quiet: true }));
+  const A = nature === 'A', tz = 'Europe/London';
+  return (data.flights || []).filter(f => f.flightDirection === (A ? 'Arrival' : 'Departure')).map(f => {
+    const leg = f.data?.LegData || {};
+    const ops = Object.values(leg.OperationTime || {}).map(o => ({ type: o._attributes?.TimeType, q: o._attributes?.OperationQualifier, v: o._value })).filter(o => o.v);
+    const pick = type => ops.filter(o => o.type === type).map(o => o.v).pop() || null;
+    const sched = utcToLocal(f.flightTimes?.scheduledTime?.value || pick('SCT'), tz);
+    const est = utcToLocal(pick('EST'), tz), act = utcToLocal(f.flightTimes?.actualTime?.value || pick('ACT'), tz);
+    let status = statusIt(f.flightStatus?.status, nature);
+    if (act && !/Cancellato|Dirottato/.test(status || '')) status = A ? 'Atterrato' : 'Decollato';
+    const res = Object.values(leg.AirportResources || {}).map(r => r.Resource || {}).find(r => typeof r.BaggageClaimUnit === 'string' || typeof r.PassengerGate === 'string') || {};
+    const other = A ? f.departureAirport : f.arrivalAirport;
+    const reg = leg.AircraftInfo?.Registration;
+    return {
+      number: normNum(f.flightNumber), sched: clock(sched?.slice(11)), schedDate: sched, est: clock((act || est || '').slice(11)), actual: act ? clock(act.slice(11)) : null,
+      estAt: act || est || null, actualAt: act || null, status, statusCode: f.flightStatus?.code || null,
+      gate: A ? null : trimOrNull(f.passengerGate), checkin: null, stand: null, belt: A && typeof res.BaggageClaimUnit === 'string' ? res.BaggageClaimUnit.replace(/^0+/, '') : null,
+      reg: typeof reg === 'string' ? fmtReg(reg) : null, type: typeof leg.AircraftInfo?.AircraftType === 'string' ? leg.AircraftInfo.AircraftType : null,
+      city: other?.name || null, cityCode: other?.iata_code || null, airline: f.airline?.name || null,
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Lione (Lyon Aéroports) ----------
+// API JSON del sito lyonaeroports.com, una giornata per chiamata, orari locali.
+async function lyon(nature, log) {
+  const tz = 'Europe/Paris';
+  const dates = [...new Set([localNow(tz, -150).date, localNow(tz, 630).date])];
+  const all = [];
+  for (const d of dates) {
+    try { all.push(...JSON.parse(await getText(`https://www.lyonaeroports.com/api/flights/list?direction=${nature === 'A' ? 'A' : 'D'}&date=${d}`, log, { name: 'Lione', quiet: true }))); }
+    catch (e) { if (!all.length && d === dates[dates.length - 1]) throw e; }
+  }
+  const dmy = s => { const m = /(\d\d)\/(\d\d)\/(\d{4}) (\d\d:\d\d)/.exec(s || ''); return m ? `${m[3]}-${m[2]}-${m[1]}T${m[4]}` : null; };
+  return all.map(f => {
+    const sched = f.HORAIRE ? f.HORAIRE.replace(' ', 'T').slice(0, 16) : null;
+    const st = trimOrNull(f.STATUTF) || trimOrNull(f.status?.label);
+    const status = statusIt(st, nature);
+    const estAt = dmy(nature === 'A' ? f.EIBT_DTH : f.EOBT_DTH);
+    const tm = timeIn(f.STATUTF);
+    const est = clock(f.HACTU) || clock(estAt?.slice(11));
+    return {
+      number: normNum(f.NUMVOL), sched: clock(sched?.slice(11)), schedDate: sched, est, actual: isDone(status) ? tm || est : null,
+      estAt: estAt && clock(estAt.slice(11)) === est ? estAt : null, status, statusCode: st,
+      gate: nature === 'A' ? null : trimOrNull(f.PORTE), checkin: trimOrNull(f.COMPTOIR_ENREGISTREMENT)?.replace(/\s*-\s*/, '–') || null, stand: null,
+      belt: nature === 'A' ? trimOrNull(f.TAPIS) : null, reg: null, type: trimOrNull(f.AIRCRAFT_MODEL), terminal: trimOrNull(f.TERMINAL)?.replace(/^T/i, '') || null,
+      city: titleCase(f.AERO_SLIBELLE), cityCode: f.CODEESC1 || null, airline: f.CIE_LIBELLE || null,
+      codeshare: (f.share_codes || []).map(normNum).filter(n => n && n !== normNum(f.NUMVOL)),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Parigi Beauvais ----------
+// Pagina "Vols du jour" di aeroportparisbeauvais.com: due tabelle HTML (prima arrivi, poi partenze), solo orari.
+async function beauvais(nature, log) {
+  const t = await getText('https://www.aeroportparisbeauvais.com/vols/etat-des-vols/vols-du-jour', log, { name: 'Beauvais', quiet: true, accept: 'text/html' });
+  const tables = t.match(/<table[\s\S]*?<\/table>/g) || [];
+  const tb = tables.find(x => (nature === 'A' ? /Provenance/ : /Destination/).test(x)) || '';
+  const today = localNow('Europe/Paris').date;
+  return tableRows(tb).filter(c => c.length >= 6).map(c => {
+    const sched = clock(c[0]), st = trimOrNull(c[5]), prev = timeIn(c[6]);
+    const status = statusIt(st?.replace(/&#039;/g, "'"), nature);
+    return {
+      number: normNum(c[1]), sched, schedDate: sched ? `${today}T${sched}` : null, est: prev, actual: isDone(status) ? prev : null,
+      status, statusCode: st, gate: null, checkin: null, stand: null, belt: null, reg: null, type: null,
+      terminal: trimOrNull(c[4])?.replace(/^T/i, '') || null, city: titleCase(c[2]), cityCode: null, airline: titleCase(c[3]),
+    };
+  }).filter(f => f.number && f.sched);
 }
