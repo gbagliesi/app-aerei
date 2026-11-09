@@ -140,3 +140,6 @@ dd.big { font-size: 1.3rem; color: var(--amber); line-height: 1.1; }
 .board .csbtn.open { background: rgba(77,163,255,.3); }
 .board small.cslist { white-space: normal; overflow: visible; font-size: .72rem; line-height: 1.35; margin-top: .15rem; overflow-wrap: anywhere; }
 .board small.cslist[hidden] { display: none; }
+.src { display: block; color: var(--muted); font-size: .68rem; margin-top: .15rem; white-space: nowrap; }
+.hint.sources { font-size: .82rem; }
+.leg .hint.sources { margin: .6rem 0 0; }

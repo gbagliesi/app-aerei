@@ -1,19 +1,29 @@
-import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, OFFICIAL_AIRPORTS, officialInfo } from './api.js';
+import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
 import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
 
-function officialNote(iata, dir, list) {
-  if (!OFFICIAL_AIRPORTS[iata] || getSettings().provider !== 'aerodatabox') return '';
-  const i = officialInfo[`${iata}:${dir === 'dep' ? 'D' : 'A'}`];
-  if (!i) return '';
-  if (i.error) return `<p class="hint">⚠ Tabellone ufficiale non disponibile: ${esc(i.error)}</p>`;
-  const n = list.filter(x => x._official).length;
-  if (!n) return `<p class="hint">⚠ Tabellone ufficiale letto (${i.count} voli) ma nessun volo abbinato a quelli di AeroDataBox</p>`;
-  return `<p class="hint official">✓ Gate, orari stimati e stato dal tabellone ufficiale dell’aeroporto (abbinati ${n} su ${list.length})</p>`;
+// Riga "Fonti" sotto il tabellone: da dove arrivano i dati mostrati
+function sourcesNote(iata, dir, list, degraded) {
+  const s = getSettings();
+  if (s.provider !== 'aerodatabox') return '<p class="hint sources">Fonte: dati dimostrativi (modalità demo, nessun dato reale).</p>';
+  const site = OFFICIAL_SOURCES[iata];
+  if (!OFFICIAL_AIRPORTS[iata]) return '<p class="hint sources">Fonte: AeroDataBox. Per questo aeroporto non c’è un tabellone ufficiale collegato.</p>';
+  if (!(s.workerUrl || '').trim()) return `<p class="hint sources">Fonte: AeroDataBox. Il tabellone ufficiale (${esc(site)}) si attiva impostando il Worker in Impostazioni.</p>`;
+  const i = officialInfo[`${iata}:${dir === 'dep' ? 'D' : 'A'}`] || {};
+  if (i.error) return `<p class="hint sources">Fonte: AeroDataBox. ⚠ Tabellone ufficiale (${esc(site)}) non disponibile: ${esc(i.error)}</p>`;
+  if (degraded) return `<p class="hint sources official">Fonte: tabellone ufficiale dell’aeroporto (${esc(site)}). ⚠ AeroDataBox non disponibile: ${esc(degraded)}</p>`;
+  const both = list.filter(x => x._official && !x._officialOnly).length, only = list.filter(x => x._officialOnly).length, adb = list.length - both - only;
+  const parts = [];
+  if (both) parts.push(`${both} con orari, gate, check-in e stato dal tabellone ufficiale e gli altri dati da AeroDataBox`);
+  if (only) parts.push(`${only} solo nel tabellone ufficiale`);
+  if (adb) parts.push(`${adb} solo da AeroDataBox`);
+  return `<p class="hint sources official">Fonti: tabellone ufficiale dell’aeroporto (${esc(site)}), che ha la priorità, e AeroDataBox. ${parts.length ? `Voli: ${parts.join('; ')}.` : ''}</p>`;
 }
+const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
+  : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '3.0 · tabelloni ufficiali di Milano, Bologna, Catania, Palermo, Zurigo, Francoforte e Monaco';
+const APP_VERSION = '3.1 · dati ufficiali prioritari + AeroDataBox, fonti sempre indicate';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -136,7 +146,7 @@ function boardTable(list, dir, filter = '') {
         <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x), true) : esc(x.airline?.name || '')}</small></span>
         <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <button class="csbtn" type="button" title="Anche: ${esc(x.codeshares.join(' '))}">+${x.codeshares.length} code sharing</button>` : ''}</small>${x.codeshares?.length ? `<small class="cslist" hidden>anche ${x.codeshares.map(esc).join(' ')}</small>` : ''}</span>
         <span class="gate">${esc((dir === 'dep' ? side?.gate : side?.belt) || '—')}</span>
-        <span>${statusBadge(x.status)}</span>
+        <span>${statusBadge(x.status)}${srcTag(x)}</span>
       </div>`;
     }).join('')}
   </div>`;
@@ -165,7 +175,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
         <a href="#/airport/${iata}/arr" class="${dir === 'arr' ? 'active' : ''}">🛬 Arrivi</a>
         <input id="filter" type="search" placeholder="Filtra: città, volo, compagnia" value="${esc(filter)}">
       </div>`}
-      ${data?.degraded ? `<p class="hint">⚠ AeroDataBox non disponibile, mostro solo il tabellone ufficiale dell’aeroporto. ${esc(data.degraded)}</p>` : data ? officialNote(iata, isRoute ? 'dep' : dir, list) : ''}
+      ${data ? sourcesNote(iata, isRoute ? 'dep' : dir, list, data.degraded) : ''}
       <div id="board">${data ? boardTable(filtered, isRoute ? 'dep' : dir, filter) : '<div class="loading">Caricamento tabellone…</div>'}</div>
       <p class="updated" id="updated"></p>`;
     bindStars($app, render);
@@ -224,6 +234,13 @@ function progress(f) {
   return Math.max(0, Math.min(1, (Date.now() - s) / (e - s)));
 }
 
+function legSources(f) {
+  if (getSettings().provider !== 'aerodatabox') return 'Fonte: dati dimostrativi.';
+  const off = [['partenza', f.dep], ['arrivo', f.arr]].filter(([, s]) => s?._off).map(([w, s]) => `${w} a ${esc(s._off)} dal tabellone ufficiale (${esc(OFFICIAL_SOURCES[s._off] || s._off)})`);
+  const base = f._adb ? 'AeroDataBox' : 'tabellone ufficiale dell’aeroporto';
+  return off.length ? `Fonti: orari, gate, check-in, nastro e stato della ${off.join('; della ')}, che ha la priorità; il resto da ${base}.` : `Fonte: ${base}.`;
+}
+
 function legCard(f, title, cls = '') {
   const p = progress(f);
   return `<div class="card leg ${cls}">
@@ -238,6 +255,7 @@ function legCard(f, title, cls = '') {
         <div class="time">${timeCell(f.arr.sched, f.arr.revised, f.arr.actual)}</div>
         <dl>${f.arr.terminal ? `<dt>Terminal</dt><dd>${esc(f.arr.terminal)}</dd>` : ''}<dt>Gate</dt><dd>${esc(f.arr.gate || '—')}</dd><dt>Nastro</dt><dd>${esc(f.arr.belt || '—')}</dd></dl></div>
     </div>
+    <p class="hint sources">${legSources(f)}</p>
   </div>`;
 }
 

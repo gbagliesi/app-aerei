@@ -135,6 +135,7 @@ function normFlight(f, dir, own) {
     aircraft: { reg: f.aircraft?.reg, hex: f.aircraft?.modeS?.toLowerCase(), model: f.aircraft?.model },
     dep, arr,
     location: normLocation(f.location),
+    _adb: true,
   };
 }
 const ownInfo = own => own ? { iata: own.iata, icao: own.icao, name: own.name } : {};
@@ -146,6 +147,15 @@ export const OFFICIAL_AIRPORTS = {
   PSA: 'Europe/Rome', FLR: 'Europe/Rome', FCO: 'Europe/Rome', CIA: 'Europe/Rome', BRI: 'Europe/Rome', BDS: 'Europe/Rome', FOG: 'Europe/Rome', TAR: 'Europe/Rome',
   MXP: 'Europe/Rome', LIN: 'Europe/Rome', BLQ: 'Europe/Rome', CTA: 'Europe/Rome', PMO: 'Europe/Rome',
   GVA: 'Europe/Zurich', ZRH: 'Europe/Zurich', FRA: 'Europe/Berlin', MUC: 'Europe/Berlin',
+};
+// Da dove arriva il tabellone ufficiale di ogni aeroporto (mostrato nella pagina come fonte)
+export const OFFICIAL_SOURCES = {
+  PSA: 'pisa-airport.com (Toscana Aeroporti)', FLR: 'firenze-airport.it (Toscana Aeroporti)',
+  FCO: 'adr.it (Aeroporti di Roma)', CIA: 'adr.it (Aeroporti di Roma)',
+  BRI: 'app Aeroporti di Puglia', BDS: 'app Aeroporti di Puglia', FOG: 'app Aeroporti di Puglia', TAR: 'app Aeroporti di Puglia',
+  MXP: 'milanomalpensa-airport.com (SEA)', LIN: 'milanolinate-airport.com (SEA)', BLQ: 'bologna-airport.it',
+  CTA: 'aeroporto.catania.it', PMO: 'aeroportodipalermo.it', GVA: 'app Genève Aéroport', ZRH: 'flughafen-zuerich.ch',
+  FRA: 'frankfurt-airport.com', MUC: 'munich-airport.de',
 };
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {
@@ -203,15 +213,16 @@ function mapStatus(t) {
 }
 
 /** Arricchisce i voli AeroDataBox con i dati ufficiali dell'aeroporto (gate, orari stimati, stato, marche). */
-function mergeOfficial(flights, official, sideKey, iata) {
+function mergeOfficial(flights, official, sideKey, iata, used = null) {
   if (!official?.length) return flights;
   const tz = OFFICIAL_AIRPORTS[iata];
   const byNum = new Map(official.flatMap(o => [...(o.codeshare || []).map(c => [c, o]), [o.number, o]]));
   for (const f of flights) {
     const side = f[sideKey];
     if (!side || side.iata !== iata) continue;
-    const o = byNum.get(f.number);
+    const o = byNum.get(f.number) || (f.codeshares || []).map(n => byNum.get(n)).find(Boolean);
     if (!o) continue;
+    used?.add(o);
     if (o.gate) side.gate = o.gate;
     if (o.checkin) side.checkIn = o.checkin;
     if (o.belt) side.belt = o.belt;
@@ -223,8 +234,10 @@ function mergeOfficial(flights, official, sideKey, iata) {
     const st = mapStatus(o.status);
     if (st && !(st === 'Delayed' && ['Departed', 'EnRoute', 'Approaching', 'Arrived'].includes(f.status))) f.status = st;
     if (sideKey === 'arr' && o.actual && f.status !== 'Canceled') f.status = 'Arrived';
-    if (o.reg && !f.aircraft?.reg) f.aircraft = { ...f.aircraft, reg: o.reg, model: f.aircraft?.model || o.type };
+    if (o.reg && o.reg.replace(/-/g, '') !== (f.aircraft?.reg || '').replace(/-/g, '')) f.aircraft = { ...f.aircraft, reg: o.reg, hex: f.aircraft?.reg ? undefined : f.aircraft?.hex, model: f.aircraft?.model || o.type };
+    else if (o.type && !f.aircraft?.model) f.aircraft = { ...f.aircraft, model: o.type };
     side.officialStatus = o.status || null;
+    side._off = iata;
     f._official = true;
   }
   return flights;
@@ -232,13 +245,31 @@ function mergeOfficial(flights, official, sideKey, iata) {
 
 // Esito dell'ultima lettura del tabellone ufficiale, per mostrarlo sotto il tabellone
 export const officialInfo = {};
-async function withOfficial(flights, iata, nature) {
+async function withOfficial(flights, iata, nature, window = true) {
   const k = `${iata}:${nature}`;
   try {
     if (!(getSettings().workerUrl || '').trim()) { officialInfo[k] = { error: 'indirizzo del Worker non impostato in Impostazioni' }; return flights; }
     const off = await getOfficial(iata, nature);
-    mergeOfficial(flights, off, nature === 'D' ? 'dep' : 'arr', iata);
-    officialInfo[k] = { count: off?.length || 0, matched: flights.filter(f => f._official).length };
+    const used = new Set(), sideKey = nature === 'D' ? 'dep' : 'arr';
+    mergeOfficial(flights, off, sideKey, iata, used);
+    const matched = flights.filter(f => f._official).length;
+    // voli del tabellone ufficiale che AeroDataBox non ha: li aggiungo (salvo doppioni con un'altra sigla)
+    let added = 0;
+    if (window && off?.length) {
+      const otherKey = sideKey === 'dep' ? 'arr' : 'dep';
+      const extra = officialFlights(off.filter(o => !used.has(o)), iata, nature).filter(inWindow).filter(x => !flights.some(f => {
+        if (f[sideKey]?.sched?.utc !== x[sideKey].sched.utc) return false;
+        const a = f[otherKey] || {}, b = x[otherKey] || {};
+        if (a.iata && b.iata) return a.iata === b.iata;
+        const n = v => (v || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 4);
+        return !b.name || !a.name || n(a.name) === n(b.name);
+      }));
+      mergeOfficial(extra, off, sideKey, iata);
+      flights.push(...extra);
+      added = extra.length;
+      flights.sort((a, b) => Date.parse(a[sideKey]?.sched?.utc || 0) - Date.parse(b[sideKey]?.sched?.utc || 0));
+    }
+    officialInfo[k] = { count: off?.length || 0, matched, added };
     return flights;
   } catch (e) {
     officialInfo[k] = { error: String(e.message || e) };
@@ -248,8 +279,8 @@ async function withOfficial(flights, iata, nature) {
 
 async function enrichLegs(legs) {
   for (const iata of new Set(legs.flatMap(l => [l.dep?.iata, l.arr?.iata]).filter(c => OFFICIAL_AIRPORTS[c]))) {
-    await withOfficial(legs, iata, 'D');
-    await withOfficial(legs, iata, 'A');
+    await withOfficial(legs, iata, 'D', false);
+    await withOfficial(legs, iata, 'A', false);
   }
   return legs;
 }
@@ -331,27 +362,33 @@ export function mergeCodeshares(list, dir) {
   });
 }
 
+/** Voli (formato dell'app) costruiti dalle righe del tabellone ufficiale. */
+function officialFlights(off, iata, nature) {
+  const tz = OFFICIAL_AIRPORTS[iata], own = { iata, ...(airportByIata(iata) || {}) };
+  return (off || []).filter(o => o.schedDate && o.number).map(o => {
+    const d = o.schedDate.slice(0, 10), hm = o.schedDate.slice(11, 16), z = tzOffset(tz, d);
+    const sched = { local: `${d} ${hm}${z}`, utc: new Date(`${d}T${hm}:00${z}`).toISOString() };
+    const mine = { iata, icao: own.icao, name: own.name, sched };
+    const ap = o.cityCode ? airportByIata(o.cityCode) : null;
+    const other = { iata: o.cityCode || null, name: ap?.name || (o.city ? o.city.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()) : null) };
+    return {
+      number: o.number, airline: { name: o.airline || null, iata: o.number.slice(0, 2) }, status: 'Expected', aircraft: { reg: o.reg || null, model: o.type || null },
+      dep: nature === 'D' ? mine : other, arr: nature === 'D' ? other : mine, _officialOnly: true,
+      // Aeroporti di Roma: una riga per sigla, "Operato da" indica il vettore; gli altri: la riga del vettore elenca le altre sigle
+      ...(['FCO', 'CIA'].includes(iata) ? { _opBy: o.codeshare?.[0] } : { _mkt: o.codeshare || [] }),
+    };
+  });
+}
+const inWindow = f => { const t = Date.parse((f.dep.sched || f.arr.sched).utc), now = Date.now(); return t > now - 2 * 3600e3 && t < now + 10 * 3600e3; };
+
 /** Tabellone costruito solo dai dati ufficiali dell'aeroporto (senza AeroDataBox). */
 async function officialOnly(iata, nature, window = true) {
   const k = `${iata}:${nature}`;
   let off;
   try { off = await getOfficial(iata, nature); } catch (e) { officialInfo[k] = { error: String(e.message || e) }; return []; }
-  const tz = OFFICIAL_AIRPORTS[iata], own = { iata, ...(airportByIata(iata) || {}) };
-  const now = Date.now();
-  const flights = (off || []).filter(o => o.schedDate).map(o => {
-    const d = o.schedDate.slice(0, 10), hm = o.schedDate.slice(11, 16), z = tzOffset(tz, d);
-    const sched = { local: `${d} ${hm}${z}`, utc: new Date(`${d}T${hm}:00${z}`).toISOString() };
-    const mine = { iata, icao: own.icao, name: own.name, sched };
-    const other = { iata: o.cityCode || null, name: o.city ? o.city.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()) : null };
-    return {
-      number: o.number, airline: { name: o.airline || null, iata: o.number.slice(0, 2) }, status: 'Expected', aircraft: { reg: o.reg || null, model: o.type || null },
-      dep: nature === 'D' ? mine : other, arr: nature === 'D' ? other : mine, _officialOnly: true,
-      // Aeroporti di Roma: una riga per sigla, "Operato da" indica il vettore; Toscana Aeroporti: la riga del vettore elenca le altre sigle
-      ...(['FCO', 'CIA'].includes(iata) ? { _opBy: o.codeshare?.[0] } : { _mkt: o.codeshare || [] }),
-    };
-  }).filter(f => { if (!window) return true; const t = Date.parse((f.dep.sched || f.arr.sched).utc); return t > now - 2 * 3600e3 && t < now + 10 * 3600e3; });
+  const flights = officialFlights(off, iata, nature).filter(f => !window || inWindow(f));
   mergeOfficial(flights, off, nature === 'D' ? 'dep' : 'arr', iata);
-  if (window) officialInfo[k] = { count: off.length, matched: flights.length };
+  if (window) officialInfo[k] = { count: off.length, matched: 0, added: flights.length, only: true };
   return flights.sort((a, b) => Date.parse((a.dep.sched || a.arr.sched).utc) - Date.parse((b.dep.sched || b.arr.sched).utc));
 }
 
