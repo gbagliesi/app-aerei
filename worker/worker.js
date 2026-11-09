@@ -331,7 +331,9 @@ async function sea(code, nature, log, env) {
   for (const d of dates) {
     const u = `https://apiextra.seamilano.eu/ols-flights/v1/it/operative/flights/lists?movementType=${nature === 'A' ? 'A' : 'D'}&dateFrom=${d}+00:00&dateTo=${d}+23:59&loadingType=P&airportReferenceIata=${code}&mfFlightType=P`;
     const t0 = Date.now();
-    const r = await fetch(u, { signal: AbortSignal.timeout(15000), headers: { 'keyId': key, 'Accept': 'application/json', 'User-Agent': UA } });
+    // la prima risposta della giornata a volte supera i 15 s: attesa più lunga e un secondo tentativo
+    const get = () => fetch(u, { signal: AbortSignal.timeout(20000), headers: { 'keyId': key, 'Accept': 'application/json', 'User-Agent': UA } });
+    const r = await get().catch(() => get());
     const t = await r.text();
     log.push({ url: u, status: r.status, length: t.length, ms: Date.now() - t0, start: t.slice(0, 200) });
     if (!r.ok) { if (all.length) continue; throw new Error(`SEA: errore ${r.status}${r.status === 401 ? ' (chiave keyId non valida)' : ''}`); }
