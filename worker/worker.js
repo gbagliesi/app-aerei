@@ -846,6 +846,9 @@ const AMS_STATES = { SCH: null, DEL: 'Ritardato', WIL: 'Attendere in sala', GTO:
 let amsToken = null;
 async function schipholToken(env, log) {
   if (amsToken && amsToken.until > Date.now()) return amsToken.value;
+  const ck = new Request('https://cache.local/schiphol-token');
+  const hit = await caches.default.match(ck).catch(() => null);
+  if (hit) { const c = await hit.json(); if (c.until > Date.now()) { amsToken = c; return c.value; } }
   const id = env.SCHIPHOL_APP_ID, secret = env.SCHIPHOL_APP_KEY;
   const url = env.SCHIPHOL_TOKEN_URL || 'https://api.auth.schiphol.nl/oauth/token';
   const form = { grant_type: 'client_credentials', audience: env.SCHIPHOL_AUDIENCE || 'https://api.schiphol.nl/public' };
@@ -864,6 +867,8 @@ async function schipholToken(env, log) {
     log.push({ url: `${url} (token, tentativo ${i + 1})`, status: r.status, length: txt.length, ms: Date.now() - t0, start: j.access_token ? 'token ok' : txt.slice(0, 200) });
     if (r.ok && j.access_token) {
       amsToken = { value: j.access_token, until: Date.now() + Math.max(60, (+j.expires_in || 3600) - 120) * 1000 };
+      const ttl = Math.floor((amsToken.until - Date.now()) / 1000);
+      await caches.default.put(ck, new Response(JSON.stringify(amsToken), { headers: { 'Cache-Control': `max-age=${ttl}` } })).catch(() => {});
       return amsToken.value;
     }
     last = `${r.status} ${j.error_description || j.error || j.message || ''}`.trim();
@@ -874,8 +879,8 @@ async function schiphol(nature, log, env) {
   if (!env || !env.SCHIPHOL_APP_ID || !env.SCHIPHOL_APP_KEY) throw new Error('Schiphol: mancano i segreti SCHIPHOL_APP_ID e SCHIPHOL_APP_KEY nel Worker');
   const A = nature === 'A', tz = 'Europe/Amsterdam';
   const iso = n => `${n.date}T${n.hm}:00`;
-  const base = `https://api.schiphol.nl/public/public-flights/v4/flights?flightDirection=${A ? 'A' : 'D'}&includedelays=false&sort=%2BscheduleTime`
-    + `&searchDateTimeField=scheduleDateTime&fromDateTime=${iso(localNow(tz, -180))}&toDateTime=${iso(localNow(tz, 660))}`;
+  const base = `https://api.schiphol.nl/public/public-flights/v4/flights?flightDirection=${A ? 'A' : 'D'}&includedelays=false&isOperationalFlight=true&sort=%2BscheduleTime`
+    + `&searchDateTimeField=scheduleDateTime&fromDateTime=${iso(localNow(tz, -150))}&toDateTime=${iso(localNow(tz, 600))}`;
   const token = await schipholToken(env, log);
   const headers = { 'Accept': 'application/json', 'Authorization': `Bearer ${token}` };
   const page = async p => {
@@ -883,20 +888,20 @@ async function schiphol(nature, log, env) {
     const r = await fetch(`${base}&page=${p}`, { signal: AbortSignal.timeout(15000), headers });
     const t = r.status === 204 ? '' : await r.text();
     log.push({ url: `${base}&page=${p}`, status: r.status, length: t.length, ms: Date.now() - t0, start: p ? undefined : t.slice(0, 160) });
-    if (r.status === 401 || r.status === 403) amsToken = null;
+    if (r.status === 401 || r.status === 403) { amsToken = null; await caches.default.delete(new Request('https://cache.local/schiphol-token')).catch(() => {}); }
     if (!r.ok) throw new Error(`Schiphol: errore ${r.status}${r.status === 401 || r.status === 403 ? ' (token rifiutato)' : ''}`);
     const link = r.headers.get('link') || '';
     return { flights: t ? JSON.parse(t).flights || [] : [], link, next: /rel="?next"?/.test(link) };
   };
   const first = await page(0);
-  const last = Math.min(+(/[?&]page=(\d+)[^>]*>;\s*rel="?last"?/.exec(first.link)?.[1] || 0), 40);
+  const last = Math.min(+(/[?&]page=(\d+)[^>]*>;\s*rel="?last"?/.exec(first.link)?.[1] || 0), 44);
   const rest = [];
   if (last) {
     for (let p = 1; p <= last; p += 10) {
       rest.push(...await Promise.all(Array.from({ length: Math.min(10, last - p + 1) }, (_, i) => page(p + i).catch(() => ({ flights: [] })))));
     }
   } else if (first.next) {
-    for (let p = 1, more = true; more && p <= 40; p++) { const x = await page(p).catch(() => ({ flights: [] })); rest.push(x); more = x.next; }
+    for (let p = 1, more = true; more && p <= 44; p++) { const x = await page(p).catch(() => ({ flights: [] })); rest.push(x); more = x.next; }
   }
   const seen = new Set();
   return [first, ...rest].flatMap(x => x.flights).filter(f => {
