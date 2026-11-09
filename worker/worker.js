@@ -25,7 +25,7 @@ const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
   MAD: (n, log) => aena('MAD', n, log), BCN: (n, log) => aena('BCN', n, log),
-  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol,
+  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol, GOA: genova,
 };
 
 export default {
@@ -943,6 +943,29 @@ async function schiphol(nature, log, env) {
       reg: fmtReg(f.aircraftRegistration), type: trimOrNull(t.iataSub || t.iatasub || t.iataMain || t.iatamain), terminal: f.terminal != null ? String(f.terminal) : null,
       city: null, cityCode: (f.route?.destinations || [])[A ? 0 : (f.route?.destinations || []).length - 1] || null, airline: null,
       codeshare: (f.codeshares?.codeshares || []).map(normNum).filter(n => n && n !== normNum(f.flightName)),
+    };
+  }).filter(f => f.number && f.sched);
+}
+
+// ---------- Genova ----------
+// API WordPress del sito airport.genova.it (plugin goavoli): partenze e arrivi della giornata insieme, orari locali.
+async function genova(nature, log) {
+  const data = JSON.parse(await getText('https://www.airport.genova.it/wp-json/goavoli/v1/voli', log, { name: 'Genova', quiet: true }));
+  const A = nature === 'A';
+  const t = v => (v && !v.startsWith('0001') ? v.slice(0, 16) : null);
+  return ((A ? data.arrival : data.departure) || []).filter(f => (f.TRANSPORT_TYPE || 'P') === 'P' && f.PUBLIC_FLIGHT_FLAG !== 'N').map(f => {
+    const sched = t(f.SCHEDULED_DATE_TIME), est = t(f.RESCHEDULED_DATE_TIME) || t(f.ESTIMATED_DATE_TIME);
+    const st = trimOrNull(f.REMARK_PUB_LOC);
+    const status = statusIt(st, nature);
+    const done = isDone(status);
+    const act = done ? est : null;
+    const num = normNum(`${(f.AIRLINE_2 || '').trim()}${(f.FLIGHT || '').trim()}`);
+    return {
+      number: num, sched: clock(sched?.slice(11)), schedDate: sched, est: clock(est?.slice(11)), actual: act ? clock(act.slice(11)) : null,
+      estAt: est, actualAt: act, status, statusCode: trimOrNull(f.REMARK_PUB),
+      gate: A ? null : trimOrNull(f.GATE), checkin: A ? null : trimOrNull(f.CHECKIN), stand: null, belt: A ? trimOrNull(f.BELT_FIDS) : null,
+      reg: null, type: null, terminal: null,
+      city: titleCase(A ? f.ORIGIN_LOC : f.DESTINATION_LOC), cityCode: trimOrNull(A ? f.ORIGIN : f.DESTINATION), airline: trimOrNull(f.AIRLINE_DESCRIPTION_LOC),
     };
   }).filter(f => f.number && f.sched);
 }

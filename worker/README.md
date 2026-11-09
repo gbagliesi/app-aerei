@@ -7,7 +7,7 @@ Aeroporti supportati: **Pisa (PSA)**, **Firenze (FLR)**, **Fiumicino (FCO)**, **
 **Milano Malpensa (MXP)** e **Linate (LIN)**, **Bologna (BLQ)**, **Catania (CTA)**, **Palermo (PMO)**,
 **Torino (TRN)**, **Cagliari (CAG)**, **Ginevra (GVA)**, **Zurigo (ZRH)**, **Francoforte (FRA)**, **Monaco (MUC)**,
 **Madrid (MAD)**, **Barcellona (BCN)**, **Lisbona (LIS)**, **Londra Gatwick (LGW)**, **Stansted (STN)**, **Luton (LTN)**, **City (LCY)**,
-**Lione (LYS)**, **Parigi Beauvais (BVA)**, **Amsterdam (AMS)**.
+**Lione (LYS)**, **Parigi Beauvais (BVA)**, **Amsterdam (AMS)**, **Genova (GOA)**.
 
 Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
 - Pisa, Firenze: API dei siti di Toscana Aeroporti. Puglia: backend dell'app ufficiale. Ginevra: feed dell'app.
@@ -21,7 +21,7 @@ Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
   London City: API voli del sito. Lione: `/api/flights/list` di lyonaeroports.com.
 - Amsterdam: Public Flight API 4.2 ufficiale di Schiphol (developer.schiphol.nl, token OAuth). Client ID e secret dell'app, salvati
   come segreti del Worker `SCHIPHOL_APP_ID` e `SCHIPHOL_APP_KEY` (Settings → Variables and Secrets, tipo Secret).
-- Non disponibili (protezioni anti-bot o chiave/registrazione): Napoli, Venezia, Genova, Orio al Serio, Olbia, Alghero,
+- Non disponibili (protezioni anti-bot o chiave/registrazione): Napoli, Venezia, Orio al Serio, Olbia, Alghero,
   Heathrow, Parigi CDG/Orly.
 
 Dati: gate, check-in, nastro, orario stimato e stato (dove l'aeroporto li pubblica); marche dell'aereo per Milano,
