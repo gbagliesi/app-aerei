@@ -839,7 +839,7 @@ async function beauvais(nature, log) {
 // ---------- Amsterdam Schiphol ----------
 // Public Flight API 4.2 ufficiale (developer.schiphol.nl). L'app registrata sul portale dà client_id e client_secret
 // (segreti del Worker SCHIPHOL_APP_ID e SCHIPHOL_APP_KEY) che si scambiano con un token JWT (OAuth client_credentials);
-// SCHIPHOL_TOKEN_URL e SCHIPHOL_AUDIENCE, se servono, si impostano come variabili. 20 voli per pagina; orari ISO con fuso.
+// Token da https://api.auth.schiphol.nl/oauth/token con audience https://api.schiphol.nl/public (durata 30 minuti). 20 voli per pagina; orari ISO con fuso.
 const AMS_STATES = { SCH: null, DEL: 'Ritardato', WIL: 'Attendere in sala', GTO: 'Gate aperto', BRD: 'Imbarco', GCH: 'Cambio gate',
   GCL: 'Ultima chiamata', GTD: 'Gate chiuso', DEP: 'Decollato', CNX: 'Cancellato', TOM: 'Domani', AIR: 'In volo', EXP: 'In arrivo',
   FIR: 'In arrivo', LND: 'Atterrato', FIB: 'Atterrato', ARR: 'Atterrato', DIV: 'Dirottato' };
@@ -847,9 +847,8 @@ let amsToken = null;
 async function schipholToken(env, log) {
   if (amsToken && amsToken.until > Date.now()) return amsToken.value;
   const id = env.SCHIPHOL_APP_ID, secret = env.SCHIPHOL_APP_KEY;
-  const url = env.SCHIPHOL_TOKEN_URL || 'https://login.schiphol.nl/oauth/token';
-  const form = { grant_type: 'client_credentials', scope: 'openid' };
-  if (env.SCHIPHOL_AUDIENCE) form.audience = env.SCHIPHOL_AUDIENCE;
+  const url = env.SCHIPHOL_TOKEN_URL || 'https://api.auth.schiphol.nl/oauth/token';
+  const form = { grant_type: 'client_credentials', audience: env.SCHIPHOL_AUDIENCE || 'https://api.schiphol.nl/public' };
   const tries = [
     { body: new URLSearchParams({ ...form, client_id: id, client_secret: secret }), headers: {} },
     { body: new URLSearchParams(form), headers: { 'Authorization': 'Basic ' + btoa(`${id}:${secret}`) } },
