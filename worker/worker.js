@@ -57,7 +57,10 @@ export default {
       if (!PROBE_HOSTS.some(h => host === h || host.endsWith('.' + h))) return json({ error: 'host non ammesso' }, 400);
       const t0 = Date.now();
       try {
-        const r = await fetch(target, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'application/json, text/html;q=0.9, */*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8' } });
+        const body = url.searchParams.get('body');
+        const r = await fetch(target, { signal: AbortSignal.timeout(15000), method: body ? 'POST' : 'GET', body: body || undefined,
+          headers: { 'User-Agent': UA, 'Accept': 'application/json, text/html;q=0.9, */*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8',
+            ...(body ? { 'Content-Type': url.searchParams.get('ctype') || 'application/json' } : {}) } });
         const t = await r.text();
         const grep = url.searchParams.get('grep');
         let matches;

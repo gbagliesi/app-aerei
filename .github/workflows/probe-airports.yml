@@ -20,8 +20,9 @@ jobs:
         run: |
           [ -n "$PROBES" ] || PROBES="https://www.veneziaairport.it/it_it/|[\"'][^\"']*(volo|voli|flight|partenz|arriv|departure)[^\"']*[\"'] https://www.airport.genova.it/|[\"'][^\"']*(volo|voli|flight|partenz|arriv|wp-json)[^\"']*[\"']"
           for p in $PROBES; do
-            u="${p%%|*}"; g=""; [ "$u" != "$p" ] && g="${p#*|}"
-            echo "=== $u"
-            curl -s -G "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/probe" --data-urlencode "url=$u" --data-urlencode "grep=$g" | head -c 6000
+            # formato: URL|regex|corpo POST|content-type (gli ultimi tre facoltativi)
+            IFS='|' read -r u g b c <<< "$p"
+            echo "=== $u ${b:+(POST)}"
+            curl -s -G "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/probe" --data-urlencode "url=$u" --data-urlencode "grep=$g" ${b:+--data-urlencode "body=$b"} ${c:+--data-urlencode "ctype=$c"} | head -c 6000
             echo
           done
