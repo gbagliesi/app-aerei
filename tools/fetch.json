@@ -1,20 +1,89 @@
 [
 {
-"id": "HAM_dep",
-"url": "https://www.hamburg-airport.de/service/flightdata/departures",
+"id": "BER_A",
+"url": "https://ber.berlin-airport.de/api.flights.json?arrivalDeparture=A&dateFrom=2026-11-10T16:00&dateUntil=2026-11-11&search=&lang=en&page=1&terminal=&itemsPerPage=100",
+"headers": {
+"Referer": "https://ber.berlin-airport.de/en/flying/departures-arrivals.html",
+"Accept": "application/json, text/plain, */*"
+}
+},
+{
+"id": "BER_D",
+"url": "https://ber.berlin-airport.de/api.flights.json?arrivalDeparture=D&dateFrom=2026-11-10T16:00&dateUntil=2026-11-11&search=&lang=en&page=1&terminal=&itemsPerPage=100",
+"headers": {
+"Referer": "https://ber.berlin-airport.de/en/flying/departures-arrivals.html",
+"Accept": "application/json, text/plain, */*"
+}
+},
+{
+"id": "ARN_A",
+"url": "https://www.swedavia.com/services/publicflightsboard/v3/arrivals/en/ARN/2026-11-10",
 "headers": {
 "Accept": "application/json"
 }
 },
 {
-"id": "HAM_arr",
-"url": "https://www.hamburg-airport.de/service/flightdata/arrivals",
+"id": "VIE_inc",
+"url": "https://viennaairport.com/jart/prj3/va/data/flights/inc.json"
+},
+{
+"id": "PRG_A",
+"url": "https://api.prg.aero/en/arrivals-shorttime?offset=0&limit=100&from=10-11-2026_15-00",
 "headers": {
 "Accept": "application/json"
 }
 },
 {
-"id": "EDI_api",
-"url": "https://flights-api.edinburghairport.com/flights/departures?version=2"
+"id": "DUB_A",
+"url": "https://www.dublinairport.com/api/flight-listing/arrivals?date=2026-11-10T15:00:00.000Z&limit=100"
+},
+{
+"id": "EDI_A",
+"url": "https://flights-api.edinburghairport.com/flights/arrivals?version=2"
+},
+{
+"id": "BUD_A",
+"url": "https://www.bud.hu/ajax/flight-search?locale=en&query=&date=2026-11-10&time=15:00&hideDeparted=0&hideArrived=0&direction=arrivals",
+"headers": {
+"X-Requested-With": "XMLHttpRequest",
+"Accept": "application/json"
+}
+},
+{
+"id": "DBV_A",
+"url": "https://www.dbv.hr/en/arrivals/40"
+},
+{
+"id": "SXB_A",
+"url": "https://www.strasbourg.aeroport.fr/en/passengers/to-travel/live-flight-information/?active=arrivee"
+},
+{
+"id": "WAW_A",
+"url": "https://lotnisko-chopina.pl/en/arrivals-and-departures/?page=1&operation=a",
+"headers": {
+"X-Requested-With": "XMLHttpRequest"
+}
+},
+{
+"id": "WAW_D",
+"url": "https://lotnisko-chopina.pl/en/arrivals-and-departures/?page=1&operation=d",
+"headers": {
+"X-Requested-With": "XMLHttpRequest"
+}
+},
+{
+"id": "CHQ_A",
+"url": "https://www.chq-airport.gr/en/_jcr_content.arrivals.json"
+},
+{
+"id": "BSL_dep",
+"url": "https://www.euroairport.com/en/vols-au-depart"
+},
+{
+"id": "TFS_A",
+"url": "https://www.aena.es/sites/Satellite?pagename=AENA_ConsultarVuelos&airport=TFS&flightType=L&dosDias=si",
+"headers": {
+"Accept": "application/json, text/javascript, */*"
+}
 }
 ]
