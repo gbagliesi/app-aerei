@@ -36,9 +36,9 @@ const PROBE_HOSTS = ['aeroportoverona.it', 'trevisoairport.it', 'riminiairport.c
   'baden-airpark.de', 'bru-system.be', 'airport.ai', 'lameziaairport.it', 'sacal.it'];
 const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
-  ZRH: zurich, FRA: frankfurt, CTA: catania, CIY: (n, log) => catania(n, log, 'CIY'), TPS: trapani, AOI: ancona, TRS: trieste, MUC: munich, PMO: palermo, BLQ: bologna,
+  ZRH: zurich, FRA: frankfurt, CTA: (n, log) => catania(n, log, 'CTA'), CIY: (n, log) => catania(n, log, 'CIY'), TPS: trapani, AOI: ancona, TRS: trieste, MUC: munich, PMO: palermo, BLQ: bologna,
   MAD: (n, log) => aena('MAD', n, log), BCN: (n, log) => aena('BCN', n, log),
-  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol, GOA: genova, VCE: venezia, HKG: hongKong,
+  LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol, GOA: genova, VCE: (n, log) => venezia(n, log), VRN: (n, log) => venezia(n, log, 'www.aeroportoverona.it', 'vrn_store_it', 'Verona'), TSF: (n, log) => venezia(n, log, 'www.trevisoairport.it', 'tsf_store_it', 'Treviso'), HKG: hongKong,
   // altri aeroporti europei (2026-11-10)
   ...Object.fromEntries(['TFS', 'TFN', 'LPA', 'ACE', 'FUE', 'VLC'].map(c => [c, (n, log) => aena(c, n, log)])),
   MAN: manchester, HAM: hamburg, BER: berlin, ARN: (n, log) => swedavia('ARN', n, log), VIE: vienna, PRG: prague, DUB: dublin, EDI: edinburgh,
@@ -1045,11 +1045,12 @@ async function genova(nature, log) {
 
 // ---------- Venezia (SAVE) ----------
 // API Magento del sito veneziaairport.it: POST /it_it/rest/V1/flights/get, 15 voli per pagina, orari ISO con fuso.
-async function venezia(nature, log) {
+// Stessa API (gruppo SAVE) per Verona e Treviso: cambiano solo il sito e lo store_code
+async function venezia(nature, log, host = 'www.veneziaairport.it', store = 'vce_store_it', name = 'Venezia') {
   const A = nature === 'A', tz = 'Europe/Rome';
-  const page = async p => JSON.parse(await getText('https://www.veneziaairport.it/it_it/rest/V1/flights/get', log, {
-    name: 'Venezia', method: 'POST', quiet: p > 1, headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: null, date: 'any', type: A ? 'arrivals' : 'departures', page: p, store_code: 'vce_store_it' }) }));
+  const page = async p => JSON.parse(await getText(`https://${host}/it_it/rest/V1/flights/get`, log, {
+    name, method: 'POST', quiet: p > 1, headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: null, date: 'any', type: A ? 'arrivals' : 'departures', page: p, store_code: store }) }));
   const first = await page(1);
   const per = +first.pagination?.per_page || 15, total = +first.pagination?.total || +first.results?.total || 0;
   const pages = Math.min(Math.ceil(total / per), 30);
