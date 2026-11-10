@@ -1,0 +1,158 @@
+[
+{
+"id": "HEL_page",
+"url": "https://www.finavia.fi/en/airports/helsinki-airport/flights?tab=dep"
+},
+{
+"id": "HEL_js",
+"url": "https://www.finavia.fi/modules/custom/finavia_frontend/app/dist/js/flightsAndAirlines.bundle.js"
+},
+{
+"id": "WAW_page",
+"url": "https://lotnisko-chopina.pl/en/arrivals-and-departures/"
+},
+{
+"id": "WAW_js",
+"url": "https://lotnisko-chopina.pl/static/website/js/arrivals-departures-page.js"
+},
+{
+"id": "WAW_js2",
+"url": "https://lotnisko-chopina.pl/static/website/js/arrivals-departures-section.js"
+},
+{
+"id": "KRK_dep",
+"url": "https://krakowairport.pl/en/passenger/flights/destinations/departures"
+},
+{
+"id": "BUD_js",
+"url": "https://www.bud.hu/build/assets/app-CYMcx8Ka.js"
+},
+{
+"id": "BUD_store",
+"url": "https://www.bud.hu/build/assets/flightStore-BjT5Sp9I.js"
+},
+{
+"id": "SKG_list",
+"url": "https://www.skg-airport.gr/en/flight-list"
+},
+{
+"id": "LCA_page",
+"url": "https://www.hermesairports.com/flight-info/arrivals-and-departures-lca/"
+},
+{
+"id": "MLA_dep",
+"url": "https://maltairport.com/flights/departures/"
+},
+{
+"id": "ARN_dep",
+"url": "https://www.swedavia.com/arlanda/departures/"
+},
+{
+"id": "HAM_dep",
+"url": "https://www.hamburg-airport.de/en/depart-arrive/departures"
+},
+{
+"id": "HAM_js",
+"url": "https://www.hamburg-airport.de/resource/themes/airport/js/app-69838-82.js"
+},
+{
+"id": "BER_page",
+"url": "https://ber.berlin-airport.de/en/flying/departures-arrivals.html"
+},
+{
+"id": "BER_js",
+"url": "https://ber.berlin-airport.de/etc.clientlibs/restartweb/clientlibs/clientlib-base.33f4e25734a21db723113c8e20c89b68.js"
+},
+{
+"id": "VIE_dep",
+"url": "https://viennaairport.com/passagiere/ankunft__abflug/abfluege"
+},
+{
+"id": "BRN_home",
+"url": "https://www.flughafenbern.ch/en/"
+},
+{
+"id": "SXB_page",
+"url": "https://www.strasbourg.aeroport.fr/passagers/voyager/vols-du-jour-en-temps-reel/"
+},
+{
+"id": "MST_home",
+"url": "https://www.maa.nl/"
+},
+{
+"id": "CGN_page",
+"url": "https://www.koeln-bonn-airport.de/fluggaeste/fluege/abflug-ankunft.html"
+},
+{
+"id": "BSL_dep",
+"url": "https://www.euroairport.com/en/vols-au-depart"
+},
+{
+"id": "FKB_page",
+"url": "https://www.baden-airpark.de/passagiere-besucher/fluege/tagesaktueller-flugplan/"
+},
+{
+"id": "ZAG_dep",
+"url": "https://www.zagreb-airport.hr/en/passengers/flight-information/departures/33"
+},
+{
+"id": "DBV_home",
+"url": "https://www.airport-dubrovnik.hr/"
+},
+{
+"id": "DUB_dep",
+"url": "https://www.dublinairport.com/flight-information/live-departures"
+},
+{
+"id": "DUB_js",
+"url": "https://www.dublinairport.com/_next/static/chunks/2vmfv-sj0nv68.js"
+},
+{
+"id": "EDI_flights",
+"url": "https://www.edinburghairport.com/flights"
+},
+{
+"id": "EDI_js",
+"url": "https://www.edinburghairport.com/assets/LiveFlightLookup-CyHxRKsy.js"
+},
+{
+"id": "PRG_page",
+"url": "https://www.prg.aero/en/flight-information"
+},
+{
+"id": "SPU_home",
+"url": "https://www.split-airport.hr/"
+},
+{
+"id": "SPU_http",
+"url": "http://split-airport.hr/"
+},
+{
+"id": "STR_alt",
+"url": "https://www.stuttgart-airport.com/"
+},
+{
+"id": "ATH_alt",
+"url": "https://www.aia.gr/"
+},
+{
+"id": "CPH_dev",
+"url": "https://developer.cph.dk/"
+},
+{
+"id": "CPH_alt",
+"url": "https://www.cph.dk/"
+},
+{
+"id": "GLA_alt",
+"url": "https://www.glasgowairport.com/flight-information/"
+},
+{
+"id": "BRU_alt",
+"url": "https://www.brusselsairport.be/"
+},
+{
+"id": "HER_alt",
+"url": "https://www.heraklion-airport.info/"
+}
+]

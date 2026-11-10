@@ -1,0 +1,24 @@
+# Scarica pagine/endpoint pubblici elencati in tools/fetch.json e li salva sul ramo temporaneo samples-tmp
+# (solo per analisi; il ramo si può cancellare). Solo avvio manuale.
+name: Fetch samples
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch
+        run: python3 tools/fetch_samples.py tools/fetch.json
+      - name: Push samples-tmp
+        run: |
+          mkdir /tmp/s && mv samples /tmp/s/ && cd /tmp/s
+          git init -q -b samples-tmp && git add samples
+          git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -qm samples
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" samples-tmp

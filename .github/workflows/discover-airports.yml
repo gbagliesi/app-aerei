@@ -17,4 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Discover
-        run: python3 tools/discover.py tools/discover.json ${{ inputs.codes }}
+        env:
+          CODES: ${{ inputs.codes }}
+        run: python3 tools/discover.py tools/discover.json $CODES

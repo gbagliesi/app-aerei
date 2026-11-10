@@ -78,11 +78,13 @@ def discover(code, cfg):
     print(f"  URL candidati ({len(items)}):")
     for x in items[:90]: print('   ', x, f'[{found[x]}]')
 
-cfg = json.load(open(sys.argv[1]))
-only = set(sys.argv[2:])
-for p in cfg.get('probes', []):
-    if not only or p.get('code') in only: probe(p)
-for code, c in cfg.get('airports', {}).items():
-    if not only or code in only:
-        try: discover(code, c)
-        except Exception as e: print(code, 'ERRORE', e)
+if __name__ != "__main__": pass
+else:
+  cfg = json.load(open(sys.argv[1]))
+  only = set(sys.argv[2:])
+  for p in cfg.get('probes', []):
+      if not only or p.get('code') in only: probe(p)
+  for code, c in cfg.get('airports', {}).items():
+      if not only or code in only:
+          try: discover(code, c)
+          except Exception as e: print(code, 'ERRORE', e)
