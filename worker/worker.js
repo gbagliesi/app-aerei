@@ -33,7 +33,7 @@ const PROBE_HOSTS = ['veniceairport.it', 'veneziaairport.it', 'aeroportodigenova
   'dfwairport.com', 'atl.com', 'flychicago.com', 'iah.org', 'fly2houston.com', 'mia-airport.com', 'flydenver.com', 'iflyorlando.com', 'orlandoairports.net',
   // aeroporti europei bloccati dal server di GitHub (prova dal Worker, 2026-11-10)
   'cph.dk', 'aia.gr', 'heraklion-airport.gr', 'brusselsairport.be', 'stuttgart-airport.com', 'flughafen-stuttgart.de', 'glasgowairport.com', 'split-airport.hr', 'euroairport.com', 'finavia.fi', 'maa.nl',
-  'baden-airpark.de', 'bru-system.be', 'airport.ai'];
+  'baden-airpark.de', 'bru-system.be', 'airport.ai', 'lameziaairport.it', 'sacal.it'];
 const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
@@ -1450,7 +1450,7 @@ async function euroairport(nature, log) {
 async function stuttgart(nature, log) {
   const tz = 'Europe/Berlin', A = nature === 'A', today = localNow(tz).date, out = [];
   const t = await getText('https://www.stuttgart-airport.com/de/reisende-besucher/fliegen/ankunft-abflug', log, { name: 'Stoccarda', quiet: true, accept: 'text/html', timeout: 20000 });
-  const re = new RegExp(`<a href="[^"]*/ankunft-abflug/\\d+"[^>]*data-flights-day="([a-z]+)"[^>]*data-flights-table-traffic="${A ? 'arrival' : 'departure'}" data-filter="([^"]*)">([\\s\\S]*?)</a>`, 'g');
+  const re = new RegExp(`<a href="[^"]*/ankunft-abflug/\\d+"[^>]*data-flights-day="([a-z]+)"[^>]*data-flights-table-traffic="${A ? 'arrival' : 'departure'}" data-filter="([^"]*)"[^>]*>([\\s\\S]*?)</a>`, 'g');
   for (const m of t.matchAll(re)) {
     const h = m[3], cell = c => strip((new RegExp(`flights-table__cell-${c}[^"]*">([\\s\\S]*?)</div>\\s*(?:<div data-role|$)`).exec(h) || [])[1] || '').replace(/^[A-Za-z-]+:\s*/, '');
     const plan = clock(/is--plan">([^<]*)</.exec(h)?.[1]), est = clock(/<span class="is--(?:late|early|ontime|delayed)">([^<]*)</.exec(h)?.[1]);
