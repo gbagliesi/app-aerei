@@ -1,0 +1,215 @@
+{
+ "probes": [
+  {
+   "code": "TFS",
+   "url": "https://www.aena.es/sites/Satellite?pagename=AENA_ConsultarVuelos&airport=TFS&flightType=S&dosDias=si",
+   "headers": {
+    "Accept": "application/json, text/javascript, */*"
+   },
+   "show": 400
+  },
+  {
+   "code": "TFN",
+   "url": "https://www.aena.es/sites/Satellite?pagename=AENA_ConsultarVuelos&airport=TFN&flightType=S&dosDias=si",
+   "headers": {
+    "Accept": "application/json, text/javascript, */*"
+   },
+   "show": 400
+  },
+  {
+   "code": "LPA",
+   "url": "https://www.aena.es/sites/Satellite?pagename=AENA_ConsultarVuelos&airport=LPA&flightType=S&dosDias=si",
+   "headers": {
+    "Accept": "application/json, text/javascript, */*"
+   },
+   "show": 400
+  },
+  {
+   "code": "VLC",
+   "url": "https://www.aena.es/sites/Satellite?pagename=AENA_ConsultarVuelos&airport=VLC&flightType=S&dosDias=si",
+   "headers": {
+    "Accept": "application/json, text/javascript, */*"
+   },
+   "show": 400
+  },
+  {
+   "code": "MAN",
+   "url": "https://d3ebfrkw2baepa.cloudfront.net/",
+   "body": "{\"query\": \"query($t:String!,$s:AWSDateTime,$e:AWSDateTime){ allDepartures(tenant:$t,startDate:$s,endDate:$e,from:0,size:5){ flightNumber status scheduledDepartureDateTime departureGate{number} arrivalAirport{code} } }\", \"variables\": {\"t\": \"MAN\", \"s\": \"2026-11-10T10:00:00Z\", \"e\": \"2026-11-11T10:00:00Z\"}}",
+   "headers": {
+    "Content-Type": "application/json"
+   },
+   "show": 500
+  },
+  {
+   "code": "MAN",
+   "url": "https://d3ebfrkw2baepa.cloudfront.net/",
+   "body": "{\"query\": \"query($t:String!,$s:AWSDateTime,$e:AWSDateTime){ allDepartures(tenant:$t,startDate:$s,endDate:$e,from:0,size:5){ flightNumber status scheduledDepartureDateTime departureGate{number} arrivalAirport{code} } }\", \"variables\": {\"t\": \"EMA\", \"s\": \"2026-11-10T10:00:00Z\", \"e\": \"2026-11-11T10:00:00Z\"}}",
+   "headers": {
+    "Content-Type": "application/json"
+   },
+   "show": 500
+  }
+ ],
+ "airports": {
+  "CPH": {
+   "name": "Copenhagen",
+   "home": "https://www.cph.dk/en",
+   "pages": [
+    "https://www.cph.dk/en/flight-info/departures"
+   ]
+  },
+  "HEL": {
+   "name": "Helsinki Finavia",
+   "home": "https://www.finavia.fi/en",
+   "pages": [
+    "https://www.finavia.fi/en/airports/helsinki-airport/flights"
+   ]
+  },
+  "WAW": {
+   "name": "Warsaw Chopin",
+   "home": "https://www.lotnisko-chopina.pl/en/",
+   "pages": []
+  },
+  "KRK": {
+   "name": "Krakow",
+   "home": "https://www.krakowairport.pl/en",
+   "pages": []
+  },
+  "BUD": {
+   "name": "Budapest",
+   "home": "https://www.bud.hu/en",
+   "pages": []
+  },
+  "ATH": {
+   "name": "Athens",
+   "home": "https://www.aia.gr/en",
+   "pages": []
+  },
+  "SKG": {
+   "name": "Thessaloniki Fraport",
+   "home": "https://www.skg-airport.gr/en",
+   "pages": []
+  },
+  "HER": {
+   "name": "Heraklion",
+   "home": "https://www.heraklion-airport.gr/",
+   "pages": []
+  },
+  "CHQ": {
+   "name": "Chania Fraport",
+   "home": "https://www.chq-airport.gr/en",
+   "pages": []
+  },
+  "LCA": {
+   "name": "Larnaca Hermes",
+   "home": "https://www.hermesairports.com/",
+   "pages": []
+  },
+  "MLA": {
+   "name": "Malta",
+   "home": "https://www.maltairport.com/",
+   "pages": []
+  },
+  "ARN": {
+   "name": "Stockholm Swedavia",
+   "home": "https://www.swedavia.com/arlanda/",
+   "pages": []
+  },
+  "HAM": {
+   "name": "Hamburg",
+   "home": "https://www.hamburg-airport.de/en/",
+   "pages": []
+  },
+  "BER": {
+   "name": "Berlin",
+   "home": "https://ber.berlin-airport.de/en.html",
+   "pages": []
+  },
+  "VIE": {
+   "name": "Vienna",
+   "home": "https://www.viennaairport.com/en/",
+   "pages": []
+  },
+  "BRN": {
+   "name": "Bern",
+   "home": "https://www.flughafenbern.ch/en/",
+   "pages": []
+  },
+  "SXB": {
+   "name": "Strasbourg",
+   "home": "https://www.strasbourg.aeroport.fr/",
+   "pages": []
+  },
+  "MST": {
+   "name": "Maastricht",
+   "home": "https://www.maa.nl/",
+   "pages": []
+  },
+  "CGN": {
+   "name": "Koeln Bonn",
+   "home": "https://www.koeln-bonn-airport.de/",
+   "pages": []
+  },
+  "BRU": {
+   "name": "Brussels",
+   "home": "https://www.brusselsairport.be/en",
+   "pages": []
+  },
+  "BSL": {
+   "name": "Basel EuroAirport",
+   "home": "https://www.euroairport.com/en/",
+   "pages": []
+  },
+  "FKB": {
+   "name": "Karlsruhe Baden-Baden",
+   "home": "https://www.baden-airpark.de/",
+   "pages": []
+  },
+  "STR": {
+   "name": "Stuttgart",
+   "home": "https://www.flughafen-stuttgart.de/en/",
+   "pages": []
+  },
+  "ZAG": {
+   "name": "Zagreb",
+   "home": "https://www.zagreb-airport.hr/en",
+   "pages": []
+  },
+  "SPU": {
+   "name": "Split",
+   "home": "https://www.split-airport.hr/en/",
+   "pages": []
+  },
+  "DBV": {
+   "name": "Dubrovnik",
+   "home": "https://www.airport-dubrovnik.hr/",
+   "pages": []
+  },
+  "DUB": {
+   "name": "Dublin",
+   "home": "https://www.dublinairport.com/",
+   "pages": []
+  },
+  "MAN": {
+   "name": "Manchester",
+   "home": "https://www.manchesterairport.co.uk/",
+   "pages": []
+  },
+  "EDI": {
+   "name": "Edinburgh",
+   "home": "https://www.edinburghairport.com/",
+   "pages": []
+  },
+  "GLA": {
+   "name": "Glasgow",
+   "home": "https://www.glasgowairport.com/",
+   "pages": []
+  },
+  "PRG": {
+   "name": "Prague",
+   "home": "https://www.prg.aero/en",
+   "pages": []
+  }
+ }
+}
