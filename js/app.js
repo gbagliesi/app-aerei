@@ -44,7 +44,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '3.8.1 · tab, fonti in ogni pagina, avviso fonti breve';
+const APP_VERSION = '3.8.2 · tab, fonti brevi in ogni pagina';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -295,9 +295,9 @@ function progress(f) {
 
 function legSources(f) {
   if (getSettings().provider !== 'aerodatabox') return 'Fonte: dati dimostrativi.';
-  const off = [['partenza', f.dep], ['arrivo', f.arr]].filter(([, s]) => s?._off).map(([w, s]) => `${w} a ${esc(s._off)} dal tabellone ufficiale (${esc(OFFICIAL_SOURCES[s._off] || s._off)})`);
-  const base = f._adb ? 'AeroDataBox' : 'tabellone ufficiale dell’aeroporto';
-  return off.length ? `Fonti: orari, gate, check-in, nastro e stato della ${off.join('; della ')}, che ha la priorità; il resto da ${base}.` : `Fonte: ${base}.`;
+  const sites = [...new Set([f.dep, f.arr].filter(s => s?._off).map(s => OFFICIAL_SOURCES[s._off] || s._off))].map(esc);
+  if (!sites.length) return f._adb ? 'Fonte: AeroDataBox.' : 'Fonte: tabellone ufficiale dell’aeroporto.';
+  return `Fonti: ${sites.join(', ')}${f._adb ? ' + AeroDataBox' : ''}.`;
 }
 
 // "Parte tra 40 min", "Atterra tra 1 h 05 min", "Atterrato alle 12:06"
@@ -355,14 +355,15 @@ async function viewFlight(number, date, depHint) {
     ${legs.length > 1 ? `<div class="tabs">${legs.map(l => `<a href="#/flight/${encodeURIComponent(number)}/${date}?dep=${l.dep.iata}" class="${l === f ? 'active' : ''}">${l.dep.iata} → ${l.arr.iata}</a>`).join('')}</div>` : ''}
     <p class="links">Tratta <b>${esc(f.dep.iata)} → ${esc(f.arr.iata)}</b> ${star(isFavorite('routes', { from: f.dep.iata, to: f.arr.iata }), favAttrs('routes', { from: f.dep.iata, to: f.arr.iata }))}
       · <a href="#/route/${f.dep.iata}/${f.arr.iata}">altri voli su questa tratta</a> · <a href="#/airport/${f.dep.iata}/dep">tabellone ${esc(f.dep.iata)}</a></p>
-    ${f._degraded ? `<p class="hint">⚠ AeroDataBox non disponibile: dati dal tabellone ufficiale dell’aeroporto. ${esc(f._degraded)}</p>` : ''}
+    ${f._degraded ? `<p class="hint" title="${esc(f._degraded)}">⚠ AeroDataBox non disponibile ora: solo dati del tabellone ufficiale.</p>` : ''}
     <div id="predict"></div>
     <div id="leg">${legCard(f, 'Questo volo')}</div>
     <div class="card"><div class="leghead"><span class="eyebrow">Posizione dell'aereo</span><span id="livemeta" class="sub"></span></div><div id="map" class="map"></div></div>
     <div class="card" id="aircraft">${aircraftCard(f.aircraft, date)}</div>
     <div id="inbound"><div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="loading">Cerco la tratta precedente…</p></div></div>
     ${pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
-      'orari, terminal, gate, check-in, nastro e stato: indicati in fondo a ogni riquadro (il <b>tabellone ufficiale dell’aeroporto</b> ha la priorità, il resto da <b>AeroDataBox</b>)',
+      'orari, terminal, gate, check-in, nastro e stato: indicati in fondo a ogni riquadro. Quando c’è il <b>tabellone ufficiale dell’aeroporto</b> (partenza e/o arrivo) ha la priorità per questi dati; il resto viene da <b>AeroDataBox</b>',
+      f._degraded ? `⚠ AeroDataBox non disponibile: ${esc(f._degraded)}` : '',
       'aereo assegnato e volo precedente: <b>AeroDataBox</b>, completato con la rete ADS-B <b>adsb.lol</b>; quando è scritto “probabile” o “stima” è una deduzione dell’app',
       'ritardo previsto, tempo di rotazione, durata e “parte tra / atterra tra”: calcolati dall’app con gli orari qui sopra',
       POS_SRC, MAP_SRC])}`;
