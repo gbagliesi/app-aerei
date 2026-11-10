@@ -1,0 +1,1953 @@
+# https://lotnisko-chopina.pl/en/arrivals-and-departures/?page=1&operation=d
+# status 200 final https://lotnisko-chopina.pl/en/arrivals-and-departures/?page=1&operation=d
+# {"Date": "Tue, 10 Nov 2026 17:09:56 GMT", "Content-Type": "text/html; charset=utf-8", "Transfer-Encoding": "chunked", "Connection": "close", "Server-Timing": "cfCacheStatus;desc=\"DYNAMIC\"", "Vary": "Accept-Encoding", "Content-Security-Policy": "default-src 'self' https://*.consentmanager.net; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self' https://login.ppl.pl https://*.ppl.pl https://*.lotnisko-chopina.pl; script-src 'self' 'nonce-dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU' https: https://*.googletagmanager.com https://tagmanager.google.com https://www.googletagmanager.com https://*.google-analytics.com https://www.google-analytics.com https://www.googleadservices.com https://*.consentmanager.net http://*.consentmanager.net https://cdn.consentmanager.net https://b.delivery.consentmanager.net https://www.google.com https://*.gstatic.com https://*.googleapis.com https://static.cloudflareinsights.com https://*.lotnisko-chopina.pl/cdn-cgi/ https://challenges.cloudflare.com https://ajax.cloudflare.com https://*.cloudflare.com https://connect.facebook.net; style-src 'self' 'unsafe-inline' https://*.consentmanager.net http://*.consentmanager.net https://*.googletagmanager.com https://*.google-analytics.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://googletagmanager.com https://tagmanager.google.com https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://*.consentmanager.net http://*.consentmanager.net https://*.googletagmanager.com https://*.google-analytics.com https://*.googleapis.com https://*.gstatic.com https://*.google.com https://googletagmanager.com https://tagmanager.google.com https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' data: https://*.consentmanager.net http://*.consentmanager.net https://cdn.consentmanager.net https://b.delivery.consentmanager.net https://*.gstatic.com https://*.googleapis.com https://*.google.com https://fonts.gstatic.com; img-src 'self' data: blob: https://*.consentmanager.net http://*.consentmanager.net https://cdn.consentmanager.net https://b.delivery.consentmanager.net https://storage.googleapis.com https://*.gstatic.com https://*.googleapis.com https://*.google.pl https://*.google.com https://cloudflareinsights.com https://*.cloudflare.com https://www.googletagmanager.com https://googleads.g.doubleclick.net https://pagead2.googlesyndication.com https://*.googleadservices.com https://*.google-analytics.com https://*.googletagmanager.com https://*.g.doubleclick.net https://google.com https://ad.doubleclick.net https://*.doubleclick.net https://ade.googlesyndication.com https://adservice.google.com https://px.ads.linkedin.com https://www.facebook.com https://facebook.com https://*.facebook.com https://*.facebook.net https://www.facebook.com; connect-src 'self' https://*.lotnisko-chopina.pl https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.consentmanager.net http://*.consentmanager.net https://cdn.consentmanager.net https://b.delivery.consentmanager.net https://*.gstatic.com https://*.googleapis.com https://*.google.com https://*.google.pl https://cloudflareinsights.com https://*.cloudflareinsights.com https://www.googletagmanager.com https://www.google.com https://google.com https://*.g.doubleclick.net https://pagead2.googlesyndication.com https://*.googleadservices.com https://googleads.g.doubleclick.net https://*.doubleclick.net https://ad.doubleclick.net https://px.ads.linkedin.com https://*.facebook.com https://*.facebook.net; frame-src 'self' https://*.consentmanager.net http://*.consentmanager.net https://cdn.consentmanager.net https://b.delivery.consentmanager.net https://*.googletagmanager.com https://*.gstatic.com https://*.googleapis.com https://*.google.com https://*.google-analytics.com https://challenges.cloudflare.com; worker-src 'self' blob:; manifest-src 'self'; media-src 'self' blob: https://*.lotnisko-chopina.pl; child-src 'self' blob: https://*.consentmanager.net http://*.consentmanager.net https://*.googletagmanager.com https://challenges.cloudflare.com;", "X-Frame-Options": "DENY", "Content-Language": "en", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin", "Cross-Origin-Opener-Policy": "same-origin", "Expires": "Tue, 10 Nov 2026 17:14:56 GMT", "X-Wagtail-Cache": "miss", "Strict-Transport-Security": "max-age=31536000", "Permissions-Policy": "microphone=(),camera=()", "Set-Cookie": "00018bfc90=016588ea9f75149afc99bd3e9bed3ee9b67b6de86ea7a7b4716087d3ae1b0eee93c4245bd43de0ff88c10cf8bb9a57093375d1ee27; Path=/; Domain=.lotnisko-chopina.pl", "cf-cache-status": "DYNAMIC", "Server": "cloudflare", "CF-RAY": "a586aaeb1e65e5b2-IAD", "alt-svc": "h3=\":443\"; ma=86400"}
+
+
+<!DOCTYPE html>
+
+<html lang="en" prefix="og: http://ogp.me/ns#">
+<head>
+<script type="text/javascript" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+(function(){
+window["loaderConfig"] = "/TSPD/?type=21";
+})();
+
+</script>
+
+<script type="text/javascript" src="/TSPD/?type=18" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU"></script>
+
+<script nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    'csp_nonce': 'dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU'
+  });
+</script>
+<script data-cfasync="false" data-cmp-ab="1" data-cmp-cdn="cdn.consentmanager.net" data-cmp-codesrc="1" data-cmp-host="b.delivery.consentmanager.net" data-cmp-nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="https://cdn.consentmanager.net/delivery/autoblocking/f6e5ee5f6714.js" type="text/javascript">
+</script>
+<!-- Google Tag Manager -->
+<script data-cfasync="false" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+    (function(w,d,s,l,i){
+      w[l]=w[l]||[];
+      w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
+      var f=d.getElementsByTagName(s)[0],
+          j=d.createElement(s),
+          dl=l!='dataLayer'?'&l='+l:'';
+      j.async=true;
+      j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+
+      var n = 'dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU';
+      if (n) {
+          j.setAttribute('nonce', n);
+      }
+
+      f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-K2RZJ2WL');
+  </script>
+<!-- End Google Tag Manager -->
+<script data-cfasync="false" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+    cr_site_url = "https://lotnisko-chopina.pl";
+    cr_external_new_tab = false;
+    cr_version = "3.0.4";
+  </script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Arrivals and departures – Warsaw Chopin Airport</title>
+<link href="https://lotnisko-chopina.pl/en/arrivals-and-departures/" rel="canonical"/>
+<meta content="Arrivals and Departures at Warsaw Chopin Airport – check the latest updates on flight times and statuses to and from Warsaw." name="description">
+<meta content="max-image-preview:large" name="robots"/>
+<meta content="Arrivals and departures – Warsaw Chopin Airport" property="og:title">
+<meta content="Arrivals and Departures at Warsaw Chopin Airport – check the latest updates on flight times and statuses to and from Warsaw." property="og:description">
+<meta content="
+  
+      https://lotnisko-chopina.pl/media/images/przyloty_i_odloty_banner-mobile.original_Q0Ru6jP.png
+  
+" property="og:image"/>
+<meta content="Lotnisko Chopina" property="og:site_name"/>
+<meta content="https://lotnisko-chopina.pl/en/arrivals-and-departures/" property="og:url"/>
+<meta content="website" property="og:type"/>
+<meta content="
+  
+    summary_large_image
+  
+" name="twitter:card"/>
+<meta content="Arrivals and departures – Warsaw Chopin Airport" name="twitter:title"/>
+<meta content="
+  
+    https://lotnisko-chopina.pl/media/images/przyloty_i_odloty_banner-mobile.original_Q0Ru6jP.png
+  
+" name="twitter:image"/>
+<meta content="Arrivals and Departures at Warsaw Chopin Airport – check the latest updates on flight times and statuses to and from Warsaw." name="twitter:description"/>
+<meta content="@" name="twitter:site">
+<link href="/static/coderedcms/vendor/bootstrap/dist/css/bootstrap.min.css?v=2db78341" rel="stylesheet"/>
+<link href="/static/coderedcms/css/crx-front.min.css?v=3.0.4" rel="stylesheet"/>
+<link href="/static/website/css/custom.css?v=2db78341" rel="stylesheet"/>
+<link href="/static/website/css/lightbox.min.css?v=2db78341" rel="stylesheet"/>
+<link href="/static/website/css/fontawesome.all.min.css?v=2db78341" rel="stylesheet"/>
+<link href="/static/website/css/swiper-bundle.min.css?v=2db78341" rel="stylesheet"/>
+<link href="/static/website/css/flatpickr.min.css?v=2db78341" rel="stylesheet"/>
+<link href="/media/images/LCH_favicon_black_yel.2e16d0ba.fill-256x256.format-webp_5xzIBb5.webp" rel="icon" type="image/webp"/>
+<link href="/media/images/LCH_favicon_black_yello.2e16d0ba.fill-180x180.format-png_h9xEBcu.png" rel="apple-touch-icon"/>
+<link href="/media/images/LCH_favicon_black_yello.2e16d0ba.fill-120x120.format-png_kGAKsZH.png" rel="apple-touch-icon" sizes="120x120"/>
+<link href="/media/images/LCH_favicon_black_yello.2e16d0ba.fill-180x180.format-png_h9xEBcu.png" rel="apple-touch-icon" sizes="180x180"/>
+<link href="/media/images/LCH_favicon_black_yello.2e16d0ba.fill-152x152.format-png_75MFcGl.png" rel="apple-touch-icon" sizes="152x152"/>
+<link href="/media/images/LCH_favicon_black_yello.2e16d0ba.fill-167x167.format-png_52bRwUZ.png" rel="apple-touch-icon" sizes="167x167"/>
+<script data-cfasync="false" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+(function() {
+  // 1. Definiujemy funkcję Meta Pixel
+  !function(f,b,e,v,n,t,s)
+  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;
+
+  // 2. Pobieramy nonce bezpośrednio z silnika Django do atrybutu tworzonego skryptu
+  var currentNonce = "dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU";
+  if (currentNonce) {
+      t.setAttribute('nonce', currentNonce);
+  }
+
+  s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
+
+  fbq('init', '2080297962446377');
+  fbq('track', 'PageView');
+})();
+</script>
+<noscript>
+<img height="1" src="https://www.facebook.com/tr?id=2080297962446377&amp;ev=PageView&amp;noscript=1" style="display:none" width="1"/>
+</noscript>
+</meta></meta></meta></meta></head>
+<body class="crx-arrivalsdeparturespage parent-page-4 default-body-ppl" id="page-1174">
+<a class="visually-hidden-focusable" href="#content">Skip to content</a>
+<a class="visually-hidden-focusable" href="#footer">Skip to footer</a>
+<!-- <div class="advert header" /> -->
+<nav class="row mx-0"><div class="container position-relative"><div class="navbar navbar-expand-lg pb-0" id="menu-navbar"><div class="container shadow-sm pe-0 navbar-logo-container navbar-desktop-padding-right"><a aria-label="Warsaw Chopin Airport Homepage" class="navbar-brand py-2 ps-3 ps-xl-4" href="/en/"><img alt="Logo" aria-hidden="true" height="41" src="/media/images/LOGO-LCH-K_EN-110x41.original_XgjloYw.svg" width="110"/></a><div class="navbar-mobile-bg position-absolute start-0 end-0 top-0"></div><button aria-label="Go back to the categories list" class="go-back-btn"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button><p class="open-nav-header fw-semibold mb-0"></p><div class="d-flex justify-content-end d-lg-none pe-3" id="menuMobile"><div class="d-flex align-items-center gap-1"><a aria-controls="SearchContentMobile" aria-expanded="false" aria-label="Search" class="nav-link p-2" data-bs-target="#SearchContentMobile" data-bs-toggle="collapse" href="#" id="searchIcon"><img aria-hidden="true" class="navbar-icon" src="/static/website/img/lupka.png"/></a><button aria-controls="MobileSubmenuContent" aria-expanded="false" aria-label="Toggle list" class="navbar-hamburger nav-link p-2 collapsed" data-bs-target="#MobileSubmenuContent" data-bs-toggle="collapse" id="menuToggleButton" type="button"><div class="navbar-hamburger__content"></div></button></div></div><div class="collapse navbar-collapse pt-4" id="MobileSubmenuContent"><ul class="navbar-nav d-lg-none px-4 border-0 rounded-0" id="submenuMobile"><li class="nav-item dropdown"><div aria-expanded="false" class="d-flex align-items-center justify-content-between pt-3 pb-3 border-bottom-mobile-fix" data-bs-toggle="dropdown" style="cursor: pointer;"><a class="nav-link p-0 flex-grow-1" href="#" id="menuLevel1_flights" onclick="event.stopPropagation();">
+                         Flights
+                      </a><button aria-label="Toggle list" class="btn p-0 ps-3 border-0 dropdown-toggle-custom" type="button"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel1_flights" class="dropdown-menu border-0 next-level px-3 rounded-0"><li class="nav-item dropdown"><div class="nav-link pt-3 pb-3"><a class="nav-link--dropdown" href="/en/arrivals-and-departures/" id="menuLevel2_arrivals-and-departures" onclick="event.stopPropagation();">
+                         Arrivals and departures
+                      </a></div></li><li class="nav-item dropdown"><div class="nav-link pt-3 pb-3"><a class="nav-link--dropdown" href="https://chopin-airport.bluesky.pl/" id="menuLevel2_book-a-flight" onclick="event.stopPropagation();" target="_blank">
+                         Book a flight
+                      </a></div></li></ul></li><li class="nav-item dropdown"><div aria-expanded="false" class="d-flex align-items-center justify-content-between pt-3 pb-3 border-bottom-mobile-fix" data-bs-toggle="dropdown" style="cursor: pointer;"><a class="nav-link p-0 flex-grow-1" href="#" id="menuLevel1_about-us" onclick="event.stopPropagation();">
+                         About us
+                      </a><button aria-label="Toggle list" class="btn p-0 ps-3 border-0 dropdown-toggle-custom" type="button"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel1_about-us" class="dropdown-menu border-0 next-level px-3 rounded-0"><li class="nav-item dropdown"><div aria-expanded="false" class="nav-link menu-toggle pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/history/" id="menuLevel2_history" onclick="event.stopPropagation();">
+                         History
+                      </a><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel2_history" class="dropdown-menu border-0 rounded-0"><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/history/the-exhibition-90-years-of-history-emotion-and-change/">
+                                The exhibition: "90 years of history, emotion and change"
+                              </a></li></ul></li><li class="nav-item dropdown"><div class="nav-link pt-3 pb-3"><a class="nav-link--dropdown" href="/en/contact/" id="menuLevel2_contact" onclick="event.stopPropagation();">
+                         Contact
+                      </a></div></li><li class="nav-item dropdown"><div class="nav-link pt-3 pb-3"><a class="nav-link--dropdown" href="https://biuroprasowe.ppl.pl/" id="menuLevel2_for-the-media" onclick="event.stopPropagation();" target="_blank">
+                         For the media
+                      </a></div></li></ul></li><li class="nav-item dropdown"><div aria-expanded="false" class="d-flex align-items-center justify-content-between pt-3 pb-3 border-bottom-mobile-fix" data-bs-toggle="dropdown" style="cursor: pointer;"><a class="nav-link p-0 flex-grow-1" href="#" id="menuLevel1_transportation" onclick="event.stopPropagation();">
+                         Transportation
+                      </a><button aria-label="Toggle list" class="btn p-0 ps-3 border-0 dropdown-toggle-custom" type="button"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel1_transportation" class="dropdown-menu border-0 next-level px-3 rounded-0"><li class="nav-item dropdown"><div class="nav-link pt-3 pb-3"><a class="nav-link--dropdown" href="/en/to-and-from-the-airport/" id="menuLevel2_to-and-from-the-airport" onclick="event.stopPropagation();">
+                         To and from the Airport
+                      </a></div></li><li class="nav-item dropdown"><div aria-expanded="false" class="nav-link menu-toggle pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/parking/" id="menuLevel2_parking" onclick="event.stopPropagation();">
+                         Parking
+                      </a><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel2_parking" class="dropdown-menu border-0 rounded-0"><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/parking/parking-price-lists-and-regulations/">
+                                Parking Price List and Regulations
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/parking/kiss-and-fly/">
+                                Kiss &amp; Fly
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/parking/valet-parking/">
+                                Valet Parking
+                              </a></li></ul></li></ul></li><li class="nav-item dropdown"><div aria-expanded="false" class="d-flex align-items-center justify-content-between pt-3 pb-3 border-bottom-mobile-fix" data-bs-toggle="dropdown" style="cursor: pointer;"><a class="nav-link p-0 flex-grow-1" href="#" id="menuLevel1_at-the-airport" onclick="event.stopPropagation();">
+                         At the airport
+                      </a><button aria-label="Toggle list" class="btn p-0 ps-3 border-0 dropdown-toggle-custom" type="button"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel1_at-the-airport" class="dropdown-menu border-0 next-level px-3 rounded-0"><li class="nav-item dropdown"><div aria-expanded="false" class="nav-link menu-toggle pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/before-flight/" id="menuLevel2_before-flight" onclick="event.stopPropagation();">
+                         Before flight
+                      </a><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel2_before-flight" class="dropdown-menu border-0 rounded-0"><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/before-flight/check-in-at-the-airport/">
+                                Check-in at the airport
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/before-flight/prm-assistance/">
+                                PRM assistance
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/before-flight/passenger-guide/">
+                                Passenger guide
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/before-flight/safety-and-security-regulations/">
+                                Safety and Security Regulations
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/before-flight/transfer-passenger-connecting-flight/">
+                                Transfer passenger
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/before-flight/passenger-rights/">
+                                Passenger rights
+                              </a></li></ul></li><li class="nav-item dropdown"><div aria-expanded="false" class="nav-link menu-toggle pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/baggage/" id="menuLevel2_baggage" onclick="event.stopPropagation();">
+                         Baggage
+                      </a><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel2_baggage" class="dropdown-menu border-0 rounded-0"><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/baggage/baggage-rules/">
+                                Baggage rules
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/baggage/lost-or-damaged-luggage-in-air-transport/">
+                                Lost or Damaged Luggage
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/baggage/luggage-wrapping/">
+                                Luggage wrapping
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/baggage/baggage-handling/">
+                                Baggage handling
+                              </a></li></ul></li><li class="nav-item dropdown"><div aria-expanded="false" class="nav-link menu-toggle pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/service-points/" id="menuLevel2_service-points" onclick="event.stopPropagation();">
+                         Service points
+                      </a><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel2_service-points" class="dropdown-menu border-0 rounded-0"><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/service-points/restaurants/">
+                                Restaurants
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/service-points/shops/">
+                                Shops
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/facilities/temporary-passport/">
+                                Temporary passport
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/service-points/financial-and-postal-services/">
+                                Financial and postal services
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/service-points/tax-refund/">
+                                Tax refund
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/service-points/parcel-locker/">
+                                Parcel locker®
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/service-points/rent-a-car/">
+                                Rent a Car
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/service-points/shops/pharmacy/">
+                                Pharmacy
+                              </a></li></ul></li><li class="nav-item dropdown"><div aria-expanded="false" class="nav-link menu-toggle pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/facilities/" id="menuLevel2_facilities" onclick="event.stopPropagation();">
+                         Facilities
+                      </a><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel2_facilities" class="dropdown-menu border-0 rounded-0"><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/facilities/ehic-card/">
+                                EHIC Card
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/facilities/quiet-and-relaxation-zones/">
+                                Quiet and relaxation zones
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/facilities/for-children/">
+                                For children
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/facilities/information-points/">
+                                Information points
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/facilities/lost-and-found-office/">
+                                Lost and Found Office
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/facilities/observation-deck/">
+                                Observation deck
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/facilities/drinking-fountains-free-drinking-water/">
+                                Drinking fountains
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/facilities/places-for-reflection-and-prayer/">
+                                Places for reflection and prayer
+                              </a></li></ul></li><li class="nav-item dropdown"><div aria-expanded="false" class="nav-link menu-toggle pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/safety/" id="menuLevel2_safety" onclick="event.stopPropagation();">
+                         Safety
+                      </a><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel2_safety" class="dropdown-menu border-0 rounded-0"><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/safety/agreeing-the-location-of-temporary-aerodrome-obstacles/">
+                                Agreeing the location of temporary aerodrome obstacles
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/safety/safety-management-system/">
+                                Safety Management System
+                              </a></li></ul></li><li class="nav-item dropdown"><div class="nav-link pt-3 pb-3"><a class="nav-link--dropdown" href="/en/warsaw-chopin-airport-map/" id="menuLevel2_warsaw-chopin-airport-map" onclick="event.stopPropagation();">
+                         Warsaw Chopin Airport Map
+                      </a></div></li></ul></li><li class="nav-item"><a aria-current="page" class="nav-link pt-3 pb-3" href="/en/b2b/">
+              B2B
+            </a></li><li class="nav-item dropdown"><div aria-expanded="false" class="d-flex align-items-center justify-content-between pt-3 pb-3 border-bottom-mobile-fix" data-bs-toggle="dropdown" style="cursor: pointer;"><a class="nav-link p-0 flex-grow-1" href="#" id="menuLevel1_reserve" onclick="event.stopPropagation();">
+                         Reserve
+                      </a><button aria-label="Toggle list" class="btn p-0 ps-3 border-0 dropdown-toggle-custom" type="button"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel1_reserve" class="dropdown-menu border-0 next-level px-3 rounded-0"><li class="nav-item dropdown"><div aria-expanded="false" class="nav-link menu-toggle pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/our-services/" id="menuLevel2_our-services" onclick="event.stopPropagation();">
+                         Our services
+                      </a><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button></div><ul aria-labelledby="menuLevel2_our-services" class="dropdown-menu border-0 rounded-0"><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/our-services/fast-track/">
+                                Fast Track
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/our-services/comfort-pass/">
+                                Comfort Pass
+                              </a></li><div aria-expanded="false" class="nav-link menu-toggle ps-3 pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/our-services/executive-lounges/" id="menuLevel3_executive-lounge" onclick="event.stopPropagation();">
+                                Executive Lounge
+                              </a><!-- --><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button><!-- --></div><ul aria-labelledby="menuLevel3_executive-lounge" class="dropdown-menu border-0 rounded-0 dropdown-menu--inner"><li class="nav-item"><a class="nav-link dropdown-menu-item ps-3 pt-3 pb-3" href="/en/our-services/executive-lounges/">
+                                      Etiuda Executive Lounge
+                                    </a></li><li class="nav-item"><a class="nav-link dropdown-menu-item ps-3 pt-3 pb-3" href="/en/our-services/executive-lounges/">
+                                      Fantazja Executive Lounge
+                                    </a></li><li class="nav-item"><a class="nav-link dropdown-menu-item ps-3 pt-3 pb-3" href="/en/our-services/executive-lounges/">
+                                      Preludium Executive Lounge
+                                    </a></li></ul><div aria-expanded="false" class="nav-link menu-toggle ps-3 pt-3 pb-3" data-bs-toggle="dropdown" role="button"><a class="nav-link--dropdown" href="/en/our-services/vip-line-zone/" id="menuLevel3_vip-line-zone" onclick="event.stopPropagation();">
+                                VIP Line Zone
+                              </a><!-- --><button class="float-end" type="button"><img src="/static/website/img/arrow-down.svg"/></button><!-- --></div><ul aria-labelledby="menuLevel3_vip-line-zone" class="dropdown-menu border-0 rounded-0 dropdown-menu--inner"><li class="nav-item"><a class="nav-link dropdown-menu-item ps-3 pt-3 pb-3" href="/en/our-services/vip-line-zone/">
+                                      City Transfer
+                                    </a></li><li class="nav-item"><a class="nav-link dropdown-menu-item ps-3 pt-3 pb-3" href="/en/our-services/vip-line-zone/">
+                                      Valet Parking in the VIP Line Zone
+                                    </a></li></ul><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/parking/">
+                                Parking
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/parking/valet-parking/">
+                                Valet Parking
+                              </a></li><li class="nav-item ps-3"><a class="nav-link fw-normal dropdown-menu-item pt-3 pb-3" href="/en/baggage/baggage-handling/">
+                                Baggage handling
+                              </a></li></ul></li></ul></li><li class="nav-item dropdown"><a aria-expanded="false" class="nav-link menu-toggle pt-3 pb-3" data-bs-toggle="dropdown" href="#" id="menuLevel_lang" role="button"><img alt="English" class="navbar-icon pe-3" src="/static/website/img/en.png"> English
+              <span class="float-end"><img src="/static/website/img/arrow-down.svg"/></span></img></a><ul aria-labelledby="menuLevel1_" class="dropdown-menu border-0 rounded-0"><li class="nav-item"><a class="nav-link dropdown-menu-item fw-bold pt-3 pb-3" href="/pl/przyloty-i-odloty/"><img alt="pl" class="navbar-icon pe-3" src="/static/website/img/pl.png">
+                Polish
+              </img></a></li><li class="nav-item active"><a class="nav-link dropdown-menu-item fw-bold pt-3 pb-3" href="/en/arrivals-and-departures/"><img alt="en" class="navbar-icon pe-3" src="/static/website/img/en.png">
+                English
+              </img></a></li></ul></li></ul></div><div class="collapse navbar-collapse bg-white overflow-hidden search-mobile-variant" id="SearchContentMobile"><ul class="navbar-nav d-lg-none"><li class="nav-item p-3"><form action="/en/search/" class="d-flex ms-auto" method="GET" role="search"><div class="input-group d-flex w-100 search-input-wrapper lch-form-input"><label for="id_s">Search</label><input autocomplete="off" class="form-control form-control__search-trigger rounded-3" id="id_s" maxlength="255" name="s" placeholder="" type="text" value=""/><button class="btn btn-outline btn-secondary search-btn submit-search-icon btn-search-input" type="submit"><img alt="Search" src="/static/website/img/interface-essential-search-loupe.svg"/></button><button class="btn btn-outline btn-secondary search-btn submit-search-icon btn-delete-input d-none"><img alt="" src="/static/website/img/clear.svg"/></button></div></form></li></ul></div><div class="collapse navbar-collapse d-none d-lg-block"><div class="nav d-flex ms-auto" id="DesktopMenuContent"><ul class="nav navbar-nav gap-4" id="menu"><li class="nav-item text-menu-item mx-2" role="presentation"><a aria-controls="pills-flights" aria-selected="false" class="nav-link nav-category px-0" data-bs-target="#pills-flights" href="#" id="pills-flights-tab" tabindex="0">
+                   Flights
+                </a><button class="p-0 ms-3 px-2 border-0 dropdown-toggle-custom bg-white accessiblity-btns d-none" data-bs-target="#pills-flights" data-bs-toggle="tab" type="button"><img src="/static/website/img/arrow-down.svg"/></button></li><li class="nav-item text-menu-item mx-2" role="presentation"><a aria-controls="pills-about-us" aria-selected="false" class="nav-link nav-category px-0" data-bs-target="#pills-about-us" href="#" id="pills-about-us-tab" tabindex="0">
+                   About us
+                </a><button class="p-0 ms-3 px-2 border-0 dropdown-toggle-custom bg-white accessiblity-btns d-none" data-bs-target="#pills-about-us" data-bs-toggle="tab" type="button"><img src="/static/website/img/arrow-down.svg"/></button></li><li class="nav-item text-menu-item mx-2" role="presentation"><a aria-controls="pills-transportation" aria-selected="false" class="nav-link nav-category px-0" data-bs-target="#pills-transportation" href="#" id="pills-transportation-tab" tabindex="0">
+                   Transportation
+                </a><button class="p-0 ms-3 px-2 border-0 dropdown-toggle-custom bg-white accessiblity-btns d-none" data-bs-target="#pills-transportation" data-bs-toggle="tab" type="button"><img src="/static/website/img/arrow-down.svg"/></button></li><li class="nav-item text-menu-item mx-2" role="presentation"><a aria-controls="pills-at-the-airport" aria-selected="false" class="nav-link nav-category px-0" data-bs-target="#pills-at-the-airport" href="#" id="pills-at-the-airport-tab" tabindex="0">
+                   At the airport
+                </a><button class="p-0 ms-3 px-2 border-0 dropdown-toggle-custom bg-white accessiblity-btns d-none" data-bs-target="#pills-at-the-airport" data-bs-toggle="tab" type="button"><img src="/static/website/img/arrow-down.svg"/></button></li><li class="nav-item text-menu-item mx-2" role="presentation"><a aria-controls="pills-b2b" aria-selected="false" class="nav-link nav-category px-0" data-bs-target="#pills-b2b" href="/en/b2b/" id="pills-b2b-tab" tabindex="0">
+                   B2B
+                </a><button class="p-0 ms-3 px-2 border-0 dropdown-toggle-custom bg-white accessiblity-btns d-none" data-bs-target="#pills-b2b" data-bs-toggle="tab" type="button"><img src="/static/website/img/arrow-down.svg"/></button></li><li class="nav-item text-menu-item mx-2" role="presentation"><a aria-controls="pills-reserve" aria-selected="false" class="nav-link nav-category px-0" data-bs-target="#pills-reserve" href="#" id="pills-reserve-tab" tabindex="0">
+                   Reserve
+                </a><button class="p-0 ms-3 px-2 border-0 dropdown-toggle-custom bg-white accessiblity-btns d-none" data-bs-target="#pills-reserve" data-bs-toggle="tab" type="button"><img src="/static/website/img/arrow-down.svg"/></button></li><div class="d-flex"><li class="nav-item border-menu-item" role="presentation"><a aria-controls="pills-search" aria-selected="false" class="nav-link nav-category" data-bs-target="#pills-search" data-bs-toggle="tab" href="#" id="pills-search-tab" tabindex="0"><img alt="Search" class="navbar-icon" src="/static/website/img/lupka.png"/></a></li><li class="nav-item no-border-menu-item" role="presentation"><a aria-controls="pills-lang" aria-selected="false" class="nav-link nav-category" data-bs-target="#pills-lang" data-bs-toggle="tab" href="#" id="pills-lang-tab" tabindex="0"><img alt="British flag - Choose language" class="navbar-icon" src="/static/website/img/en.png"/></a></li></div></ul></div></div></div><div class="navbar d-none d-lg-block" id="DesktopSubMenuContent"><div class="container"><div class="container rounded-bottom-4 tab-content"><div aria-labelledby="pills-flights-tab" class="tab-pane fade submenu-category" id="pills-flights"><ul class="nav flex-column menu-items submenu"><li class="nav-item px-3"><div class="nav-link no-sublinks list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/arrivals-and-departures/"><p>Arrivals and departures</p></a></div></li><li class="nav-item px-3"><div class="nav-link no-sublinks list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="https://chopin-airport.bluesky.pl/" target="_blank"><p>Book a flight</p></a></div></li></ul></div><div aria-labelledby="pills-about-us-tab" class="tab-pane fade submenu-category" id="pills-about-us"><ul class="nav flex-column menu-items submenu"><li class="nav-item px-3"><div aria-expanded="false" class="nav-link has-submenu list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/history/"><p>History</p></a><button aria-label="Toggle list" class="float-end"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul class="nav flex-column submenu-items"><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/history/the-exhibition-90-years-of-history-emotion-and-change/"><p class="mb-0 position-relative">The exhibition: "90 years of history, emotion and change"</p></a></li></ul></li><li class="nav-item px-3"><div class="nav-link no-sublinks list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/contact/"><p>Contact</p></a></div></li><li class="nav-item px-3"><div class="nav-link no-sublinks list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="https://biuroprasowe.ppl.pl/" target="_blank"><p>For the media</p></a></div></li></ul></div><div aria-labelledby="pills-transportation-tab" class="tab-pane fade submenu-category" id="pills-transportation"><ul class="nav flex-column menu-items submenu"><li class="nav-item px-3"><div class="nav-link no-sublinks list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/to-and-from-the-airport/"><p>To and from the Airport</p></a></div></li><li class="nav-item px-3"><div aria-expanded="false" class="nav-link has-submenu list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/parking/"><p>Parking</p></a><button aria-label="Toggle list" class="float-end"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul class="nav flex-column submenu-items"><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/parking/parking-price-lists-and-regulations/"><p class="mb-0 position-relative">Parking Price List and Regulations</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/parking/kiss-and-fly/"><p class="mb-0 position-relative">Kiss &amp; Fly</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/parking/valet-parking/"><p class="mb-0 position-relative">Valet Parking</p></a></li></ul></li></ul></div><div aria-labelledby="pills-at-the-airport-tab" class="tab-pane fade submenu-category" id="pills-at-the-airport"><ul class="nav flex-column menu-items submenu"><li class="nav-item px-3"><div aria-expanded="false" class="nav-link has-submenu list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/before-flight/"><p>Before flight</p></a><button aria-label="Toggle list" class="float-end"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul class="nav flex-column submenu-items"><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/before-flight/check-in-at-the-airport/"><p class="mb-0 position-relative">Check-in at the airport</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/before-flight/prm-assistance/"><p class="mb-0 position-relative">PRM assistance</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/before-flight/passenger-guide/"><p class="mb-0 position-relative">Passenger guide</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/before-flight/safety-and-security-regulations/"><p class="mb-0 position-relative">Safety and Security Regulations</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/before-flight/transfer-passenger-connecting-flight/"><p class="mb-0 position-relative">Transfer passenger</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/before-flight/passenger-rights/"><p class="mb-0 position-relative">Passenger rights</p></a></li></ul></li><li class="nav-item px-3"><div aria-expanded="false" class="nav-link has-submenu list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/baggage/"><p>Baggage</p></a><button aria-label="Toggle list" class="float-end"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul class="nav flex-column submenu-items"><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/baggage/baggage-rules/"><p class="mb-0 position-relative">Baggage rules</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/baggage/lost-or-damaged-luggage-in-air-transport/"><p class="mb-0 position-relative">Lost or Damaged Luggage</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/baggage/luggage-wrapping/"><p class="mb-0 position-relative">Luggage wrapping</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/baggage/baggage-handling/"><p class="mb-0 position-relative">Baggage handling</p></a></li></ul></li><li class="nav-item px-3"><div aria-expanded="false" class="nav-link has-submenu list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/service-points/"><p>Service points</p></a><button aria-label="Toggle list" class="float-end"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul class="nav flex-column submenu-items"><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/service-points/restaurants/"><p class="mb-0 position-relative">Restaurants</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/service-points/shops/"><p class="mb-0 position-relative">Shops</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/facilities/temporary-passport/"><p class="mb-0 position-relative">Temporary passport</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/service-points/financial-and-postal-services/"><p class="mb-0 position-relative">Financial and postal services</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/service-points/tax-refund/"><p class="mb-0 position-relative">Tax refund</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/service-points/parcel-locker/"><p class="mb-0 position-relative">Parcel locker®</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/service-points/rent-a-car/"><p class="mb-0 position-relative">Rent a Car</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/service-points/shops/pharmacy/"><p class="mb-0 position-relative">Pharmacy</p></a></li></ul></li><li class="nav-item px-3"><div aria-expanded="false" class="nav-link has-submenu list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/facilities/"><p>Facilities</p></a><button aria-label="Toggle list" class="float-end"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul class="nav flex-column submenu-items"><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/facilities/ehic-card/"><p class="mb-0 position-relative">EHIC Card</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/facilities/quiet-and-relaxation-zones/"><p class="mb-0 position-relative">Quiet and relaxation zones</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/facilities/for-children/"><p class="mb-0 position-relative">For children</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/facilities/information-points/"><p class="mb-0 position-relative">Information points</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/facilities/lost-and-found-office/"><p class="mb-0 position-relative">Lost and Found Office</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/facilities/observation-deck/"><p class="mb-0 position-relative">Observation deck</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/facilities/drinking-fountains-free-drinking-water/"><p class="mb-0 position-relative">Drinking fountains</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/facilities/places-for-reflection-and-prayer/"><p class="mb-0 position-relative">Places for reflection and prayer</p></a></li></ul></li><li class="nav-item px-3"><div aria-expanded="false" class="nav-link has-submenu list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/safety/"><p>Safety</p></a><button aria-label="Toggle list" class="float-end"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul class="nav flex-column submenu-items"><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/safety/agreeing-the-location-of-temporary-aerodrome-obstacles/"><p class="mb-0 position-relative">Agreeing the location of temporary aerodrome obstacles</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/safety/safety-management-system/"><p class="mb-0 position-relative">Safety Management System</p></a></li></ul></li><li class="nav-item px-3"><div class="nav-link no-sublinks list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/warsaw-chopin-airport-map/"><p>Warsaw Chopin Airport Map</p></a></div></li></ul></div><div aria-labelledby="pills-b2b-tab" class="tab-pane fade submenu-category" id="pills-b2b"></div><div aria-labelledby="pills-reserve-tab" class="tab-pane fade submenu-category" id="pills-reserve"><ul class="nav flex-column menu-items submenu"><li class="nav-item px-3"><div aria-expanded="false" class="nav-link has-submenu list-item py-1 py-xxl-2"><a class="mb-0 position-relative py-xxl-1" href="/en/our-services/"><p>Our services</p></a><button aria-label="Toggle list" class="float-end"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button></div><ul class="nav flex-column submenu-items"><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/our-services/fast-track/"><p class="mb-0 position-relative">Fast Track</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/our-services/comfort-pass/"><p class="mb-0 position-relative">Comfort Pass</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link has-links d-flex justify-content-between align-items-center" href="/en/our-services/executive-lounges/"><p class="mb-0 position-relative">Executive Lounge</p></a><button aria-label="Toggle list" class="float-end bg-white border-0 rotate-90-right list-toggle"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button><ul class="submenu-third-level"><li class="nav-item py-xxl-1"><a class="nav-link submenu-link" href="/en/our-services/executive-lounges/etiuda-executive-lounge/"><p class="mb-0 position-relative">Etiuda Executive Lounge</p></a></li><li class="nav-item py-xxl-1"><a class="nav-link submenu-link" href="/en/our-services/executive-lounges/fantazja-executive-lounge/"><p class="mb-0 position-relative">Fantazja Executive Lounge</p></a></li><li class="nav-item py-xxl-1"><a class="nav-link submenu-link" href="/en/our-services/executive-lounges/preludium-executive-lounge/"><p class="mb-0 position-relative">Preludium Executive Lounge</p></a></li></ul></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link has-links d-flex justify-content-between align-items-center" href="/en/our-services/vip-line-zone/"><p class="mb-0 position-relative">VIP Line Zone</p></a><button aria-label="Toggle list" class="float-end bg-white border-0 rotate-90-right list-toggle"><img aria-hidden="true" src="/static/website/img/arrow-down.svg"/></button><ul class="submenu-third-level"><li class="nav-item py-xxl-1"><a class="nav-link submenu-link" href="/en/our-services/vip-line-zone/city-transfer/"><p class="mb-0 position-relative">City Transfer</p></a></li><li class="nav-item py-xxl-1"><a class="nav-link submenu-link" href="/en/our-services/vip-line-zone/valet-parking-vip-line/"><p class="mb-0 position-relative">Valet Parking in the VIP Line Zone</p></a></li></ul></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/parking/"><p class="mb-0 position-relative">Parking</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/parking/valet-parking/"><p class="mb-0 position-relative">Valet Parking</p></a></li><li aria-expanded="false" class="nav-item py-xxl-1 submenu-second-level-item"><a aria-current="page" class="nav-link submenu-link" href="/en/baggage/baggage-handling/"><p class="mb-0 position-relative">Baggage handling</p></a></li></ul></li></ul></div><div aria-labelledby="pills-search-tab" class="px-5 mx-3 tab-pane fade" id="pills-search"><form action="/en/search/" class="d-flex ms-auto" method="GET" role="search"><div class="d-flex w-100 search-input-wrapper"><input aria-label="Search" autocomplete="off" class="form-control form-control__search-trigger search-input" id="autoComplete" maxlength="255" name="s" placeholder="Search" type="text" value=""/><button class="btn btn-outline btn-secondary search-btn submit-search-icon btn-search-input" type="submit"><img alt="Search" src="/static/website/img/interface-essential-search-loupe.svg"/></button><button class="btn btn-outline btn-secondary search-btn submit-search-icon btn-delete-input d-none"><img alt="" src="/static/website/img/clear.svg"/></button></div></form></div><div aria-labelledby="pills-lang-tab" class="tab-pane fade round-corner" id="pills-lang" role="tabpanel"><ul class="language-selector pb-4 round-corner" id="language-list-selector"><h3 class="mb-3">Choose language</h3><li class="language-item"><a aria-label="Polish" class="px-0" href="/pl/przyloty-i-odloty/" hreflang="pl" rel="alternate"><img aria-hidden="true" src="/static/website/img/pl.png">Polish
+                    </img></a></li><li class="language-item active"><a aria-label="English" class="px-0" href="/en/arrivals-and-departures/" hreflang="en" rel="alternate"><img aria-hidden="true" src="/static/website/img/en.png">English
+                    </img></a></li></ul></div></div></div></div></div></div></nav>
+<div id="content" role="main" wcag-page-title="Arrivals and departures">
+<section class="container my-4">
+<!-- Breadcrumbs -->
+<nav aria-label="breadcrumb">
+<ol class="breadcrumb">
+<li class="breadcrumb-item">
+<a href="/en/">
+                            Warsaw Chopin Airport
+                          </a>
+</li>
+<li class="breadcrumb-item">
+<a href="/en/arrivals-and-departures/">
+                      Arrivals and departures
+                    </a>
+</li>
+</ol>
+</nav>
+</section>
+<section class="container">
+<div class="row">
+<div class="col-lg-12 mx-auto p-0">
+<div class="position-relative rounded-4 overflow-hidden">
+<picture class="cover-image-container">
+<source media="(min-width: 768px)" srcset="/media/images/przyloty_i_odloty_banner_desktop.original.format-webp_kb56G1P.webp"/>
+<source srcset="/media/images/przyloty_i_odloty_banner-mobile.original.format-webp_SqWsfSG.webp"/>
+<img aria-hidden="true" src="/media/images/przyloty_i_odloty_banner_desktop.original.format-png_q8uwNf5.png"/>
+</picture>
+</div>
+</div>
+</div>
+</section>
+<section class="container" id="arrivalsDepartures">
+<div class="row">
+<div class="col-12 col-lg-10 mx-auto rounded-4 bg-white p-4 offset-y-3 shadow-container">
+<div class="d-flex flex-wrap align-items-normal align-items-xl-center flex-column flex-sm-row gap-4 gap-xl-0">
+<div class="flex-shrink-0 me-3 mb-3 mb-md-0">
+<h1 class="mb-0">Search flights</h1>
+</div>
+<div class="flex-grow-1 d-flex flex-column flex-sm-row justify-content-end">
+<form autocomplete="off" hidden="" id="search-flight-no-form">
+<div class="input-group">
+<input aria-describedby="search-addon" class="form-control form-control-lg" id="flight-no-addon-input" name="flight_no" placeholder="flight number" type="text"/>
+<input id="operation-field" name="operation" type="hidden"/>
+<span class="input-group-text" id="flight-no-addon">
+<span class="search-span">
+<img alt="Search" src="/static/website/img/interface-essential-search-loupe.svg"/>
+</span>
+</span>
+</div>
+</form>
+<form action="?operation=d" autocomplete="off" class="w-100 ps-md-5" id="search-form" method="GET">
+<div class="input-group">
+<input aria-label="Flight search e.g. city, flight number" class="form-control form-control-lg" id="search-addon-input" name="flight_search" placeholder="e.g. city, flight number" type="text" value=""/>
+<input id="operation-field" name="operation" type="hidden" value="d"/>
+<button class="input-group-text" id="search-addon">
+<span class="search-span">
+<img alt="Search" src="/static/website/img/interface-essential-search-loupe.svg"/>
+</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+<div class="row pb-3 arrivals-departures-toggle__container">
+<div class="d-flex arrivals-departures-toggle mx-auto px-0">
+<button class="w-100 active heading-50 py-3 fw-medium" id="viewArrivals">
+          Arrivals
+        </button>
+<button class="w-100 heading-50 py-3 fw-medium" id="viewDepartures">
+          Departures
+        </button>
+</div>
+</div>
+<div class="container d-none" id="ArrivalsDeparturesTable">
+<div class="row text-center p-3 toggle-flights-found">
+<div class="col-12 rounded bg-light">
+<p>No flight data available</p>
+</div>
+</div>
+<div class="arrivals-departure-heading toggle-flights-found">
+<div class="row table-header text-start mb-4 mt-4 p-3 justify-content-between d-none d-xl-flex">
+<div class="column column-s">Scheduled</div>
+<div class="column column-s">Hour</div>
+<div class="column column-xl">Destination</div>
+<div class="column column-s">Flight number</div>
+<div class="column column-md">Airline</div>
+<div class="column column-md">Terminal</div>
+<div class="column column-md">Belt</div>
+<div class="column column-l">Status</div>
+</div>
+</div>
+<div class="arrivals-departure-heading d-none toggle-flights-found">
+<div class="row table-header text-start mb-4 mt-4 p-3 justify-content-between d-none d-xl-flex">
+<div class="column column-s">Scheduled</div>
+<div class="column column-xl">Destination</div>
+<div class="column column-s">Flight number</div>
+<div class="column column-md">Airline</div>
+<div class="column column-md">Terminal</div>
+<div class="column column-s">Weather</div>
+<div class="column column-s">Check-in</div>
+<div class="column column-xs">Gate</div>
+<div class="column column-l">Status</div>
+</div>
+</div>
+<div class="table-body text-center mt-4 toggle-flights-found" id="flights-list">
+<ul class="flights-list active--arrivals list-unstyled">
+<div class="d-none d-md-block">
+<div class="row advertisements-row mb-3 p-0 align-content-center align-items-center d-grid gap-3">
+<div class="p-0 m-0 advertisement">
+<a aria-label="Find out more about Valet Parking service" href="/en/parking/valet-parking/">
+<picture class="w-100">
+<source media="(min-width: 768px)" srcset="/media/images/Valet_Parking_Desktop_2720x240_EN_.original.format-webp_bGgtsIr.webp"/>
+<source srcset="/media/images/FN-26-2-125_PPL_LCH_banery_www_344.original.format-webp_5s3Dcrj.webp"/>
+<img alt="" class="shadow-container rounded-4" src="/media/images/Valet_Parking_Desktop_2720x240_EN_Iw.original.format-png.png"/>
+</picture>
+</a>
+</div>
+</div>
+</div>
+<!-- Wersja mobile -->
+<div class="d-block d-md-none mb-3">
+<div class="row advertisements-row m-0 p-0 d-grid gap-3">
+<div class="advertisement-card col-12 p-0">
+<a aria-label="Find out more about Valet Parking service" href="/en/parking/valet-parking/">
+<picture class="w-100">
+<source media="(min-width: 768px)" srcset="/media/images/Valet_Parking_Desktop_2720x240_EN_.original.format-webp_bGgtsIr.webp"/>
+<source srcset="/media/images/FN-26-2-125_PPL_LCH_banery_www_344.original.format-webp_5s3Dcrj.webp"/>
+<img alt="" class="shadow-container rounded-4" src="/media/images/Valet_Parking_Desktop_2720x240_EN_Iw.original.format-png.png"/>
+</picture>
+</a>
+</div>
+</div>
+</div>
+<li class="arrivals-departures-tables">
+<div class="text-start m-3 mt-2 fw-bolder">Tuesday, 10.11.2026</div>
+<hr class="mb-2 pb-1"/>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:10
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:10
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Rome (FCO)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 303
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-cloudy" id="weather-icon">19°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      36
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:15
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:15
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Paris (CDG)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 335
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon" id="weather-icon">11°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      27
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:25
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:25
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Vilnius (VNO)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 775
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-sunny" id="weather-icon">2°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      38
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:30
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:30
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Gdansk (GDN)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 3815
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon" id="weather-icon">1°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      23
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:30
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:30
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Wroclaw (WRO)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 3847
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon" id="weather-icon">3°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      24
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:30
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:30
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Wroclaw (WRO)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 3847
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon" id="weather-icon">3°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+</div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:35
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:35
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Brussels (BRU)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 233
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-sunny" id="weather-icon">7°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      39
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:35
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:35
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Berlin (BER)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 389
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-clouds" id="weather-icon">4°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      35
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:35
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:35
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Kraków (KRK)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 3923
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-cloudy" id="weather-icon">6°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      37
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:40
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:40
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Chicago (ORD)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 003
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-cloudy" id="weather-icon">15°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      13N-14N
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:40
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:40
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Newark (EWR)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 015
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-cloudy" id="weather-icon">15.6°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      19N-20N
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:45
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:45
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Oslo (OSL)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 483
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon" id="weather-icon">-2°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      42
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:45
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:45
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Poznan (POZ)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 3947
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon" id="weather-icon">1°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      4
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:50
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:50
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Milan-Malpensa (MXP)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 319
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-sunny" id="weather-icon">11°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      45
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:55
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:55
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      New York JFK (JFK)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 026
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-cloudy" id="weather-icon">13.9°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      1N
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<div class="d-none d-md-block">
+<div class="row advertisements-row mb-3 p-0 align-content-center align-items-center d-grid gap-3">
+<div class="p-0 m-0 advertisement">
+<a aria-label="Find out more about Valet Parking service" href="/en/parking/valet-parking/">
+<picture class="w-100">
+<source media="(min-width: 768px)" srcset="/media/images/Valet_Parking_Desktop_2720x240_EN_.original.format-webp_bGgtsIr.webp"/>
+<source srcset="/media/images/FN-26-2-125_PPL_LCH_banery_www_344.original.format-webp_5s3Dcrj.webp"/>
+<img alt="" class="shadow-container rounded-4" src="/media/images/Valet_Parking_Desktop_2720x240_EN_Iw.original.format-png.png"/>
+</picture>
+</a>
+</div>
+</div>
+</div>
+<!-- Wersja mobile -->
+<div class="d-block d-md-none mb-3">
+<div class="row advertisements-row m-0 p-0 d-grid gap-3">
+<div class="advertisement-card col-12 p-0">
+<a aria-label="Find out more about Valet Parking service" href="/en/parking/valet-parking/">
+<picture class="w-100">
+<source media="(min-width: 768px)" srcset="/media/images/Valet_Parking_Desktop_2720x240_EN_.original.format-webp_bGgtsIr.webp"/>
+<source srcset="/media/images/FN-26-2-125_PPL_LCH_banery_www_344.original.format-webp_5s3Dcrj.webp"/>
+<img alt="" class="shadow-container rounded-4" src="/media/images/Valet_Parking_Desktop_2720x240_EN_Iw.original.format-png.png"/>
+</picture>
+</a>
+</div>
+</div>
+</div>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:55
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:55
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Stockholm (ARN)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 457
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-cloud-rain" id="weather-icon">3°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      44
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        16:55
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        16:55
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Amsterdam (AMS)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      KL 1316
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="KLM" class="airline-logo airline-max-height" src="/media/images/klm.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone C
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon" id="weather-icon">4°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      201-206
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      43
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        17:00
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        17:00
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Toronto (YYZ)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 045
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-cloudy" id="weather-icon">14°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      21N-22N
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        17:00
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        17:00
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Frankfurt (FRA)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 379
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-sunny" id="weather-icon">6°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      31
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+<!-- Wersja desktop -->
+<li class="arrivals-departures-tables">
+<div class="row flight-row mb-3 p-3 align-content-center align-items-center justify-content-between text-start rounded-4">
+<div class="column column-s column-time fw-semibold arrivals-col">
+      
+        17:00
+      
+    </div>
+<div class="column column-s column-time fw-semibold departures-col">
+      
+        17:00
+      
+    </div>
+<div class="column column-s column-expected fw-semibold arrivals-col">
+</div>
+<div class="column column-xl column-origin-destination fw-semibold">
+      Zurich (ZRH)
+    </div>
+<div class="column column-s column-flight-no fw-semibold">
+      LO 409
+    </div>
+<div class="column column-md column-airline fw-semibold">
+<img alt="LOT" class="airline-logo airline-max-height" src="/media/images/lot.max-192x50.png"/>
+</div>
+<div class="column column-md column-terminal fw-semibold">
+      Zone E-D
+    </div>
+<div class="column column-md column-belt fw-semibold arrivals-col">
+</div>
+<div class="column column-s column-weather fw-medium departures-col">
+<span class="icon icon-cloudy" id="weather-icon">13°C</span>
+</div>
+<div class="column column-s column-check-in fw-semibold departures-col">
+      241-280
+    </div>
+<div class="column column-xs column-gate fw-semibold departures-col">
+      6
+    </div>
+<div class="column column-l column-status fw-semibold">
+<span class="badge badge-departured align-content-center align-items-center">
+            Departed
+        </span>
+</div>
+</div>
+</li>
+</ul>
+</div>
+<div class="row table-footer mt-3 w-25 mx-auto toggle-flights-found">
+<button class="btn text-decoration-none fw-bold" id="load-more">Later flights
+          <svg fill="none" height="24" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 19V5M12 19L17.001 13.999M12 19L6.99902 13.999" stroke="#FFBE00" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path>
+</svg>
+</button>
+</div>
+</div>
+<section class="container easy-journey-content my-4">
+<div class="row">
+<div class="col-lg-12 mx-auto p-0">
+<div class="row position-relative easy-journey-section flex-column-reverse flex-xl-row flex-xl-nowrap">
+<div class="col-lg-3 section-description order-1 order-lg-1 px-0 pe-xl-4" id="easy-journey-description_">
+<h2 class="h-block-styles-4bfef354-530b-489b-b269-d98bd5291157">
+  Are you arriving at or departing from Warsaw Chopin Airport?
+</h2>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-4bfef354-530b-489b-b269-d98bd5291157 {
+            color:#000000
+        }
+</style>
+<div class="description">
+<p><span class="text-16">Explore our services and make your journey even more convenient and comfortable!<br/></span></p>
+</div>
+<a class="btn btn-transparent button-1 btn--fit ps-0" href="/en/our-services/">
+<span>View all services</span>
+<span class="fc-gold">
+<img aria-hidden="true" src="/static/website/img/arrows--diagrams-arrow-right.svg"/>
+</span>
+</a>
+</div>
+<div class="col-xl-9 px-0 are-you-arriving-at-or-departing-from-warsaw-chopin-airport">
+<div class="swiper are-you-arriving-at-or-departing-from-warsaw-chopin-airport-Swiper" data-swiper="are-you-arriving-at-or-departing-from-warsaw-chopin-airport-Swiper">
+<ul class="swiper-wrapper px-0">
+<li class="default-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Homepage_Ulatwimy_Ci_.2e16d0ba.fill-322x250.format-webp_CyzJwA5.webp"/>
+<div class="description-box w-100 d-flex flex-column">
+<h3 class="h-block-styles-a7517eca-95e1-433c-b7a0-02f17e6e8b14">
+  Valet Parking
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-a7517eca-95e1-433c-b7a0-02f17e6e8b14 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p class="MsoNormal">Arrive, hand over your car, and fly! Use Valet Parking service and save time searching for a parking spot!</p>
+</div>
+<a class="btn btn-outline-dark description-link w-auto me-3 mb-3" href="/en/parking/valet-parking/">Check</a>
+</div>
+</div>
+</li>
+<li class="vipline-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Homepage_Ulatwimy_Ci_.2e16d0ba.fill-322x250.format-webp_CyzJwA5.webp"/>
+<div class="description-box w-100 d-flex flex-column overflow-hidden">
+<h3 class="h-block-styles-a7517eca-95e1-433c-b7a0-02f17e6e8b14">
+  Valet Parking
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-a7517eca-95e1-433c-b7a0-02f17e6e8b14 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p class="MsoNormal">Arrive, hand over your car, and fly! Use Valet Parking service and save time searching for a parking spot!</p>
+</div>
+<div class="bg-black">
+<a class="btn btn-primary--vipline rounded-top-0 ms-0 w-100 description-link" href="/en/parking/valet-parking/">Check</a>
+</div>
+</div>
+</div>
+</li>
+<li class="default-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Comfort_Pass_750x480.2e16d0ba.fill-322x250.format-webp_OaMMJg5.webp"/>
+<div class="description-box w-100 d-flex flex-column">
+<h3 class="h-block-styles-ac4cd9cc-5ec4-4def-ac72-11b5b1b51270">
+  Comfort Pass
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-ac4cd9cc-5ec4-4def-ac72-11b5b1b51270 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Save with a package! Get faster access through security and relax in your chosen Executive Lounge!</p>
+</div>
+<a class="btn btn-outline-dark description-link w-auto me-3 mb-3" href="/en/our-services/comfort-pass/">Check</a>
+</div>
+</div>
+</li>
+<li class="vipline-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Comfort_Pass_750x480.2e16d0ba.fill-322x250.format-webp_OaMMJg5.webp"/>
+<div class="description-box w-100 d-flex flex-column overflow-hidden">
+<h3 class="h-block-styles-ac4cd9cc-5ec4-4def-ac72-11b5b1b51270">
+  Comfort Pass
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-ac4cd9cc-5ec4-4def-ac72-11b5b1b51270 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Save with a package! Get faster access through security and relax in your chosen Executive Lounge!</p>
+</div>
+<div class="bg-black">
+<a class="btn btn-primary--vipline rounded-top-0 ms-0 w-100 description-link" href="/en/our-services/comfort-pass/">Check</a>
+</div>
+</div>
+</div>
+</li>
+<li class="default-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Homepage_Ulatwimy_Ci_.2e16d0ba.fill-322x250.format-webp_GliXu1B.webp"/>
+<div class="description-box w-100 d-flex flex-column">
+<h3 class="h-block-styles-9064f65a-3cd7-4998-ba7d-127caba64ce7">
+  Parking
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-9064f65a-3cd7-4998-ba7d-127caba64ce7 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Choose convenience – use Chopin Airport’s official parking and park close to the terminal!</p>
+</div>
+<a class="btn btn-outline-dark description-link w-auto me-3 mb-3" href="/en/parking/">Check</a>
+</div>
+</div>
+</li>
+<li class="vipline-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Homepage_Ulatwimy_Ci_.2e16d0ba.fill-322x250.format-webp_GliXu1B.webp"/>
+<div class="description-box w-100 d-flex flex-column overflow-hidden">
+<h3 class="h-block-styles-9064f65a-3cd7-4998-ba7d-127caba64ce7">
+  Parking
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-9064f65a-3cd7-4998-ba7d-127caba64ce7 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Choose convenience – use Chopin Airport’s official parking and park close to the terminal!</p>
+</div>
+<div class="bg-black">
+<a class="btn btn-primary--vipline rounded-top-0 ms-0 w-100 description-link" href="/en/parking/">Check</a>
+</div>
+</div>
+</div>
+</li>
+<li class="default-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Homepage_Ulatwimy_Ci_.962ff9e7.fill-322x250.format-webp_WUXc8X8.webp"/>
+<div class="description-box w-100 d-flex flex-column">
+<h3 class="h-block-styles-6bc5d0ed-8d3d-4b1e-916a-bcb753c0f887">
+  Executive Lounge
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-6bc5d0ed-8d3d-4b1e-916a-bcb753c0f887 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Relax before your flight in the stylish interiors of one of our Executive Lounges: Etiuda, Fantazja, or Preludium!</p>
+</div>
+<a class="btn btn-outline-dark description-link w-auto me-3 mb-3" href="/en/our-services/executive-lounges/">Check</a>
+</div>
+</div>
+</li>
+<li class="vipline-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Homepage_Ulatwimy_Ci_.962ff9e7.fill-322x250.format-webp_WUXc8X8.webp"/>
+<div class="description-box w-100 d-flex flex-column overflow-hidden">
+<h3 class="h-block-styles-6bc5d0ed-8d3d-4b1e-916a-bcb753c0f887">
+  Executive Lounge
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-6bc5d0ed-8d3d-4b1e-916a-bcb753c0f887 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Relax before your flight in the stylish interiors of one of our Executive Lounges: Etiuda, Fantazja, or Preludium!</p>
+</div>
+<div class="bg-black">
+<a class="btn btn-primary--vipline rounded-top-0 ms-0 w-100 description-link" href="/en/our-services/executive-lounges/">Check</a>
+</div>
+</div>
+</div>
+</li>
+<li class="default-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Homepage_Ulatwimy_Ci_.2e16d0ba.fill-322x250.format-webp_f9BskFm.webp"/>
+<div class="description-box w-100 d-flex flex-column">
+<h3 class="h-block-styles-cb6d4810-4047-42c3-b631-91eb8e064ea9">
+  VIP Line zone
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-cb6d4810-4047-42c3-b631-91eb8e064ea9 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Wait for your flight in the unique, elegant surroundings of the VIP Line area and relax before your journey!</p>
+</div>
+<a class="btn btn-outline-dark description-link w-auto me-3 mb-3" href="/en/our-services/vip-line-zone/">Check</a>
+</div>
+</div>
+</li>
+<li class="vipline-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Homepage_Ulatwimy_Ci_.2e16d0ba.fill-322x250.format-webp_f9BskFm.webp"/>
+<div class="description-box w-100 d-flex flex-column overflow-hidden">
+<h3 class="h-block-styles-cb6d4810-4047-42c3-b631-91eb8e064ea9">
+  VIP Line zone
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-cb6d4810-4047-42c3-b631-91eb8e064ea9 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Wait for your flight in the unique, elegant surroundings of the VIP Line area and relax before your journey!</p>
+</div>
+<div class="bg-black">
+<a class="btn btn-primary--vipline rounded-top-0 ms-0 w-100 description-link" href="/en/our-services/vip-line-zone/">Check</a>
+</div>
+</div>
+</div>
+</li>
+<li class="default-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Fast_Track_750x480.2e16d0ba.fill-322x250.format-webp_lgh6sBa.webp"/>
+<div class="description-box w-100 d-flex flex-column">
+<h3 class="h-block-styles-99149813-9943-4b71-bc49-8df90a4fffd5">
+  Fast Track
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-99149813-9943-4b71-bc49-8df90a4fffd5 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Choose the Fast Track service and pass through security quickly and comfortably!</p>
+</div>
+<a class="btn btn-outline-dark description-link w-auto me-3 mb-3" href="/en/our-services/fast-track/">Check</a>
+</div>
+</div>
+</li>
+<li class="vipline-version slide-container swiper-slide">
+<div class="slide rounded-4">
+<img aria-hidden="true" class="top-image w-100" src="/media/images/Fast_Track_750x480.2e16d0ba.fill-322x250.format-webp_lgh6sBa.webp"/>
+<div class="description-box w-100 d-flex flex-column overflow-hidden">
+<h3 class="h-block-styles-99149813-9943-4b71-bc49-8df90a4fffd5">
+  Fast Track
+</h3>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-99149813-9943-4b71-bc49-8df90a4fffd5 {
+            color:#000000
+        }
+</style>
+<div class="description flex-grow-1">
+<p>Choose the Fast Track service and pass through security quickly and comfortably!</p>
+</div>
+<div class="bg-black">
+<a class="btn btn-primary--vipline rounded-top-0 ms-0 w-100 description-link" href="/en/our-services/fast-track/">Check</a>
+</div>
+</div>
+</div>
+</li>
+</ul>
+<div class="position-relative d-flex gap-3 justify-content-end mt-4">
+<div class="swiper-scrollbar"></div>
+<div class="d-flex arrows-container align-items-end justify-content-between">
+<div class="position-static swiper-button-prev btn-swiper-prev">
+<div aria-hidden="true" class="slider-arrow slider-arrow--sm slider-arrow--reverse">
+<svg fill="none" height="12" viewbox="0 0 22 16" width="18" xmlns="http://www.w3.org/2000/svg">
+<path d="M20.3333 7.99998H1.66663M20.3333 7.99998L13.6666 14.6666M20.3333 7.99998L13.6666 1.33331" stroke="#1D1D1D" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+<div class="position-static swiper-button-next btn-swiper-next">
+<div aria-hidden="true" class="slider-arrow slider-arrow--sm">
+<svg fill="none" height="12" viewbox="0 0 22 16" width="18" xmlns="http://www.w3.org/2000/svg">
+<path d="M20.3333 7.99998H1.66663M20.3333 7.99998L13.6666 14.6666M20.3333 7.99998L13.6666 1.33331" stroke="#1D1D1D" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="container info-section my-4">
+<div class="row">
+<div class="mb-4 info-title col-lg-12 mx-auto p-0">
+<h2 class="h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05">
+  Arrivals and Departures at Chopin Airport – information and amenities for passengers
+</h2>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05 {
+            color:#000000
+        }
+</style>
+<p>The arrivals and departures board is updated in real time to provide you with accurate and up-to-date information – everything you need is in one place. But that’s not all! We’ve also prepared useful pre-flight tips for our passengers and made a range of facilities available to make your journey easier. Check them out!</p>
+</div>
+<div class="col-lg-12 mx-auto p-0">
+<ul class="d-grid justify-content-center p-0 grid-columns-two-items--xl gap-4 list-unstyled m-0">
+<li class="d-flex justify-content-start information-block-max-width">
+<div class="card p-3 p-md-4 border-0 rounded-4 shadow-sm w-100">
+<div class="row d-grid gap-3 gap-md-4 h-100 grid-columns-two-items--md">
+<div class="d-flex align-items-center justify-content-center mt-0 px-0">
+<a class="w-100 information-img" href="/en/before-flight/">
+<picture>
+<source media="(min-width: 768px)" srcset="/media/images/Przyloty_i_odloty_298x298_Linkowan.original.format-webp_8xVBei5.webp"/>
+<source srcset="/media/images/Przyloty_i_odloty_1056x596_Linkowa.original.format-webp_of622gg.webp"/>
+<img alt="Couple checking arrival and departure information at Chopin Airport" class="img-fluid rounded-4 w-100 h-100 object-fit-cover" src="/media/images/Przyloty_i_odloty_298x298_Linkowanie.original.format-png_ecxFsJw.png"/>
+</picture>
+<div class="sr-only">
+<div class="heading-replacement h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05">
+  Before your flight
+</div>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05 {
+            color:#000000
+        }
+</style>
+ Find out more</div>
+</a>
+</div>
+<div class="d-flex flex-column card-column-limit mt-0 px-0">
+<div class="card-body mt-0 p-0 px-0 d-flex flex-column flex-grow-1">
+<a class="nav-link mb-1 mb-md-2" href="/en/before-flight/">
+<div class="heading-replacement h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05">
+  Before your flight
+</div>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05 {
+            color:#000000
+        }
+</style>
+</a>
+<p class="justify-content-between card-part-height overflow-hidden text-black information-block-title mb-0"><p><span class="text-16">Check out practical tips for passengers arriving at and departing from Chopin Airport. Find essential information on check-in, transfers, and baggage regulations.<br/></span></p></p>
+<div class="mt-auto">
+<p class="card-text text-end">
+<a class="btn btn-transparent button-1 btn--fit pe-0" href="/en/before-flight/"><span>Find out more</span>
+<img aria-hidden="true" src="/static/website/img/arrows--diagrams-arrow-right.svg"/>
+</a>
+</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</li>
+<li class="d-flex justify-content-start information-block-max-width">
+<div class="card p-3 p-md-4 border-0 rounded-4 shadow-sm w-100">
+<div class="row d-grid gap-3 gap-md-4 h-100 grid-columns-two-items--md">
+<div class="d-flex align-items-center justify-content-center mt-0 px-0">
+<a class="w-100 information-img" href="/en/facilities/">
+<picture>
+<source media="(min-width: 768px)" srcset="/media/images/Przyloty_i_odloty_298x298_Linkowan.original.format-webp.webp"/>
+<source srcset="/media/images/Przyloty_i_odloty_1056x596_Linkowa.original.format-webp.webp"/>
+<img alt="Family preparing for their flight at the airport at the service counter" class="img-fluid rounded-4 w-100 h-100 object-fit-cover" src="/media/images/Przyloty_i_odloty_298x298_Linkowanie.original.format-png.png"/>
+</picture>
+<div class="sr-only">
+<div class="heading-replacement h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05">
+  Facilities
+</div>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05 {
+            color:#000000
+        }
+</style>
+ Find out more</div>
+</a>
+</div>
+<div class="d-flex flex-column card-column-limit mt-0 px-0">
+<div class="card-body mt-0 p-0 px-0 d-flex flex-column flex-grow-1">
+<a class="nav-link mb-1 mb-md-2" href="/en/facilities/">
+<div class="heading-replacement h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05">
+  Facilities
+</div>
+<style nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+        .h-block-styles-0d9a3556-6811-4810-87d1-c2728bcdba05 {
+            color:#000000
+        }
+</style>
+</a>
+<p class="justify-content-between card-part-height overflow-hidden text-black information-block-title mb-0"><p><span class="text-16">Arriving at or departing from Chopin Airport can enjoy a variety of amenities designed to make travel even easier and more comfortable! Discover what we offer!<br/></span></p></p>
+<div class="mt-auto">
+<p class="card-text text-end">
+<a class="btn btn-transparent button-1 btn--fit pe-0" href="/en/facilities/"><span>Find out more</span>
+<img aria-hidden="true" src="/static/website/img/arrows--diagrams-arrow-right.svg"/>
+</a>
+</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</section>
+</section>
+</div>
+<div id="content-walls">
+</div>
+<!-- <div class="advert footer" /> -->
+<footer class="footer-custom container" id="footer">
+<div class="container footer-travellers-info">
+<div class="container crx-grid">
+<div class="row">
+<div class="col-md">
+<p class="text-center" data-alignment="center" data-block-key="4fngy"><span class="text-20">Information airport 24/7</span></p><p class="text-center" data-alignment="center" data-block-key="4fngy"><span class="text-20"><a class="heading-30 airport-info-tel" href="tel: + 48226504220" title="+ 48 22 650 42 20">+ 48 22 650 42 20</a></span></p>
+</div>
+</div>
+</div>
+</div>
+<div>
+<div class="container crx-grid" id="footer-base-container">
+<div class="row justify-content-between p-3 py-4 py-xl-3">
+<div class="col-md px-0 position-relative collapsable-column overflow-hidden">
+<h2 class="heading-20"><span style="color: #74706e;">AIRPORT</span></h2><ul class="moja-ul-klasa v-hidden-mobile"><li class="text-left"><a href="/en/warsaw-chopin-airport-map/">Airport map</a></li><li class="text-left"><a class="link" href="/en/airlines/">Airlines</a></li><li class="text-left"><a class="link" href="/en/travel-agents/">Travel agents</a></li><li class="text-left"><a class="link" href="/en/general-aviation-terminal/">General Aviation Terminal</a></li><li class="text-left"><a class="link" href="/en/european-funds/">European funds</a></li><li class="text-left"><a class="link" href="/en/ass/">Airport Security Service</a></li><li class="text-left"><a class="link" href="/en/ambulances/">Ambulance</a></li></ul>
+<button aria-label="Expand or collapse the list" class="position-absolute top-0 end-0 d-md-none footer-dropdown-button px-0"></button>
+</div>
+<div class="col-md px-0 position-relative collapsable-column pt-3 pt-md-0 overflow-hidden">
+<h2 class="text-left heading-20" data-alignment="left" data-block-key="vf3wm"><span style="color: #74706e;">PERSONAL DATA PROTECTION<br/></span></h2><ul class="moja-ul-klasa v-hidden-mobile"><li style="color: #1d1b1b;"><a class="internal-link" href="/en/gdpr-and-information-clauses/">GDPR and Information clauses</a></li><li style="color: #1d1b1b;"><a class="internal-link" href="/en/privacy-policy/">Privacy policy</a></li><li style="color: #1d1b1b;"><span style="color: #1d1b1b;"><a class="internal-link" href="/en/video-surveillance/">Video surveillance</a> <br/></span></li></ul>
+<button aria-label="Expand or collapse the list" class="position-absolute top-0 end-0 d-md-none footer-dropdown-button px-0"></button>
+</div>
+<div class="col-md px-0 position-relative collapsable-column pt-3 pt-md-0 overflow-hidden">
+<h2 class="text-left heading-20" data-alignment="left" data-block-key="vf3wm"><span style="color: #74706e;">ENVIRONMENTAL PROTECTION</span></h2><ul class="moja-ul-klasa v-hidden-mobile"><li style="color: #1d1b1b;"><a class="internal-link" href="/en/monitoring-halasu/">Noise monitoring</a></li><li style="color: #1d1b1b;"><a class="internal-link" href="/en/strategic-noise-map/">Strategic noise map</a></li><li style="color: #1d1b1b;"><a class="internal-link" href="/en/quota-count-system/">Quota Count System</a></li></ul>
+<button aria-label="Expand or collapse the list" class="position-absolute top-0 end-0 d-md-none footer-dropdown-button px-0"></button>
+</div>
+<div class="col-md px-0 position-relative collapsable-column pt-3 pt-md-0 overflow-hidden">
+<h2 class="text-left heading-20" data-alignment="left" data-block-key="25072"><span style="color: #74706e;">REGULATIONS</span></h2><ul class="moja-ul-klasa v-hidden-mobile"><li style="color: #1d1b1b;"><a class="internal-link" href="/en/warsaw-chopin-airport-user-regulations/">Warsaw Chopin Airport User Regulations</a></li><li style="color: #1d1b1b;"><a class="internal-link" href="/en/rules-for-using-the-piano/">Rules for using the piano</a></li><li style="color: #1d1b1b;"><a href="https://lotnisko-chopina.pl/en/before-flight/safety-and-security-regulations/">Safety and Security Regulations </a></li></ul>
+<button aria-label="Expand or collapse the list" class="position-absolute top-0 end-0 d-md-none footer-dropdown-button px-0"></button>
+</div>
+<div class="col-md px-0 position-relative collapsable-column pt-3 pt-md-0 overflow-hidden">
+<h2 class="text-left heading-20" data-alignment="left" data-block-key="25072"><span style="color: #74706e;">CONTACT</span></h2><ul class="moja-ul-klasa v-hidden-mobile"><li style="color: #1d1b1b;"><a class="internal-link" href="/en/contact/">Contact details</a></li><li style="color: #1d1b1b;"><a class="internal-link" href="/en/emergency-phone-numbers/">Emergency phone numbers</a></li><li style="color: #1d1b1b;"><a class="internal-link" href="/en/information-phone-numbers/">Information phone numbers</a></li><li style="color: #1d1b1b;"><span style="color: #1d1b1b;"><a href="https://ppl.bip.gov.pl/" rel="noopener" target="_blank" title="Link opens in a new tab">BIP</a> </span></li></ul>
+<button aria-label="Expand or collapse the list" class="position-absolute top-0 end-0 d-md-none footer-dropdown-button px-0"></button>
+</div>
+<div class="col-md px-0 position-relative collapsable-column pt-3 pt-md-0 overflow-hidden">
+<h2 class="text-left heading-20" data-alignment="left" data-block-key="vf3wm"><span style="color: #74706e;">BUSINESS</span></h2><ul class="moja-ul-klasa v-hidden-mobile"><li style="color: #1d1b1b;"><a class="internal-link" href="/en/b2b/">B2B</a></li><li style="color: #1d1b1b;"><a class="internal-link" href="/en/b2b/proprietary-b2b-services/">Proprietary B2B services</a></li><li style="color: #1d1b1b;"><a class="internal-link" href="/en/b2b/advertising-and-filming/">Advertising and filming</a></li><li style="color: #1d1b1b;"><a class="internal-link" href="/en/b2b/commercial-space-to-let-at-the-terminal/">Commercial space rental</a></li></ul>
+<button aria-label="Expand or collapse the list" class="position-absolute top-0 end-0 d-md-none footer-dropdown-button px-0"></button>
+</div>
+</div>
+</div>
+</div>
+<div>
+<div class="container crx-grid" id="footer-social-icons">
+<div class="row justify-content-start p-3">
+<div class="col-md-3 accessibility-link-container">
+<p><span style="color: #74706e;">ACCESSIBILITY STATEMENT</span></p>
+<a aria-label="ACCESSIBILITY STATEMENT - learn more" class="internal-link" href="/en/accessibility-statement/"><img alt="" aria-hidden="true" src="/media/images/Pojazd.original.original.original.svg" style="float: left;" width="34"/><p>Learn more</p></a>
+</div>
+<div class="col-md-6 social-media-icons">
+<p><span style="color: #74706e;">SOCIAL MEDIA</span></p>
+<ul>
+<li>
+<a aria-label="Facebook profile of Chopin Airport" href="https://www.facebook.com/LotniskoChopina/" rel="noopener" target="_blank" title="This link will open in a new tab">
+<img aria-hidden="true" class="img-fluid rounded-4 overflow-hidden" src="/media/images/fb-icon.original.max-1600x1600.format-webp.webp"/>
+</a>
+</li>
+<li>
+<a aria-label="X profile of Chopin Airport" href="https://x.com/ChopinAirport" rel="noopener" target="_blank" title="This link will open in a new tab">
+<img aria-hidden="true" class="img-fluid rounded-4 overflow-hidden" src="/media/images/x-icon.original.original.max-1600x1600.format-webp.webp"/>
+</a>
+</li>
+<li>
+<a aria-label="YouTube profile of Chopin Airport" href="https://www.youtube.com/user/LotniskoChopina" rel="noopener" target="_blank" title="This link will open in a new tab">
+<img aria-hidden="true" class="img-fluid rounded-4 overflow-hidden" src="/media/images/yt-icon.original.max-1600x1600.format-webp.webp"/>
+</a>
+</li>
+<li>
+<a aria-label="Instagram profile of Chopin Airport" href="https://www.instagram.com/chopinairport/" rel="noopener" target="_blank" title="This link will open in a new tab">
+<img aria-hidden="true" class="img-fluid rounded-4 overflow-hidden" src="/media/images/insta-icon.original.max-1600x1600.format-webp.webp"/>
+</a>
+</li>
+<li>
+<a aria-label="TikTok profile of Chopin Airport" href="https://www.tiktok.com/@lotnisko.chopina" rel="noopener" target="_blank" title="This link will open in a new tab">
+<img aria-hidden="true" class="img-fluid rounded-4 overflow-hidden" src="/media/images/ticto-icon.original_DJA3G3I.max-1600x1600.format-webp.webp"/>
+</a>
+</li>
+<li>
+<a aria-label="LinkedIn profile of Chopin Airport" href="https://pl.linkedin.com/company/lotnisko-chopina-waw" rel="noopener" target="_blank" title="This link will open in a new tab">
+<img aria-hidden="true" class="img-fluid rounded-4 overflow-hidden" src="/media/images/in-icon.original.max-1600x1600.format-webp.webp"/>
+</a>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div>
+<div class="container-fluid crx-grid" id="footer-rodo-cookies">
+<div class="row justify-content-between p-3">
+<div class="col-md-6">
+<ul class="moja-ul-klasa"><li><a class="internal-link" href="/en/gdpr-and-information-clauses/">GDPR and Information clauses</a></li><li><a class="internal-link" href="/en/privacy-policy/">Privacy policy</a></li><li><a class="link" href="#" id="cookiePolicyLink">Cookies</a></li></ul>
+</div>
+<div class="col-md-6 text-sm-start text-lg-end">
+<p><span style="color: #ffffff;">Copyright © 2025 Warsaw Chopin Airport</span></p>
+</div>
+</div>
+</div>
+</div>
+</footer>
+<script data-cfasync="false" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/coderedcms/vendor/bootstrap/dist/js/bootstrap.bundle.min.js?v=3.0.4"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/jquery-3.7.1.min.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/lightbox-2.11.3.min.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/gallery.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/video.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/autoComplete.min.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/swiper-bundle.min.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/bs5-autocomplete.js?v=2db78341"></script>
+<script data-cfasync="false" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/coderedcms/js/crx-front.js?v=3.0.4"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/custom.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/navbar.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/submenu-navbar-desktop.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/navbar-mobile.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/alarm-bar.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/banner-slider.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/accordion.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/tabs.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/lightbox.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/swiper-layout.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/easy-journey-section.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/sliderable-section.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/article-index-page.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/related-article.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/executive-table.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/image-text-block.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/hub-big-block.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/video-player.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/weather.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/search.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/tab-block.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/search-arrivals-sg-form.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/arrivals-departures-page.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/arrivals-departures-section.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/form-errors.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/captcha-form.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/login-registry-content.js?v=2db78341"></script>
+<script data-cfasync="false" defer="" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" src="/static/website/js/footer.js?v=2db78341"></script>
+<script data-cfasync="false" data-cmp-ab="1" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" type="text/javascript">
+window.cmp_customlanguages = [
+  {"l":"PL","i":"xy","r":0,"t":"PL"},
+  {"l":"AA","i":"xy","r":0,"t":"AA"},
+  {"l":"PL","i":"xy","r":0,"t":"PL"}
+];
+</script>
+<script data-cfasync="false" nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU">
+  document.addEventListener('DOMContentLoaded', function() {
+    var cookieLink = document.getElementById('cookiePolicyLink');
+    if (!cookieLink) {
+      console.error('#cookiePolicyLink');
+      return;
+    }
+    cookieLink.addEventListener('click', function(e) {
+      e.preventDefault();
+      var recallButton = document.querySelector('#cmpboxrecall .cmpboxrecalllink');
+      if (recallButton) {
+        recallButton.click();
+      } else {
+        console.warn('CMP not loaded?');
+      }
+    });
+  });
+</script>
+<script nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" type="application/ld+json">
+                        {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "url": "https://lotnisko-chopina.pl/en/arrivals-and-departures/",
+    "name": "Arrivals and departures",
+    "inLanguage": "en"
+}
+                    </script><script nonce="dGX6loKAmr80WqiZnk93P3CO1dtk_jOJiLBYV4sHasU" type="application/ld+json">
+                    {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Warsaw Chopin Airport",
+            "item": "https://lotnisko-chopina.pl/en/"
+        },
+        {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Arrivals and departures",
+            "item": "https://lotnisko-chopina.pl/en/arrivals-and-departures/"
+        }
+    ]
+}
+                </script>
+<!-- Google Tag Manager (noscript) -->
+<noscript>
+<iframe height="0" src="https://www.googletagmanager.com/ns.html?id=GTM-K2RZJ2WL" style="display:none;visibility:hidden" width="0"></iframe>
+</noscript>
+<!-- End Google Tag Manager (noscript) -->
+</body>
+</html>

@@ -1,0 +1,1169 @@
+# https://www.euroairport.com/en/vols-au-depart
+# status 200 final https://www.euroairport.com/en/vols-au-depart
+# {"Date": "Tue, 10 Nov 2026 17:09:57 GMT", "Content-Type": "text/html; charset=utf-8", "Transfer-Encoding": "chunked", "Connection": "close", "Cache-Control": "max-age=1800, public", "x-drupal-dynamic-cache": "UNCACHEABLE (poor cacheability)", "content-language": "en", "x-content-type-options": "nosniff", "x-frame-options": "SAMEORIGIN", "expires": "Sun, 19 Nov 1978 05:00:00 GMT", "last-modified": "Tue, 10 Nov 2026 16:45:16 GMT", "cf-cache-status": "BYPASS", "content-security-policy": "font-src 'self'; frame-src 'self' v.calameo.com www.youtube.com player.vimeo.com secure.rentalcars.com euroairport.meteonews.net; img-src 'self' api.euroairport.com support.euroairport.com data: i.ytimg.com i.vimeocdn.com cdn.jsdelivr.net; object-src 'none'; script-src 'self' 'report-sample' analytics.euroairport.ows.fr analytics.euroairport.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src * 'report-sample' 'unsafe-inline'; worker-src 'self' blob:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'", "x-cacheable": "YES", "vary": "Cookie, Accept-Encoding", "Age": "1480", "x-cache": "HIT", "x-cache-hits": "7", "Set-Cookie": "SERVERID=vm03; path=/", "set-cookie": "SERVERID=vm03; path=/", "strict-transport-security": "max-age=15552000; includeSubDomains", "Server": "cloudflare", "CF-RAY": "a586aaf788edbeb1-IAD"}
+
+<!DOCTYPE html>
+<html lang="en" dir="ltr" prefix="og: https://ogp.me/ns#">
+	<head>
+		<meta charset="utf-8" />
+<link rel="canonical" href="https://www.euroairport.com/en/vols-au-depart" />
+<meta name="MobileOptimized" content="width" />
+<meta name="HandheldFriendly" content="true" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" href="/themes/custom/eap/favicon.ico" type="image/vnd.microsoft.icon" />
+
+    <title>Flights departures | EuroAirport</title>
+    <link rel="stylesheet" media="all" href="/sites/default/files/css/css__DW-UuqbObH69fW8zHryQAYJU_vNLxG1c1FrkrHIn8U.css?delta=0&amp;language=en&amp;theme=eap&amp;include=eJxtj1FuwzAMQy_kxEcyFJtJhMqWZynrevs53T77I0B8EEltcMdI-OlqKGlnmavFAw2DJGQdiFlr14bmtoL6spygwu34DC0PFVlc-2fu9H9YxtVJVnbURdg8TBwP0Y1kMX_JnTClNA2qtrgLeef8GG-xacGU-Dg9cdvVUnKQ4Y8aaOQz7vSV6HK9KwgcwWbYkwsSCYZHbuzBnMZ8-cGe_ERFvK2DvWz2itu0DN-Mp8X3XKuWS_ALKyJ3xw" />
+<link rel="stylesheet" media="all" href="/libraries/flatpickr/dist/flatpickr.min.css" />
+<link rel="stylesheet" media="all" href="/sites/default/files/css/css_OGGFn7gZXaTqV-Wdtf4ZG-v1je63pX3u-ovSWTJX2Qg.css?delta=2&amp;language=en&amp;theme=eap&amp;include=eJxtj1FuwzAMQy_kxEcyFJtJhMqWZynrevs53T77I0B8EEltcMdI-OlqKGlnmavFAw2DJGQdiFlr14bmtoL6spygwu34DC0PFVlc-2fu9H9YxtVJVnbURdg8TBwP0Y1kMX_JnTClNA2qtrgLeef8GG-xacGU-Dg9cdvVUnKQ4Y8aaOQz7vSV6HK9KwgcwWbYkwsSCYZHbuzBnMZ8-cGe_ERFvK2DvWz2itu0DN-Mp8X3XKuWS_ALKyJ3xw" />
+<link rel="stylesheet" media="all" href="/sites/default/files/css/css_esIQwR7tzbFOZMuWKvw7EV_VOrPL0OlzUFBRxXWrIzE.css?delta=3&amp;language=en&amp;theme=eap&amp;include=eJxtj1FuwzAMQy_kxEcyFJtJhMqWZynrevs53T77I0B8EEltcMdI-OlqKGlnmavFAw2DJGQdiFlr14bmtoL6spygwu34DC0PFVlc-2fu9H9YxtVJVnbURdg8TBwP0Y1kMX_JnTClNA2qtrgLeef8GG-xacGU-Dg9cdvVUnKQ4Y8aaOQz7vSV6HK9KwgcwWbYkwsSCYZHbuzBnMZ8-cGe_ERFvK2DvWz2itu0DN-Mp8X3XKuWS_ALKyJ3xw" />
+<link rel="stylesheet" media="print" href="/sites/default/files/css/css_i_Uq-CbRuqz4BikoW-wPoYiM-c9TA_hbiPCqjeweT8I.css?delta=4&amp;language=en&amp;theme=eap&amp;include=eJxtj1FuwzAMQy_kxEcyFJtJhMqWZynrevs53T77I0B8EEltcMdI-OlqKGlnmavFAw2DJGQdiFlr14bmtoL6spygwu34DC0PFVlc-2fu9H9YxtVJVnbURdg8TBwP0Y1kMX_JnTClNA2qtrgLeef8GG-xacGU-Dg9cdvVUnKQ4Y8aaOQz7vSV6HK9KwgcwWbYkwsSCYZHbuzBnMZ8-cGe_ERFvK2DvWz2itu0DN-Mp8X3XKuWS_ALKyJ3xw" />
+<link rel="stylesheet" media="all" href="/sites/default/files/css/css_DCrakQBiElgSMM3xbRLxCYtMCTJm0z4sbiwvOWdEVPw.css?delta=5&amp;language=en&amp;theme=eap&amp;include=eJxtj1FuwzAMQy_kxEcyFJtJhMqWZynrevs53T77I0B8EEltcMdI-OlqKGlnmavFAw2DJGQdiFlr14bmtoL6spygwu34DC0PFVlc-2fu9H9YxtVJVnbURdg8TBwP0Y1kMX_JnTClNA2qtrgLeef8GG-xacGU-Dg9cdvVUnKQ4Y8aaOQz7vSV6HK9KwgcwWbYkwsSCYZHbuzBnMZ8-cGe_ERFvK2DvWz2itu0DN-Mp8X3XKuWS_ALKyJ3xw" />
+
+    <script type="application/json" data-drupal-selector="drupal-settings-json">{"path":{"baseUrl":"\/","pathPrefix":"en\/","currentPath":"vols-au-depart","currentPathIsAdmin":false,"isFront":false,"currentLanguage":"en"},"pluralDelimiter":"\u0003","suppressDeprecationErrors":true,"ajaxPageState":{"libraries":"eJxtkFGOgzAMRC8E5EhRCAO4dRJqm-1y-zUtlfajP7HyRmOPPcIMEvG7NcUUZ2L_alhQIYm73AQht7K1imo6IG19vyJNVJfvomZpzL217btu6TJOsm-JBzKUnkntTan6_Or89tghxzA3KZ0bw8JtTNyrHXzOdhS9dWk1zJxso3yXYWZaVtOvYkS9eLsTNFz1xWqbEN7mSHVuGqMhKeSlKpLkNczpEdNu7VyIYfivKRjZolBeO9_iRgXhqpFplCTHh0fB4ttCPgn6D-jUb_GkCTExxPwUZJ1aEtfuZNFWeNsza6eHG0oYPWP3Q3hqeL1DadPO-APLj7Yl","theme":"eap","theme_token":null},"ajaxTrustedUrl":{"form_action_p_pvdeGsVG5zNF_XLGPTvYSKCf43t8qZYSwcfZl2uzM":true,"\/en\/vols-au-depart?field_scheduled_time=2027-01-03%2000%3A00\u0026flight_type=passagers\u0026page=6\u0026search_api_fulltext=\u0026ajax_form=1":true,"\/en\/vols-au-depart":true},"orejime":{"manage":{"strictly_necessary":{"id":{},"label":"Strictly Necessary","name":"strictly_necessary","description":"Technical cookies required for the site to function properly.","required":"1","cookies":["_cfuvid, __cf_bm, orejime"],"scripts":[],"default":"1","purposes":[]},"tracking":{"id":{},"label":"Audience measurement cookies","name":"tracking","description":"These cookies enable us to determine the number of visits and sources of traffic, in order to measure and improve the performance of our website.","required":"0","cookies":["mtm_cookie_consent, _pk_id.2.0a0f, _pk_ses.2.0a0f"],"scripts":[],"default":"0","purposes":["Audience"]},"youtube":{"id":{},"label":"YouTube","name":"youtube","description":"Cookies deposited by a third-party service (YouTube) when displaying or viewing an embedded video, may include third-party tracking and telemetry services.","required":"0","cookies":["YSC, VISITOR_PRIVACY_METADATA, VISITOR_INFO1_LIVE, __Secure-ROLLOUT_TOKEN, YSC, PREF, GPS, CONSENT"],"scripts":[],"default":"0","purposes":["Vid\u00e9os int\u00e9gr\u00e9es"]},"calameo":{"id":{},"label":"Calameo Media","name":"calameo","description":"Cookies deposited by a third-party service (Calam\u00e9o) when integrated content is displayed, may include third-party tracking and telemetry services.","required":"0","cookies":["_gid, lang"],"scripts":[],"default":"0","purposes":["Media tiers"]}},"language":"en","purposes":["Audience","Vid\u00e9os int\u00e9gr\u00e9es","Media tiers"],"ua_list":[],"cookie_name":"orejime","expires_after_days":"365","cookie_domain":"","privacy_policy":"\/mentions-legales","must_consent":false,"implicit_consent":null,"debug":false,"must_notice":false,"logo":"","categories":[],"texts":{"consentModal":{"title":"Information that we collect","description":"Here you can see and customize the information that we collect about you.\n","privacyPolicy":{"name":"privacy policy","text":"To learn more, please read our {privacyPolicy}.\n"}},"consentNotice":{"changeDescription":"There were changes since your last visit, please update your consent.","description":"We collect and process your personal information for the following purposes: {purposes}.\n","learnMore":"Learn more"},"accept":"Accept","acceptTitle":"Accept cookies","acceptAll":"Accept all apps","save":"Save","saveData":"Save my configuration on collected information","decline":"Decline","declineAll":"Decline all apps","close":"Close","enabled":"Enabled","disabled":"Disabled","app":{"optOut":{"title":"(opt-out)","description":"This app is loaded by default (but you can opt out)"},"required":{"title":"(always required)","description":"This application is always required"},"purposes":"Purposes","purpose":"Purpose"},"poweredBy":"Powered by Orejime","newWindow":"new window"}},"ajax":{"edit-submit":{"callback":"::ajaxSubmitForm","event":"click","progress":{"type":"none"},"url":"\/en\/vols-au-depart?field_scheduled_time=2027-01-03%2000%3A00\u0026flight_type=passagers\u0026page=6\u0026search_api_fulltext=\u0026ajax_form=1","httpMethod":"POST","dialogType":"ajax","submit":{"_triggering_element_name":"search_submit","_triggering_element_value":"Search"}}},"currentLanguage":"en","beltText":"Baggage carousel","boardingText":"Boarding Gate","unavailableText":"N\/A","selectRich":{"flight_type":{"options":{"items":{"All":{"label":"Tout","icon":"plane"},"passagers":{"label":"Passenger","icon":"passager"},"cargo":{"label":"Cargo","icon":"vols"}}}}},"sitewideAlert":{"refreshInterval":300000,"automaticRefresh":false,"showCount":false,"serverSideRender":false},"matomo":{"siteId":"2","url":"https:\/\/analytics.euroairport.com\/"},"csp":{"nonce":"gAvDLeZZK5MLZNCTN7M8zw"},"user":{"uid":0,"permissionsHash":"754bcf5f5629bfb1e0d34c70dcccc5b4072c93d329ad10cf0d8c6660303cb419"}}</script>
+<script src="/sites/default/files/js/js_Tnr26nwX6n95JodoEgTDCk5_4T_hPk9NbDJ1cjij9xE.js?scope=header&amp;delta=0&amp;language=en&amp;theme=eap&amp;include=eJxtkEGOwzAIRS-UxEeyHOfboSUmBaqZ3H7cNpFm0RXiPUDADHdoxO8uhiUW4p5aqGjQxEMWRciy7dLQ3CakfRwtqzCPLvt376l-BLU-rCWebo8n9JiK6Db0klBZ5sSj-cHU6gvFPmSTFgon3ynfdSpMdXX7KiPayeVOsHDGN2uyIHyaI7UiFqMjGfRtDUnzGkp6xPR0ea3OcPx3Bkb2qJTXoV9xow3hjJFp1qTHxaOikvUjrw3GCwxGjh9aEBNDvb-C_A_SbI41"></script>
+
+  </head>
+  <body class="path-vols-au-depart">
+        <a href="#main-content" class="skip-link">
+      Skip to main content
+    </a>
+    
+      <div class="dialog-off-canvas-main-canvas" data-off-canvas-main-canvas>
+    <div class="layout-container">
+
+  
+  <header role="banner" class="eap-header js-header">
+      <div class="eap-header__logo">
+    <div id="block-eap-header-site-branding" class="block block-system block-system-branding-block">
+  
+    
+        <a href="/en" rel="home" class="site-logo">
+      <img src="/themes/custom/eap/logo.svg" alt="Home" fetchpriority="high" />
+    </a>
+      </div>
+
+  </div>
+  <div class="eap-header__top">
+    <div class="eap-header__top__domains">
+      <nav role="navigation" aria-labelledby="block-eap-header-top-main-nav-menu" id="block-eap-header-top-main-nav" data-region="header" class="universe-navigation block">
+            
+  <h2 class="visually-hidden" id="block-eap-header-top-main-nav-menu">Universe navigation</h2>
+  
+
+        
+  <ul class="menu menu-level-0 main">
+                  
+        <li class="menu-item main menu-item--collapsed">
+                                  
+
+            <a href="/en/Professionals" class="menu-item main menu-item--collapsed menu-item__label" data-drupal-link-system-path="node/45039">Business &amp; partners</a>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item main menu-item--collapsed">
+                                  
+
+            <a href="/en/EuroAirport" class="menu-item main menu-item--collapsed menu-item__label" data-drupal-link-system-path="node/45040">EuroAirport</a>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+            </ul>
+
+
+
+
+  </nav>
+
+    </div>
+    <div id="block-eap-usersearchmenu" class="block block-eap-common block-user-menu-block">
+  
+    
+      <div class="item-list"><ul><li><a href="/en/recherche" class="icon icon-recherche"><span class='sr-only'>Search</span></a></li><li><a href="/en/user/login" class="icon icon-user" hreflang="en"><span class='sr-only'>Login</span></a></li></ul></div>
+  </div>
+
+    <div class="language-switcher-language-url block block-language block-language-blocklanguage-interface" id="block-eap-header-top-language-switcher" role="navigation">
+  
+    
+      <button class="language__btn">EN</button>
+  <ul class="links"><li data-drupal-language="fr" data-drupal-link-system-path="vols-au-depart"><a href="/vols-au-depart" class="language-link" hreflang="fr" data-drupal-link-system-path="vols-au-depart">Français</a></li><li data-drupal-language="en" data-drupal-link-system-path="vols-au-depart" class="is-active" aria-current="page"><a href="/en/vols-au-depart" class="language-link is-active" hreflang="en" data-drupal-link-system-path="vols-au-depart" aria-current="page">English</a></li><li data-drupal-language="de" data-drupal-link-system-path="vols-au-depart"><a href="/de/vols-au-depart" class="language-link" hreflang="de" data-drupal-link-system-path="vols-au-depart">Deutsch</a></li></ul>
+  </div>
+
+  </div>
+  <button type="button" class="eap-header__navburger" aria-expanded="false" aria-label="Ouvrir le menu">
+    <span class="eap-header__navburger__icon" aria-hidden="true">
+      <span class="eap-header__navburger__icon__line"></span>
+      <span class="eap-header__navburger__icon__line"></span>
+      <span class="eap-header__navburger__icon__line"></span>
+    </span>
+  </button>
+  <div class="eap-header__menu">
+    <div class="eap-header__menu__nav">
+      <div id="block-eap-header-main-nav" data-region="header" class="block block-eap-common block-eap-main-navigation-block">
+  
+    
+      
+  <ul class="menu menu-level-0 main">
+                  
+        <li class="menu-item main menu-item--expanded">
+                      <button type="button" class="menu-level-0__btn eap-header__menu__btn" aria-expanded="false">
+              
+                  <span class="icon icon-vols" aria-hidden="true"></span>
+            
+              <span class="eap-header__menu__btn__title">Flights and destinations</span>
+            </button>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+  <ul class="menu menu-level-1">
+                  
+        <li class="menu-item">
+          <a href="/en/vols-a-l-arrivee">Arrivals 
+                  <span class="icon icon-vol-arrivee-atterrissage" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item">
+          <a href="/en/vols-au-depart">Departures 
+                  <span class="icon icon-vol-depart-decollage" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item">
+          <a href="/en/airlines">Airlines 
+                  <span class="icon icon-airplane-wings" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item">
+          <a href="/en/destinations">Destinations 
+                  <span class="icon icon-itinerary" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+            </ul>
+
+
+
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item main menu-item--expanded">
+                      <button type="button" class="menu-level-0__btn eap-header__menu__btn" aria-expanded="false">
+              
+                  <span class="icon icon-transports" aria-hidden="true"></span>
+            
+              <span class="eap-header__menu__btn__title">Parking and transportation</span>
+            </button>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+  <ul class="menu menu-level-1">
+                  
+        <li class="menu-item">
+          <a href="/en/parkings">Parking 
+                  <span class="icon icon-parking1" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item">
+          <a href="/en/transport">Transport 
+                  <span class="icon icon-transports" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+            </ul>
+
+
+
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item main menu-item--expanded">
+                      <button type="button" class="menu-level-0__btn eap-header__menu__btn" aria-expanded="false">
+              
+                  <span class="icon icon-douane" aria-hidden="true"></span>
+            
+              <span class="eap-header__menu__btn__title">Check-in and formalities</span>
+            </button>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+  <ul class="menu menu-level-1">
+                  
+        <li class="menu-item">
+          <a href="/en/check-in">Check-in 
+                  <span class="icon icon-bagage-check-in" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item">
+          <a href="/en/security-checks">Security checks 
+                  <span class="icon icon-control" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item">
+          <a href="/en/baggages">Baggages 
+                  <span class="icon icon-bagage-charriot" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+            </ul>
+
+
+
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item main menu-item--expanded">
+                      <button type="button" class="menu-level-0__btn eap-header__menu__btn" aria-expanded="false">
+              
+                  <span class="icon icon-shopping" aria-hidden="true"></span>
+            
+              <span class="eap-header__menu__btn__title">Shopping and services</span>
+            </button>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+  <ul class="menu menu-level-1">
+                  
+        <li class="menu-item">
+          <a href="/en/commerces/boutiques"> Shops and Duty Free 
+                  <span class="icon icon-shop" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item">
+          <a href="/en/commerces/bars-et-restaurants">Bars, restaurants 
+                  <span class="icon icon-bar-restaurant" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item">
+          <a href="/en/relaxation">Relaxation 
+                  <span class="icon icon-lounge" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item">
+          <a href="/en/practical-services">Practical services 
+                  <span class="icon icon-stewart" aria-hidden="true"></span>
+            </a>
+                                
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-1 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+            </ul>
+
+
+
+      </div>
+
+
+
+                  </li>
+            </ul>
+
+
+
+
+  </div>
+
+    </div>
+    <div class="eap-header__menu__actions">
+      <nav role="navigation" aria-labelledby="block-eap-header-pmr-faq-menu" id="block-eap-header-pmr-faq" data-region="header" class="block block-menu navigation menu--menu-faq">
+            
+  <h2 class="visually-hidden" id="block-eap-header-pmr-faq-menu">Menu FAQ</h2>
+  
+
+        
+  <ul class="menu menu-level-0 menu-faq">
+                  
+        <li class="menu-item menu-faq">
+                                  
+                  <span class="icon icon-accessibilite-pmr" aria-hidden="true"></span>
+            
+
+            <a href="/en/people-with-reduced-mobility-prm" class="menu-item menu-faq menu-item__label" data-drupal-link-system-path="node/287623">PRM</a>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmenu-faq view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item menu-faq">
+                                  
+                  <span class="icon icon-plan-point" aria-hidden="true"></span>
+            
+
+            <a href="/en/plan" class="menu-item menu-faq menu-item__label" data-drupal-link-system-path="plan">Map</a>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmenu-faq view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item menu-faq">
+                                  
+                  <span class="icon icon-information" aria-hidden="true"></span>
+            
+
+            <a href="/en/faq" class="menu-item menu-faq menu-item__label" data-drupal-link-system-path="faq">FAQ</a>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmenu-faq view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+            </ul>
+
+
+
+
+  </nav>
+
+    </div>
+    <div class="eap-header__menu__domains">
+      <nav role="navigation" aria-labelledby="block-eap-header-top-main-nav-menu" id="block-eap-header-top-main-nav" data-region="header" class="universe-navigation block">
+            
+  <h2 class="visually-hidden" id="block-eap-header-top-main-nav-menu">Universe navigation</h2>
+  
+
+        
+  <ul class="menu menu-level-0 main">
+                  
+        <li class="menu-item main menu-item--collapsed">
+                                  
+
+            <a href="/en/Professionals" class="menu-item main menu-item--collapsed menu-item__label" data-drupal-link-system-path="node/45039">Business &amp; partners</a>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+                        
+        <li class="menu-item main menu-item--collapsed">
+                                  
+
+            <a href="/en/EuroAirport" class="menu-item main menu-item--collapsed menu-item__label" data-drupal-link-system-path="node/45040">EuroAirport</a>
+                    
+                      
+  
+  <div class="menu_link_content menu-link-contentmain view-mode-default menu-dropdown menu-dropdown-0 menu-type-default">
+              
+      </div>
+
+
+
+                  </li>
+            </ul>
+
+
+
+
+  </nav>
+
+    </div>
+  </div>
+
+  </header>
+
+  
+  
+
+  
+
+  
+
+
+  <main role="main">
+    <a id="main-content" tabindex="-1"></a>
+    <div class="layout-content">
+        <div class="region region-content">
+    <div id="block-eap-header-alert" data-sitewide-alert aria-live="polite" class="block block-sitewide-alert-block">
+  
+    
+      <div></div>
+
+  </div>
+<div data-drupal-messages-fallback class="hidden"></div>
+<div id="block-eap-content" class="block block-system block-system-main-block">
+  
+    
+      <div class="views-element-container"><div class="flight-list view view-flights view-id-flights view-display-id-departing_flights js-view-dom-id-55e2fa267a5511198b6e5a6ebe35e42636c964a6f0dcb01c394f163ec7741dca">
+  
+    
+      <div class="view-header">
+      
+
+
+
+<div class="hero -flights">      <div class="hero__img">
+        
+      </div>
+    <div class="hero__breadcrumb">
+        <nav class="breadcrumb" role="navigation" aria-labelledby="system-breadcrumb">
+    <h2 id="system-breadcrumb" class="visually-hidden">Breadcrumb</h2>
+    <ol>
+          <li>
+                  <a href="/en"><p class='icon icon-home'><span class='sr-only'>Accueil</span></p></a>
+              </li>
+          <li>
+                  Flights departures
+              </li>
+        </ol>
+  </nav>
+
+    </div>    <div class="hero__content">
+      
+      
+
+
+<h1  class="heading -xl hero__title">
+              All our flights <span>in real time</span>      
+  </h1>
+    </div>
+  </div>
+
+    </div>
+        <div class="flight-list__filters view-filters content-wrapper-sm">
+      <form class="views-exposed-form bef-exposed-form" data-drupal-selector="views-exposed-form-flights-departing-flights" action="/en/vols-au-depart" method="get" id="views-exposed-form-flights-departing-flights" accept-charset="UTF-8">
+  <div class="form--inline clearfix">
+  <div class="js-form-item form-item js-form-type-textfield form-type-textfield js-form-item-search-api-fulltext form-item-search-api-fulltext">
+      
+        <input placeholder="Flight no., city, airline…" data-drupal-selector="edit-search-api-fulltext" type="text" id="edit-search-api-fulltext" name="search_api_fulltext" value="" size="30" maxlength="128" class="form-text" />
+
+        </div>
+<div class="js-form-item form-item js-form-type-textfield form-type-textfield js-form-item-field-scheduled-time form-item-field-scheduled-time">
+      <label for="edit-field-scheduled-time">Date du vol</label>
+        <input class="js-flatpickr-input form-text" data-flatpickr="views" data-drupal-selector="edit-field-scheduled-time" type="text" id="edit-field-scheduled-time" name="field_scheduled_time" value="now" size="30" maxlength="128" />
+
+        </div>
+<div class="js-form-item form-item js-form-type-select form-type-select js-form-item-flight-type form-item-flight-type">
+      <label for="edit-flight-type">Type de vol</label>
+        <select class="js-select-rich form-select" data-drupal-selector="edit-flight-type" id="edit-flight-type" name="flight_type"><option value="All">Tout</option><option value="passagers" selected="selected">Passenger</option><option value="cargo">Cargo</option></select>
+        </div>
+<div data-drupal-selector="edit-actions" class="form-actions js-form-wrapper form-wrapper" id="edit-actions"><input data-drupal-selector="edit-submit-flights" type="submit" id="edit-submit-flights" value="Apply" class="button js-form-submit form-submit" />
+</div>
+
+</div>
+
+</form>
+
+    </div>
+  
+      <div class="flight-list__tabs tabs content-wrapper-sm">
+      
+<ul class="tabs__list"><li class="tabs__item"><a href="/en/vols-au-depart" class="-current"><span class="icon icon-vol-depart-decollage"></span>Flights departures</a></li><li class="tabs__item"><a href="/en/vols-a-l-arrivee"><span class="icon icon-vol-arrivee-atterrissage"></span>Flights arrivals</a></li></ul>
+    </div>
+    
+      <div class="flight-list__content view-content flights-rows content-wrapper-sm">
+        <h3>Departures on 10/11/2026</h3>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182788611" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">17:55</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/kl1948-0" class="flight-teaser__airport">
+          AMSTERDAM
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/KLM.png?4" alt="Logo KLM" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">KL1948</span>
+          KLM
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182788841" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">18:30</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/ds1283-0" class="flight-teaser__airport">
+          KRAKOW
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/EJU.png?4" alt="Logo easyJet" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">DS1283</span>
+          easyJet
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182788901" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">18:35</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/ds1183" class="flight-teaser__airport">
+          HAMBOURG
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/EJU.png?4" alt="Logo easyJet" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">DS1183</span>
+          easyJet
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182788981" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">19:30</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/ba763-0" class="flight-teaser__airport">
+          LONDON HEATHROW
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/BAW.png?3" alt="Logo British Airways" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">BA763</span>
+          British Airways
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182789021" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">20:10</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/os128-0" class="flight-teaser__airport">
+          VIENNE
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/AUA.png?3" alt="Logo Austrian Airlines" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">OS128</span>
+          Austrian Airlines
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182789061" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">20:20</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/iv805-0" class="flight-teaser__airport">
+          PRISTINA
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/GPX.png?1" alt="Logo GP Aviation" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">IV805</span>
+          
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182789131" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">20:20</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/w64278" class="flight-teaser__airport">
+          VARNA
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/WZZ.png?3" alt="Logo Wizz Air" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">W64278</span>
+          Wizz Air
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182789221" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">20:30</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/w62268" class="flight-teaser__airport">
+          BUDAPEST
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/WZZ.png?3" alt="Logo Wizz Air" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">W62268</span>
+          Wizz Air
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182789341" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">21:00</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/ec6816-0" class="flight-teaser__airport">
+          PORTO
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/EJU.png?4" alt="Logo easyJet" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">EC6816</span>
+          easyJet
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+    <div class="views-row">
+  <article class="node node--type-flight node--promoted node--view-mode-teaser">
+
+    
+    <div data-eap-flight-id="4182789461" data-eap-flight-sense="departure" class="node__content flight-teaser">
+      <div class="flight-teaser__date">
+        
+            <time class="field field--name-field-scheduled-time field--type-datetime field--label-hidden field__item">21:10</time>
+      
+      </div>
+      <div class="flight-teaser__content">
+        <a href="/en/flight/ec5198-0" class="flight-teaser__airport">
+          BERLIN
+        </a>
+        <div class="flight-teaser__logo">
+          <img src="https://api.euroairport.com/v3.2/airlines/logos/EJU.png?4" alt="Logo easyJet" />
+
+        </div>
+        <p class="flight-teaser__body">
+          <span class="flight-teaser__body__code">EC5198</span>
+          easyJet
+        </p>
+        <div class="flight-teaser__infos">
+          
+<div  class="tag flight__status">
+      <span class="tag__label">
+      
+    </span>
+  
+    
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+  </article>
+</div>
+
+              <p class="flight-list__info">
+          Subject to change
+        </p>
+          </div>
+  
+      <nav class="pager -mini content-wrapper-sm" role="navigation" aria-labelledby="pagination-heading">
+  <h4 id="pagination-heading" class="pager__heading visually-hidden">Pagination</h4>
+  <ul class="pager__items js-pager__items">
+              <li class="pager__item pager__item--next">
+        <a href="/en/vols-au-depart?flight_type=passagers&amp;page=1" title="Next flights" rel="next">
+          <span class="visually-hidden">Next page</span>
+          <span aria-hidden="true">Following flights</span>
+        </a>
+      </li>
+      </ul>
+  </nav>
+
+        </div>
+</div>
+
+  </div>
+
+  </div>
+
+    </div>
+      </main>
+
+      <footer role="contentinfo">
+        <div class="footer -primary">
+    <div id="block-eap-footer-social" class="block block-eap-common block-footer-social-block">
+  
+    
+      
+<img src="/themes/custom/eap/logo-footer.svg" width="190" height="45" alt="&#039;Logo d&#039;EuroAirport&#039;" loading="lazy" />
+
+<div class="item-list"><ul class="social-list"><li><a href="https://www.facebook.com/EuroAirport" class="social-list__item" target="_blank"><span class='icon icon-facebook' aria-hidden='true'></span>
+                 <span class='sr-only'>Suivez-nous sur Facebook - s'ouvre dans une nouvelle fenêtre</span></a></li><li><a href="https://www.instagram.com/euroairport_official" class="social-list__item" target="_blank"><span class='icon icon-instagram' aria-hidden='true'></span>
+                 <span class='sr-only'>Suivez-nous sur Instagram - s'ouvre dans une nouvelle fenêtre</span></a></li><li><a href="https://www.youtube.com/channel/UCWz3gWdJsIPAsvRCG7V2Naw" class="social-list__item" target="_blank"><span class='icon icon-youtube' aria-hidden='true'></span>
+                 <span class='sr-only'>Suivez-nous sur Youtube - s'ouvre dans une nouvelle fenêtre</span></a></li><li><a href="https://www.linkedin.com/company/euroairport-basel-mulhouse-freiburg" class="social-list__item" target="_blank"><span class='icon icon-linkedin' aria-hidden='true'></span>
+                 <span class='sr-only'>Suivez-nous sur Linkedin - s'ouvre dans une nouvelle fenêtre</span></a></li></ul></div>
+
+  </div>
+
+    <nav role="navigation" aria-labelledby="block-eap-footer-menu-menu" id="block-eap-footer-menu" class="block block-menu navigation menu--footer">
+            
+  <h2 class="visually-hidden" id="block-eap-footer-menu-menu">Menu pied de page</h2>
+  
+
+        
+              <ul class="menu">
+                    <li class="menu-item">
+        <a href="/en/vols-a-l-arrivee" data-drupal-link-system-path="vols-a-l-arrivee">Arrivals</a>
+              </li>
+                <li class="menu-item menu-item--active-trail">
+        <a href="/en/vols-au-depart" data-drupal-link-system-path="vols-au-depart" class="is-active" aria-current="page">Departures</a>
+              </li>
+                <li class="menu-item">
+        <a href="/en/parkings" data-drupal-link-system-path="parkings">Parking</a>
+              </li>
+                <li class="menu-item">
+        <a href="/en/plan" data-drupal-link-system-path="plan">Map of EuroAirport</a>
+              </li>
+                <li class="menu-item">
+        <a href="/en/faq" data-drupal-link-system-path="faq">FAQ - Frequently Asked Questions</a>
+              </li>
+                <li class="menu-item">
+        <a href="/en/practical-services" data-drupal-link-system-path="node/284296">Practical services</a>
+              </li>
+        </ul>
+  
+
+
+  </nav>
+
+  </div>
+  <div class="footer -secondary">
+    <nav role="navigation" aria-labelledby="block-eap-footer-secondary-menu-menu" id="block-eap-footer-secondary-menu" class="block block-menu navigation menu--footer---secondary">
+            
+  <h2 class="visually-hidden" id="block-eap-footer-secondary-menu-menu">Pied de page - secondaire</h2>
+  
+
+        
+              <ul class="menu">
+                    <li class="menu-item">
+        <a href="/en/sitemap" data-drupal-link-system-path="sitemap">Sitemap</a>
+              </li>
+                <li class="menu-item">
+        <a href="/en/legal-notices-general-terms-of-use" data-drupal-link-system-path="node/321610">Legal notices</a>
+              </li>
+                <li class="menu-item">
+        <a href="/en/data-protection-and-internet-cookies-policy" data-drupal-link-system-path="node/321607">Data Protection and Internet Cookies Policy</a>
+              </li>
+                <li class="menu-item">
+        <a href="#orejime-cookies">Internet Cookies Policy</a>
+              </li>
+        </ul>
+  
+
+
+  </nav>
+
+  </div>
+  <div class="footer -copyright">
+    <p>© 2026 EuroAirport Basel-Mulhouse-Freiburg. All rights reserved.</p>
+  </div>
+
+    </footer>
+  
+    <div class="region region-help">
+      
+<button
+   class="scroll-top js-scroll-top">
+      <span class="icon-arrow-top" aria-hidden="true"></span>
+          <span class="sr-only">Retour en haut de page</span>
+      </button>
+
+
+
+<div id="block-eap-assistance" data-drupal-selector="faq-autocomplete-form" class="assistance -maximized block block- block-faq-assistance-block">
+  <button class="assistance__button js-assistance-trigger">
+    <span class="assistance__open">
+      <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12C22 17.523 17.523 22 12 22ZM12 20C14.1217 20 16.1566 19.1571 17.6569 17.6569C19.1571 16.1566 20 14.1217 20 12C20 9.87827 19.1571 7.84344 17.6569 6.34315C16.1566 4.84285 14.1217 4 12 4C9.87827 4 7.84344 4.84285 6.34315 6.34315C4.84285 7.84344 4 9.87827 4 12C4 14.1217 4.84285 16.1566 6.34315 17.6569C7.84344 19.1571 9.87827 20 12 20ZM11 16H13V18H11V16ZM11 14.008C11 14.008 13 14 13 14.008C13 13.006 16 12 16 10C16 7.79 14.227 6 12.009 6C11.483 5.99882 10.9618 6.10141 10.4755 6.30189C9.98916 6.50238 9.54714 6.79683 9.17475 7.16839C8.80236 7.53994 8.50692 7.9813 8.30534 8.46719C8.10376 8.95307 8 9.47395 8 10H10C10 8.9 10.9 8 12 8C13.1 8 14 8.9 14 10C14 10.9 11 12.367 11 14.008Z" />
+      </svg>
+      <span class="sr-only">Ouvrir l'aide</span>
+    </span>
+    <span class="assistance__close">
+      <svg class="" width="24" height="24" viewBox="0 0 19 19" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9.98828 8.57617L17.5684 0.996094L18.9805 2.4082L11.4004 9.98828L18.9883 17.5762L17.5762 18.9883L9.98828 11.4004L2.4082 18.9805L0.996094 17.5684L8.57617 9.98828L0.988281 2.40039L2.40039 0.988281L9.98828 8.57617Z" />
+      </svg>
+      <span class="sr-only">Fermer l'aide</span>
+    </span>
+  </button>
+
+  <div class="assistance__content">
+    
+          <h2 class="assistance__header">
+        <button class="assistance__minmax js-minmax-trigger"><span>Assistance</span></button>
+      </h2>
+        
+          <div class="assistance__body">
+        <div class="assistance__wrapper">
+          <form action="/en/vols-au-depart" method="post" id="faq-autocomplete-form" accept-charset="UTF-8">
+  <div class="js-form-item form-item js-form-type-textfield form-type-textfield js-form-item-search-faq form-item-search-faq form-no-label">
+        <input class="faq-autocomplete__input form-text" data-drupal-selector="edit-search-faq" type="text" id="edit-search-faq" name="search_faq" value="" size="60" maxlength="128" placeholder="How can we help you?" />
+
+        </div>
+<input class="faq-autocomplete__btn button js-form-submit form-submit" data-drupal-selector="edit-submit" type="submit" id="edit-submit" name="search_submit" value="Search" />
+<div class="faq-autocomplete__container js-form-wrapper form-wrapper" data-drupal-selector="edit-modal" id="edit-modal"><div class="faq-autocomplete__results -hidden js-form-wrapper form-wrapper" data-drupal-selector="edit-items" id="edit-items"></div>
+</div>
+<input autocomplete="off" data-drupal-selector="form-3usvn9mkvpmuyqn2b2hn-2ilivyafxjz4ih1vvy2hsw" type="hidden" name="form_build_id" value="form-3USvN9MKvPmUyqn2B2HN-2IlIvYAfxjz4IH1vvy2hSw" />
+<input data-drupal-selector="edit-faq-autocomplete-form" type="hidden" name="form_id" value="faq_autocomplete_form" />
+
+</form>
+
+        </div>
+      </div>
+      </div>
+</div>
+  </div>
+
+
+</div>
+  </div>
+
+    
+    <script src="/core/assets/vendor/jquery/jquery.min.js?v=4.0.0"></script>
+<script src="/sites/default/files/js/js_tMl0WyZhZqqKs7uUnG-7ZUFdwHGLGZOIBEi0pH3g0WM.js?scope=footer&amp;delta=1&amp;language=en&amp;theme=eap&amp;include=eJxtkEGOwzAIRS-UxEeyHOfboSUmBaqZ3H7cNpFm0RXiPUDADHdoxO8uhiUW4p5aqGjQxEMWRciy7dLQ3CakfRwtqzCPLvt376l-BLU-rCWebo8n9JiK6Db0klBZ5sSj-cHU6gvFPmSTFgon3ynfdSpMdXX7KiPayeVOsHDGN2uyIHyaI7UiFqMjGfRtDUnzGkp6xPR0ea3OcPx3Bkb2qJTXoV9xow3hjJFp1qTHxaOikvUjrw3GCwxGjh9aEBNDvb-C_A_SbI41"></script>
+<script src="/libraries/flatpickr/dist/flatpickr.min.js"></script>
+<script src="/sites/default/files/js/js_G8mkpoRHeWx62_0I8IPPihWGu3Jv02cPVKQgn8u3AMA.js?scope=footer&amp;delta=3&amp;language=en&amp;theme=eap&amp;include=eJxtkEGOwzAIRS-UxEeyHOfboSUmBaqZ3H7cNpFm0RXiPUDADHdoxO8uhiUW4p5aqGjQxEMWRciy7dLQ3CakfRwtqzCPLvt376l-BLU-rCWebo8n9JiK6Db0klBZ5sSj-cHU6gvFPmSTFgon3ynfdSpMdXX7KiPayeVOsHDGN2uyIHyaI7UiFqMjGfRtDUnzGkp6xPR0ea3OcPx3Bkb2qJTXoV9xow3hjJFp1qTHxaOikvUjrw3GCwxGjh9aEBNDvb-C_A_SbI41"></script>
+<script src="/libraries/flatpickr/dist/l10n/default.js"></script>
+<script src="/sites/default/files/js/js_0WBQP2Q2mbIbxicd3v2JtzSXN3bC81PxOGrDCo-fHMc.js?scope=footer&amp;delta=5&amp;language=en&amp;theme=eap&amp;include=eJxtkEGOwzAIRS-UxEeyHOfboSUmBaqZ3H7cNpFm0RXiPUDADHdoxO8uhiUW4p5aqGjQxEMWRciy7dLQ3CakfRwtqzCPLvt376l-BLU-rCWebo8n9JiK6Db0klBZ5sSj-cHU6gvFPmSTFgon3ynfdSpMdXX7KiPayeVOsHDGN2uyIHyaI7UiFqMjGfRtDUnzGkp6xPR0ea3OcPx3Bkb2qJTXoV9xow3hjJFp1qTHxaOikvUjrw3GCwxGjh9aEBNDvb-C_A_SbI41"></script>
+<script src="https://unpkg.com/orejime@2.3.1/dist/orejime.js"></script>
+<script src="/sites/default/files/js/js_hLJQQKCHBWrZXq9nhf6z29uNmjNR69TbJaKkdsBv-mk.js?scope=footer&amp;delta=7&amp;language=en&amp;theme=eap&amp;include=eJxtkEGOwzAIRS-UxEeyHOfboSUmBaqZ3H7cNpFm0RXiPUDADHdoxO8uhiUW4p5aqGjQxEMWRciy7dLQ3CakfRwtqzCPLvt376l-BLU-rCWebo8n9JiK6Db0klBZ5sSj-cHU6gvFPmSTFgon3ynfdSpMdXX7KiPayeVOsHDGN2uyIHyaI7UiFqMjGfRtDUnzGkp6xPR0ea3OcPx3Bkb2qJTXoV9xow3hjJFp1qTHxaOikvUjrw3GCwxGjh9aEBNDvb-C_A_SbI41"></script>
+
+  </body>
+</html>
