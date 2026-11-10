@@ -1,5 +1,5 @@
 import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getTrace, hexOfReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
-import { searchAirports, airportByIata } from './airports.js';
+import { searchAirports, airportByIata, AIRPORTS } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
 import { pushProblem, watchFlight, refreshWatch, unwatch, getWatch, listWatches, testPush, EVENT_LABELS, DEFAULT_EVENTS } from './notify.js';
@@ -57,7 +57,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.1.1 · Basilea-Mulhouse con tabellone ufficiale';
+const APP_VERSION = '4.1.2 · pagina aereo: aeroporti mancanti ricavati da città e traccia ADS-B';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -563,7 +563,7 @@ function rotRows(list) {
     return `<a class="row rot ${AIR.includes(f.status) ? 'live' : ''}" href="${flightLink(f)}">
       <span class="t">${timeCell(f.dep?.sched, f.dep?.revised, f.dep?.actual)}</span>
       <span class="num"><b>${esc(f.number)}</b><small>${esc(f.airline?.name || '')}${f._official ? ` <i class="uff" title="Dal tabellone ufficiale di ${esc([f.dep?._off, f.arr?._off].filter(Boolean).join(' e '))}">uff.</i>` : ''}</small></span>
-      <span class="dest"><b>${esc(f.dep?.iata || '—')} → ${esc(f.arr?.iata || '—')}</b><small>${esc(apName(f.dep?.iata))} – ${esc(apName(f.arr?.iata))}</small></span>
+      <span class="dest"><b>${esc(f.dep?.iata || shortCity(f.dep?.name) || '—')} → ${esc(f.arr?.iata || shortCity(f.arr?.name) || '—')}</b><small>${esc(f.dep?.iata ? apName(f.dep.iata) : f.dep?.name || '')} – ${esc(f.arr?.iata ? apName(f.arr.iata) : f.arr?.name || '')}${f.dep?._guess || f.arr?._guess ? ' <i class="uff" title="Aeroporto ricavato dalla traccia ADS-B">ADS-B</i>' : ''}</small></span>
       <span class="t">${timeCell(f.arr?.sched, f.arr?.revised, f.arr?.actual)}</span>
       <span>${statusBadge(f.status)}${f._inferred ? '<small title="Stato dedotto: una tratta successiva è già partita">dedotto</small>' : ''}</span></a>`;
   }).join('');
@@ -586,6 +586,13 @@ function mergeOfficialLegs(list, off) {
 }
 const legEnd = f => tms(f.arr?.actual) ?? tms(f.arr?.revised) ?? tms(f.arr?.sched);
 const legStart = f => tms(f.dep?.actual) ?? tms(f.dep?.revised) ?? tms(f.dep?.sched);
+const legId = f => `${f.number}|${(f.dep?.sched || f.arr?.sched)?.utc || ''}`;
+const shortCity = n => n ? String(n).split(/[\s,(/-]+/)[0].slice(0, 10) : '';
+function nearestAirport(p) {
+  let best = null, bd = 25;
+  for (const a of AIRPORTS) { const d = distanceKm(a, p); if (d < bd) { bd = d; best = a; } }
+  return best;
+}
 const legColor = f => f._adsb || AIR.includes(f.status) ? '#f5b301' : f.status === 'Arrived' ? '#8e9ab0' : f.status === 'Canceled' ? '#e5484d' : '#6ea8fe';
 
 async function viewAircraft(reg, date, apHint) {
@@ -596,8 +603,16 @@ async function viewAircraft(reg, date, apHint) {
   $app.innerHTML = `<div class="loading">Cerco i voli di ${esc(reg)}…</div>`;
   let list, adsb = null, adbErr = null, off = { legs: [], boards: [] }, trace = null, hex = null;
   [list, adsb] = await Promise.all([getFlightsByReg(reg, date).catch(e => { adbErr = e; return []; }), isToday ? liveByReg(reg) : null]);
+  const guess = new Map(); // tratta → aeroporti ricavati dalla traccia ADS-B
   const build = () => {
     let legs = cleanLegs(mergeOfficialLegs(list, off.legs));
+    for (const f of legs) {
+      const g = guess.get(legId(f));
+      if (!g) continue;
+      for (const k of ['dep', 'arr']) if (g[k] && !f[k]?.iata) {
+        f[k] = { ...f[k], lat: g[k].lat, lon: g[k].lon, ...(g[k].iata ? { iata: g[k].iata, name: f[k]?.name || g[k].name } : {}), _guess: true };
+      }
+    }
     // l'aereo sta volando con un nominativo che non corrisponde a nessuna tratta nota: la aggiungo
     if (adsb?.pos && !adsb.onGround) {
       const cs = adsb.callsign.replace(/\s+/g, '');
@@ -663,11 +678,14 @@ async function viewAircraft(reg, date, apHint) {
     dayLayer = L.layerGroup().addTo(map);
     const pts = [], aps = new Map();
     drawn.forEach(({ f, A, B }) => {
-      for (const [P, code] of [[A, f.dep?.iata], [B, f.arr?.iata]]) if (P?.lat != null && code) { pts.push([P.lat, P.lon]); if (!aps.has(code)) aps.set(code, P); }
+      for (const [P, side] of [[A, f.dep], [B, f.arr]]) {
+        const code = side?.iata || shortCity(side?.name);
+        if (P?.lat != null && code) { pts.push([P.lat, P.lon]); if (!aps.has(code)) aps.set(code, P); }
+      }
       if (A?.lat == null || B?.lat == null) return;
       const future = !f._adsb && !AIR.includes(f.status) && f.status !== 'Arrived';
       const line = L.polyline(arc(A, B), { color: legColor(f), weight: AIR.includes(f.status) || f._adsb ? 3 : 2, opacity: trace?.points?.length && f.status === 'Arrived' ? 0.45 : 0.9, dashArray: future ? '6 6' : null })
-        .bindTooltip(`<b>${esc(f.number)}</b> ${esc(f.dep.iata)} → ${esc(f.arr.iata)}${f.dep?.sched ? ` · ${hhmm(f.dep.sched)}` : ''}`, { sticky: true });
+        .bindTooltip(`<b>${esc(f.number)}</b> ${esc(f.dep.iata || f.dep.name || '?')} → ${esc(f.arr.iata || f.arr.name || '?')}${f.dep?.sched ? ` · ${hhmm(f.dep.sched)}` : ''}`, { sticky: true });
       if (!f._adsb) line.on('click', () => { location.hash = flightLink(f); });
       line.addTo(dayLayer);
     });
@@ -688,16 +706,32 @@ async function viewAircraft(reg, date, apHint) {
     const to = legs.length ? Math.max(...legs.map(f => legEnd(f) ?? -Infinity)) + 3600e3 : from + 86400e3;
     const inDay = t.points.filter(p => p.t >= (isFinite(from) ? from : 0) && p.t <= (isFinite(to) ? to : Infinity));
     trace = { ...t, points: inDay };
-    // spezzo in tratte: inizio di una nuova tratta, aereo a terra, o buchi di copertura oltre 20 minuti
+    // spezzo in tratte: inizio di una nuova tratta, aereo a terra, o buco di copertura con l'aereo a bassa quota (atterrato e ripartito)
     const segs = []; let cur = [];
     inDay.forEach((p, i) => {
       const prev = inDay[i - 1];
-      if (p.ground || p.newLeg || (prev && p.t - prev.t > 20 * 60e3)) { if (cur.length > 1) segs.push(cur); cur = []; }
-      if (!p.ground) cur.push([p.lat, p.lon]);
+      const landedGap = prev && p.t - prev.t > 20 * 60e3 && (prev.alt < 10000 || p.alt < 10000);
+      if (p.ground || p.newLeg || landedGap) { if (cur.length > 1) segs.push(cur); cur = []; }
+      if (!p.ground) cur.push(p);
     });
     if (cur.length > 1) segs.push(cur);
+    // aeroporti che il tabellone non indica (es. Ginevra dà solo il nome della città): li ricavo dagli estremi della traccia
+    guess.clear();
+    for (const f of legs) {
+      if (f._adsb || (f.dep?.iata && f.arr?.iata)) continue;
+      const s0 = legStart(f), e0 = legEnd(f);
+      let best = null, bd = 75 * 60e3;
+      for (const sg of segs) {
+        const d = Math.min(s0 ? Math.abs(sg[0].t - s0) : Infinity, e0 ? Math.abs(sg[sg.length - 1].t - e0) : Infinity);
+        if (d < bd) { bd = d; best = sg; }
+      }
+      if (!best) continue;
+      const end = p => p.alt < 12000 ? (nearestAirport(p) || { lat: p.lat, lon: p.lon }) : null;
+      guess.set(legId(f), { dep: !f.dep?.iata ? end(best[0]) : null, arr: !f.arr?.iata ? end(best[best.length - 1]) : null });
+    }
+    legs = build();
     if (traceLayer) traceLayer.remove();
-    traceLayer = L.layerGroup(segs.map(s => L.polyline(s, { color: '#38d39f', weight: 3, opacity: 0.95 }))).addTo(map);
+    traceLayer = L.layerGroup(segs.map(s => L.polyline(s.map(p => [p.lat, p.lon]), { color: '#38d39f', weight: 3, opacity: 0.95 }))).addTo(map);
     if (segs.length) trail.length = 0, trailLine.setLatLngs([]);
     render();
   };
@@ -731,9 +765,9 @@ async function viewAircraft(reg, date, apHint) {
   };
   await drawDay();
   await live();
-  findOfficial().then(drawDay).then(drawTrace).catch(() => {});
+  findOfficial().then(drawDay).then(drawTrace).then(drawDay).catch(() => {});
   every(15, live);
-  every(60, () => drawTrace().catch(() => {}));
+  every(60, () => drawTrace().then(drawDay).catch(() => {}));
   let ticks = 0;
   every(Math.max(getSettings().refreshSec, 60), async () => {
     try {
@@ -750,16 +784,20 @@ function summary(legs) {
   const real = legs.filter(f => !f._adsb && f.status !== 'Canceled');
   if (!real.length) return '';
   const chain = [];
-  for (const f of real) for (const c of [f.dep?.iata, f.arr?.iata]) if (c && chain[chain.length - 1] !== c) chain.push(c);
+  for (const f of real) for (const side of [f.dep, f.arr]) {
+    const c = side?.iata || shortCity(side?.name);
+    if (c && chain[chain.length - 1]?.c !== c) chain.push({ c, iata: side?.iata });
+  }
   let km = 0, min = 0;
   for (const f of real) {
-    const A = airportByIata(f.dep?.iata), B = airportByIata(f.arr?.iata);
+    const pos = side => side?.lat != null ? side : airportByIata(side?.iata);
+    const A = pos(f.dep), B = pos(f.arr);
     if (A && B) km += distanceKm(A, B);
     const s = legStart(f), e = legEnd(f);
     if (s && e && e > s) min += Math.round((e - s) / 60e3);
   }
   const done = real.filter(f => f.status === 'Arrived').length;
-  return `<b>${real.length} ${real.length === 1 ? 'tratta' : 'tratte'}</b>${done ? ` (${done} concluse)` : ''} · ${chain.map(c => `<a href="#/airport/${c}/dep">${esc(c)}</a>`).join(' → ')}${km ? ` · ${Math.round(km).toLocaleString('it-IT')} km` : ''}${min ? ` · ${fmtDur(min)} di volo` : ''}`;
+  return `<b>${real.length} ${real.length === 1 ? 'tratta' : 'tratte'}</b>${done ? ` (${done} concluse)` : ''} · ${chain.map(x => x.iata ? `<a href="#/airport/${x.iata}/dep">${esc(x.c)}</a>` : esc(x.c)).join(' → ')}${km ? ` · ${Math.round(km).toLocaleString('it-IT')} km` : ''}${min ? ` · ${fmtDur(min)} di volo` : ''}`;
 }
 const AIR = ['Departed', 'EnRoute', 'Approaching'];
 

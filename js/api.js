@@ -1,7 +1,7 @@
 // Livello dati: provider "demo" (dati simulati) o "aerodatabox" (dati reali via RapidAPI),
 // più il tracking live della posizione dell'aereo (AeroDataBox / adsb.lol / OpenSky).
 import { getSettings } from './store.js';
-import { airportByIata } from './airports.js';
+import { airportByIata, AIRPORTS } from './airports.js';
 import * as demo from './demo.js';
 
 const ADB_HOST = 'aerodatabox.p.rapidapi.com';
@@ -376,6 +376,15 @@ export function mergeCodeshares(list, dir) {
   });
 }
 
+const CITY_ALIASES = { ROME: 'Roma', MILAN: 'Milano', NAPLES: 'Napoli', FLORENCE: 'Firenze', VENICE: 'Venezia', TURIN: 'Torino', GENOA: 'Genova', LISBON: 'Lisbona', LISBOA: 'Lisbona', COPENHAGEN: 'Copenaghen', MUNICH: 'Monaco di Baviera', ATHENS: 'Atene', BRUSSELS: 'Bruxelles', GENEVA: 'Ginevra', GENEVE: 'Ginevra', ZURICH: 'Zurigo', VIENNA: 'Vienna', WARSAW: 'Varsavia', PRAGUE: 'Praga', SEVILLE: 'Siviglia', CORK: 'Cork' };
+function cityToIata(city) {
+  if (!city) return null;
+  const c = String(city).trim().toUpperCase();
+  const it = (CITY_ALIASES[c] || c).toLowerCase();
+  const hits = AIRPORTS.filter(a => a.city.toLowerCase() === it || a.name.toLowerCase() === it);
+  return hits.length === 1 ? hits[0].iata : null;
+}
+
 /** Voli (formato dell'app) costruiti dalle righe del tabellone ufficiale. */
 function officialFlights(off, iata, nature) {
   const tz = OFFICIAL_AIRPORTS[iata], own = { iata, ...(airportByIata(iata) || {}) };
@@ -383,8 +392,10 @@ function officialFlights(off, iata, nature) {
     const d = o.schedDate.slice(0, 10), hm = o.schedDate.slice(11, 16), z = tzOffset(tz, d);
     const sched = { local: `${d} ${hm}${z}`, utc: new Date(`${d}T${hm}:00${z}`).toISOString() };
     const mine = { iata, icao: own.icao, name: own.name, sched };
-    const ap = o.cityCode ? airportByIata(o.cityCode) : null;
-    const other = { iata: o.cityCode || null, name: ap?.name || (o.city ? o.city.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()) : null) };
+    // alcuni tabelloni (es. Ginevra) danno solo il nome della città: provo a ricavare il codice dal database locale (solo se univoco)
+    const cityCode = o.cityCode || cityToIata(o.city);
+    const ap = cityCode ? airportByIata(cityCode) : null;
+    const other = { iata: cityCode || null, name: ap?.name || (o.city ? o.city.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()) : null) };
     return {
       number: o.number, airline: { name: o.airline || null, iata: o.number.slice(0, 2) }, status: 'Expected', aircraft: { reg: o.reg || null, model: o.type || null },
       dep: nature === 'D' ? mine : other, arr: nature === 'D' ? other : mine, _officialOnly: true,
