@@ -150,7 +150,7 @@ export const OFFICIAL_AIRPORTS = {
   MAD: 'Europe/Madrid', BCN: 'Europe/Madrid', LIS: 'Europe/Lisbon', TRN: 'Europe/Rome', CAG: 'Europe/Rome',
   STN: 'Europe/London', LGW: 'Europe/London', LTN: 'Europe/London', LCY: 'Europe/London', LYS: 'Europe/Paris', BVA: 'Europe/Paris', AMS: 'Europe/Amsterdam', GOA: 'Europe/Rome', VCE: 'Europe/Rome', HKG: 'Asia/Hong_Kong',
   TFS: 'Atlantic/Canary', TFN: 'Atlantic/Canary', LPA: 'Atlantic/Canary', ACE: 'Atlantic/Canary', FUE: 'Atlantic/Canary', VLC: 'Europe/Madrid',
-  MAN: 'Europe/London', EDI: 'Europe/London', DUB: 'Europe/Dublin', HAM: 'Europe/Berlin', BER: 'Europe/Berlin', CGN: 'Europe/Berlin', FKB: 'Europe/Berlin',
+  MAN: 'Europe/London', EDI: 'Europe/London', DUB: 'Europe/Dublin', HAM: 'Europe/Berlin', BER: 'Europe/Berlin', CGN: 'Europe/Berlin',
   ARN: 'Europe/Stockholm', VIE: 'Europe/Vienna', PRG: 'Europe/Prague', BUD: 'Europe/Budapest', WAW: 'Europe/Warsaw', KRK: 'Europe/Warsaw',
   SKG: 'Europe/Athens', CHQ: 'Europe/Athens', LCA: 'Asia/Nicosia', PFO: 'Asia/Nicosia', MLA: 'Europe/Malta', ZAG: 'Europe/Zagreb', DBV: 'Europe/Zagreb', SXB: 'Europe/Paris',
 };
@@ -169,7 +169,7 @@ export const OFFICIAL_SOURCES = {
   HAM: 'hamburg-airport.de', BER: 'ber.berlin-airport.de', ARN: 'swedavia.com', VIE: 'viennaairport.com', PRG: 'prg.aero', DUB: 'dublinairport.com',
   EDI: 'edinburghairport.com', CGN: 'koeln-bonn-airport.de', BUD: 'bud.hu', SKG: 'skg-airport.gr (Fraport Greece)', CHQ: 'chq-airport.gr (Fraport Greece)',
   WAW: 'lotnisko-chopina.pl', KRK: 'krakowairport.pl', LCA: 'hermesairports.com', PFO: 'hermesairports.com', MLA: 'maltairport.com',
-  ZAG: 'zagreb-airport.hr', DBV: 'dbv.hr', SXB: 'strasbourg.aeroport.fr', FKB: 'baden-airpark.de',
+  ZAG: 'zagreb-airport.hr', DBV: 'dbv.hr', SXB: 'strasbourg.aeroport.fr',
 };
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {

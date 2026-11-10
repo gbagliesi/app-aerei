@@ -7,7 +7,7 @@ on:
       airports:
         description: 'Codici IATA separati da spazio'
         required: true
-        default: 'TFS TFN LPA ACE FUE VLC MAN HAM BER ARN VIE PRG DUB EDI CGN BUD SKG CHQ WAW KRK LCA PFO MLA ZAG DBV SXB FKB'
+        default: 'TFS TFN LPA ACE FUE VLC MAN HAM BER ARN VIE PRG DUB EDI CGN BUD SKG CHQ WAW KRK LCA PFO MLA ZAG DBV SXB'
 
 jobs:
   check:
@@ -23,5 +23,5 @@ jobs:
             c=$(printf %s "$r" | grep -o '"count":[0-9]*' | head -1)
             e=$(printf %s "$r" | grep -o '"error":"[^"]*"' | head -1)
             echo "$a $n ${c:-count:-} ${e} $(printf %s "$r" | grep -o 'HTTP[0-9]* [0-9.]*s$')"
-            [ -n "$e" ] && curl -s -m 40 "$W/debug?airport=$a&nature=$n" | head -c 700 && echo
+            if [ -n "$e" ]; then curl -s -m 40 "$W/debug?airport=$a&nature=$n" | head -c 700; echo; fi
           done; done

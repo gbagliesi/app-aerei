@@ -46,6 +46,7 @@ const SITE_BOARDS = {
   SPU: { dep: 'https://www.split-airport.hr/', name: 'split-airport.hr' },
   BSL: { dep: 'https://www.euroairport.com/en/vols-au-depart', arr: 'https://www.euroairport.com/en/vols-a-l-arrivee', name: 'euroairport.com' },
   BRN: { dep: 'https://www.bernairport.ch/en/', name: 'bernairport.ch' },
+  FKB: { dep: 'https://www.baden-airpark.de/passagiere-besucher/fluege/tagesaktueller-flugplan/', name: 'baden-airpark.de' },
   MST: { dep: 'https://www.maa.nl/en/flights/', name: 'maa.nl' },
 };
 const siteLink = (iata, dir) => {
@@ -56,7 +57,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.0 · 27 nuovi aeroporti europei con tabellone ufficiale';
+const APP_VERSION = '4.0.1 · 26 nuovi aeroporti europei con tabellone ufficiale';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
