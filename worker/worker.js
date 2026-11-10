@@ -5,7 +5,12 @@
 //   GET /board?airport=PSA&nature=D   (D = partenze, A = arrivi)  →  { flights: [...] }
 //   GET /debug?airport=PSA&nature=D                                 →  diagnostica (URL provati, inizio risposta)
 //
+//   /push/...  notifiche sui voli seguiti (Web Push): vedi notify.js
+//
 // Uso personale: le risposte restano in cache 90 secondi, così l'aeroporto riceve poche richieste.
+
+import { Watcher, setBoardFn } from './notify.js';
+export { Watcher };
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36';
 const CACHE_SECONDS = 90;
@@ -32,6 +37,12 @@ const OTHER = {
   LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol, GOA: genova, VCE: venezia, HKG: hongKong,
 };
 
+const isSupported = a => !!(TOSCANA[a] || PUGLIA.includes(a) || ADR[a] || OTHER[a] || a === 'GVA');
+async function readBoard(airport, nature, env, log = []) {
+  return OTHER[airport] ? OTHER[airport](nature, log, env) : airport === 'GVA' ? geneva(nature, log) : ADR[airport] ? adr(airport, nature, log) : PUGLIA.includes(airport) ? puglia(airport, nature, log) : toscana(airport, nature, log);
+}
+setBoardFn((a, n, env) => (isSupported(a) ? readBoard(a, n, env) : null));
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -39,7 +50,8 @@ export default {
     const allowed = (env.ALLOWED_ORIGINS || 'https://gbagliesi.github.io,http://localhost:8000').split(',').map(s => s.trim());
     const cors = {
       'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0],
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
       'Vary': 'Origin',
     };
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -48,6 +60,12 @@ export default {
     const nature = url.searchParams.get('nature') === 'A' ? 'A' : 'D';
     const json = (obj, status = 200, extra = {}) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors, ...extra } });
 
+    // notifiche: tutto passa dal Durable Object "Watcher" (iscritti, voli seguiti, controllo periodico)
+    if (url.pathname.startsWith('/push/')) {
+      if (!env.WATCHER) return json({ error: 'notifiche non configurate nel Worker (manca il Durable Object WATCHER)' }, 501);
+      const r = await env.WATCHER.get(env.WATCHER.idFromName('main')).fetch(request);
+      return new Response(r.body, { status: r.status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors } });
+    }
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA', ...Object.keys(OTHER)] });
     // Prova diagnostica: una richiesta normale (nessun aggiramento) verso i siti degli aeroporti non ancora supportati
     if (url.pathname === '/probe') {
@@ -81,7 +99,7 @@ export default {
 
     const log = [];
     try {
-      const flights = OTHER[airport] ? await OTHER[airport](nature, log, env) : airport === 'GVA' ? await geneva(nature, log) : ADR[airport] ? await adr(airport, nature, log) : PUGLIA.includes(airport) ? await puglia(airport, nature, log) : await toscana(airport, nature, log);
+      const flights = await readBoard(airport, nature, env, log);
       const body = { airport, nature, fetchedAt: new Date().toISOString(), count: flights.length, flights };
       if (debug) return json({ ...body, flights: flights.slice(0, 5), log });
       if (flights.length) ctx.waitUntil(Promise.all([

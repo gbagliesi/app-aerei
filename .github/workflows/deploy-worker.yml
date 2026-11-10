@@ -22,12 +22,13 @@ jobs:
           T=$(printf %s "$RAW_TOKEN" | tr -d '[:space:]'); T=${T#Bearer}
           echo "::add-mask::$T"
           echo "token: ${#T} caratteri, di cui non alfanumerici: $(printf %s "$T" | tr -d 'A-Za-z0-9_-' | wc -c)"
-          CLOUDFLARE_API_TOKEN="$T" npx -y wrangler@4 deploy worker/worker.js --name tabelloni-voli --compatibility-date 2024-09-23 --keep-vars
+          CLOUDFLARE_API_TOKEN="$T" npx -y wrangler@4 deploy --config worker/wrangler.toml --keep-vars
       - name: Verifica
         run: |
           for a in MXP AMS ZRH; do
             curl -s -w " -> $a %{http_code} %{time_total}s\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=$a&nature=D" | tail -c 300
           done
+          echo "== notifiche"; curl -s -w " -> /push/key %{http_code}\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/push/key" | head -c 200
           for a in MXP HKG; do
             echo "== $a"; curl -s "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/debug?airport=$a&nature=D" | grep -o '"count":[0-9]*\|"log":.*' | head -c 1200; echo
           done

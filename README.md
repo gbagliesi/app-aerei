@@ -14,6 +14,8 @@ dettaglio del volo con tracking in tempo reale su mappa, l'aereo "in arrivo" che
 - **Tab** in cima: ogni aeroporto, volo, tratta o aereo aperto resta in un tab (salvati nel browser) con stato e orario del volo;
   su computer si clicca il tab, su telefono si scorre col dito a destra/sinistra sul contenuto o sulla barra dei tab.
 - **Fonti** in fondo a ogni pagina: da dove arriva ogni dato (tabellone ufficiale dell'aeroporto, AeroDataBox, ADS-B, calcoli dell'app).
+- **Notifiche** (🔔 sul volo): atterraggio e decollo dell'aereo in arrivo, gate e cambi gate, imbarco, ritardi, decollo,
+  atterraggio, nastro bagagli, cancellazione. Le manda il Worker, anche ad app chiusa (su iPhone/iPad dall'app aggiunta alla schermata Home).
 - **Preferiti** (☆): aeroporti, tratte (con vista dedicata e tratta inversa) e voli; esportabili/importabili in JSON.
 - **Modalità demo** con voli simulati e coerenti, per provarla senza chiave API.
 

@@ -27,6 +27,18 @@ Fonti (tutte pubbliche, usate dai siti o dalle app degli aeroporti):
 Dati: gate, check-in, nastro, orario stimato e stato (dove l'aeroporto li pubblica); marche dell'aereo per Milano,
 Ginevra, Zurigo e Francoforte. Monaco non pubblica il gate nell'elenco; Palermo e Bologna solo i voli di oggi.
 
+## Notifiche sui voli seguiti (dalla v3.9)
+
+Il Worker contiene anche un Durable Object `Watcher` (file [`notify.js`](notify.js), configurazione in [`wrangler.toml`](wrangler.toml))
+che conserva i voli scelti con 🔔 nell'app, li controlla ogni 2 minuti (da 4 ore prima della partenza, solo quando c'è qualcosa
+da seguire) e manda le notifiche Web Push al telefono o al computer, anche ad app chiusa.
+- Fonti: prima i tabelloni ufficiali di partenza e arrivo (letti dal Worker stesso con la cache di `/board`); AeroDataBox solo
+  per quello che i tabelloni non coprono, al massimo una chiamata ogni 8 minuti e 30 per volo. La chiave AeroDataBox è quella
+  mandata dall'app (se lo consenti) oppure il segreto facoltativo `ADB_KEY` del Worker.
+- Le chiavi VAPID per il Web Push le crea il Worker al primo uso e restano nel Durable Object: non serve configurare niente.
+- Si pubblica con il workflow **Deploy Worker** (usa `wrangler.toml`); a mano: `npx wrangler deploy --config worker/wrangler.toml --keep-vars`.
+  Incollare il codice nella dashboard non basta più (servono `notify.js` e il Durable Object).
+
 ## Pubblicarlo (una volta sola, ~5 minuti)
 
 1. Entra su [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Create Worker**.

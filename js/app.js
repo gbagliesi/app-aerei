@@ -2,6 +2,7 @@ import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDa
 import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
+import { pushProblem, watchFlight, refreshWatch, unwatch, getWatch, listWatches, testPush, EVENT_LABELS, DEFAULT_EVENTS } from './notify.js';
 import { initTabs, enterTab, setTabInfo, playEnterAnim, closeAllTabs, openTabsCount } from './tabs.js';
 
 // Riga "Fonti" sotto il tabellone: da dove arrivano i dati mostrati
@@ -44,7 +45,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '3.8.2 · tab, fonti brevi in ogni pagina';
+const APP_VERSION = '3.9 · notifiche sui voli seguiti';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -332,6 +333,49 @@ function legCard(f, title, cls = '') {
   </div>`;
 }
 
+// ---------- notifiche sul volo (🔔) ----------
+const NOTIFY_SRC = 'notifiche 🔔: le manda il tuo Worker, che controlla il volo ogni 2 minuti sul <b>tabellone ufficiale</b> degli aeroporti di partenza e arrivo; dove non c’è usa <b>AeroDataBox</b> (con la tua chiave, al massimo 30 chiamate per volo). Ogni notifica scrive la fonte';
+const flightDay = f => (f.dep?.sched?.local || '').slice(0, 10);
+const bellBtn = f => { const on = !!getWatch(f.number, flightDay(f), f.dep?.iata); return `<button class="bell ${on ? 'on' : ''}" id="bellbtn" aria-pressed="${on}" title="${on ? 'Notifiche attive: modifica' : 'Attiva le notifiche su questo volo'}">${on ? '🔔' : '🔕'}</button>`; };
+function bindBell(f, getInb) {
+  const btn = document.getElementById('bellbtn'), box = document.getElementById('notify');
+  if (!btn || !box) return;
+  const paint = () => { const on = !!getWatch(f.number, flightDay(f), f.dep?.iata); btn.classList.toggle('on', on); btn.textContent = on ? '🔔' : '🔕'; btn.setAttribute('aria-pressed', on); };
+  const render = (msg = '') => {
+    const w = getWatch(f.number, flightDay(f), f.dep?.iata), problem = pushProblem();
+    const [inb, guess] = getInb();
+    const ended = ['Arrived', 'Canceled'].includes(f.status);
+    const evs = w?.events || DEFAULT_EVENTS;
+    const off = [f.dep?.iata, f.arr?.iata].filter(c => OFFICIAL_AIRPORTS[c]);
+    const needKey = !OFFICIAL_AIRPORTS[f.dep?.iata] || !OFFICIAL_AIRPORTS[f.arr?.iata];
+    box.innerHTML = `<span class="eyebrow">Notifiche su questo volo</span>
+      ${problem ? `<p class="note warn">${esc(problem)}</p>` : ended && !w ? '<p class="hint">Il volo è già concluso.</p>' : `
+      <p class="hint">Avvisi sul telefono o sul computer anche ad app chiusa, per ${esc(f.number)} ${esc(f.dep?.iata || '')}→${esc(f.arr?.iata || '')}${inb ? ` e per l’aereo in arrivo ${esc(inb.number)}${guess ? ' (stima)' : ''}` : ''}. Scegli gli eventi:</p>
+      <div class="evlist">${Object.entries(EVENT_LABELS).map(([k, l]) => `${(() => { const na = k.startsWith('inbound') && !inb; return `<label class="check"><input type="checkbox" name="ev" value="${k}" ${evs.includes(k) && !na ? 'checked' : ''} ${na ? 'disabled' : ''}> <span>${esc(l)}${na ? ' <small class="sub">(volo precedente non ancora trovato)</small>' : ''}</span></label>`; })()}`).join('')}</div>
+      <p class="hint">Fonti: ${off.length ? `tabellone ufficiale di ${off.join(' e ')}` : 'nessun tabellone ufficiale per questi aeroporti'}${needKey ? `${off.length ? '; per il resto' : ':'} AeroDataBox, al massimo 30 chiamate per volo` : ''}.</p>
+      ${needKey ? `<label class="check"><input type="checkbox" id="usekey" ${w?.useKey === false ? '' : 'checked'}> Usa la mia chiave AeroDataBox dal Worker (resta salvata solo nel tuo Worker)</label>` : ''}
+      <p><button id="nwatch">${w ? 'Aggiorna' : 'Attiva le notifiche'}</button> ${w ? '<button class="ghost" id="nstop">Disattiva</button>' : ''}</p>`}
+      <div id="nres">${msg}</div>`;
+    const go = document.getElementById('nwatch');
+    if (go) go.onclick = async () => {
+      const events = [...box.querySelectorAll('[name=ev]:checked:not(:disabled)')].map(x => x.value);
+      if (!events.length) { render(errorBox('Scegli almeno un evento.')); return; }
+      go.disabled = true; document.getElementById('nres').innerHTML = '<p class="hint">Attivo…</p>';
+      try {
+        const r = await watchFlight(f, inb, guess, events, document.getElementById('usekey')?.checked !== false);
+        paint();
+        render(r.updated ? '<p class="okmsg">✓ Notifiche aggiornate.</p>' : r.push?.ok ? '<p class="okmsg">✓ Notifiche attive: ti ho mandato una notifica di conferma.</p>'
+          : errorBox(`Volo registrato, ma la notifica di conferma non è partita (${r.push?.status || ''} ${r.push?.error || ''}).`));
+      } catch (e) { render(errorBox(e)); }
+    };
+    const stop = document.getElementById('nstop');
+    if (stop) stop.onclick = async () => {
+      try { await unwatch(f.number, flightDay(f), f.dep?.iata); paint(); render('<p class="hint">Notifiche disattivate per questo volo.</p>'); } catch (e) { render(errorBox(e)); }
+    };
+  };
+  btn.onclick = () => { box.hidden = !box.hidden; if (!box.hidden) render(); };
+}
+
 async function viewFlight(number, date, depHint) {
   $app.innerHTML = `<div class="loading">Cerco il volo ${esc(number)}…</div>`;
   let legs;
@@ -348,7 +392,7 @@ async function viewFlight(number, date, depHint) {
   const day = d => isoDate(new Date(new Date(`${date}T12:00:00`).getTime() + d * 86400e3));
   $app.innerHTML = `
     <div class="pagehead">
-      <div><h1>${esc(f.number)} ${star(isFavorite('flights', { number: f.number }), favAttrs('flights', { number: f.number, dep: f.dep.iata, arr: f.arr.iata }))}</h1>
+      <div><h1>${esc(f.number)} ${star(isFavorite('flights', { number: f.number }), favAttrs('flights', { number: f.number, dep: f.dep.iata, arr: f.arr.iata }))}${bellBtn(f)}</h1>
       <p class="sub">${esc(f.airline?.name || '')} · ${esc(new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }))}</p></div>
       <div class="daynav"><a class="ghost" href="#/flight/${encodeURIComponent(number)}/${day(-1)}">‹ Ieri</a><a class="ghost" href="#/flight/${encodeURIComponent(number)}/${day(1)}">Domani ›</a></div>
     </div>
@@ -356,6 +400,7 @@ async function viewFlight(number, date, depHint) {
     <p class="links">Tratta <b>${esc(f.dep.iata)} → ${esc(f.arr.iata)}</b> ${star(isFavorite('routes', { from: f.dep.iata, to: f.arr.iata }), favAttrs('routes', { from: f.dep.iata, to: f.arr.iata }))}
       · <a href="#/route/${f.dep.iata}/${f.arr.iata}">altri voli su questa tratta</a> · <a href="#/airport/${f.dep.iata}/dep">tabellone ${esc(f.dep.iata)}</a></p>
     ${f._degraded ? `<p class="hint" title="${esc(f._degraded)}">⚠ AeroDataBox non disponibile ora: solo dati del tabellone ufficiale.</p>` : ''}
+    <div id="notify" class="card notify" hidden></div>
     <div id="predict"></div>
     <div id="leg">${legCard(f, 'Questo volo')}</div>
     <div class="card"><div class="leghead"><span class="eyebrow">Posizione dell'aereo</span><span id="livemeta" class="sub"></span></div><div id="map" class="map"></div></div>
@@ -366,8 +411,10 @@ async function viewFlight(number, date, depHint) {
       f._degraded ? `⚠ AeroDataBox non disponibile: ${esc(f._degraded)}` : '',
       'aereo assegnato e volo precedente: <b>AeroDataBox</b>, completato con la rete ADS-B <b>adsb.lol</b>; quando è scritto “probabile” o “stima” è una deduzione dell’app',
       'ritardo previsto, tempo di rotazione, durata e “parte tra / atterra tra”: calcolati dall’app con gli orari qui sopra',
-      POS_SRC, MAP_SRC])}`;
+      NOTIFY_SRC, POS_SRC, MAP_SRC])}`;
   bindStars($app);
+  let inbound = null, inboundGuess = false;
+  bindBell(f, () => [inbound, inboundGuess]);
 
   // mappa
   const map = L.map('map', { worldCopyJump: true, zoomControl: true });
@@ -382,11 +429,11 @@ async function viewFlight(number, date, depHint) {
   if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] }); else map.setView([45, 10], 4);
 
   // tratta precedente
-  let inbound = null;
   try {
     const hadReg = !!f.aircraft?.reg;
     const r = await getInbound(f);
-    inbound = r.inbound;
+    inbound = r.inbound; inboundGuess = r.method === 'guess';
+    refreshWatch(f, inbound, inboundGuess).catch(() => {});
     let html = `<div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="hint">${esc(r.reason)}</p></div>`;
     if (inbound) {
       const turn = minutesBetween(inbound.arr.revised || inbound.arr.sched, f.dep.revised || f.dep.sched);
@@ -630,6 +677,12 @@ function viewSettings() {
       <p class="hint">Solo AeroDataBox, con il link al tabellone sul sito ufficiale: ${Object.entries(SITE_BOARDS).map(([k, b]) => `<b>${k}</b> (${esc(b.name)})`).join(', ')}.</p>
     </div>
     <div class="card">
+      <span class="eyebrow">Notifiche sui voli</span>
+      <p class="hint">Apri un volo e tocca 🔕 accanto al numero per scegliere gli avvisi (atterraggio dell’aereo in arrivo, gate, imbarco, ritardi, decollo, atterraggio…). Le manda il tuo Worker, anche ad app chiusa; su iPhone/iPad solo dall’app aggiunta alla schermata Home.</p>
+      <div id="nlist"><p class="hint">…</p></div>
+      <button type="button" class="ghost" id="ntest">Manda una notifica di prova</button> <span id="ntestres" class="sub"></span>
+    </div>
+    <div class="card">
       <span class="eyebrow">Preferiti e tab</span>
       <p class="hint">I preferiti e i tab aperti sono salvati in questo browser. Esporta i preferiti per spostarli su un altro dispositivo.</p>
       <button id="exp" class="ghost">Esporta</button> <label class="ghost filebtn">Importa<input id="imp" type="file" accept="application/json" hidden></label>
@@ -657,6 +710,7 @@ function viewSettings() {
       out.innerHTML = n ? `<p class="okmsg">✓ Worker funzionante: ${n} partenze lette dal tabellone di Pisa. Premi Salva.</p>` : errorBox('Il Worker risponde ma non ha trovato voli: apri l’indirizzo del Worker seguito da /debug?airport=PSA&nature=D e mandami cosa compare.');
     } catch (e) { out.innerHTML = errorBox(`Worker non raggiungibile (${e.message}). Controlla l’indirizzo.`); }
   };
+  notifySettings();
   document.getElementById('exp').onclick = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([exportFavorites()], { type: 'application/json' }));
@@ -665,6 +719,30 @@ function viewSettings() {
   document.getElementById('imp').onchange = async e => {
     try { importFavorites(await e.target.files[0].text()); alert('Preferiti importati'); } catch { alert('File non valido'); }
   };
+}
+
+async function notifySettings() {
+  const list = document.getElementById('nlist'), problem = pushProblem();
+  const t = document.getElementById('ntest');
+  if (problem) { list.innerHTML = `<p class="note warn">${esc(problem)}</p>`; t.hidden = true; return; }
+  t.onclick = async () => {
+    const out = document.getElementById('ntestres');
+    out.textContent = 'Invio…';
+    try { const r = await testPush(); out.textContent = r.push?.ok ? 'Inviata ✓' : `Non partita: ${r.push?.status || ''} ${r.push?.error || ''}`; } catch (e) { out.textContent = e.message; }
+  };
+  try {
+    const ws = await listWatches();
+    if (!ws.length) { list.innerHTML = '<p class="hint">Nessun volo seguito con le notifiche su questo dispositivo.</p>'; return; }
+    const when = ms => new Date(ms).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    list.innerHTML = `<ul class="srclist">${ws.map(w => `<li><a href="#/flight/${encodeURIComponent(w.number)}/${w.date}?dep=${w.dep}"><b>${esc(w.number)}</b> ${esc(w.dep)}→${esc(w.arr || '?')}</a> · ${esc(w.date.slice(8))}/${esc(w.date.slice(5, 7))}
+      ${w.inbound ? `· aereo in arrivo ${esc(w.inbound)}` : ''} · <small>${w.lastCheck ? `ultimo controllo ${esc(when(w.lastCheck))}` : 'controlli a partire da 4 ore prima'}${w.adbCalls ? ` · ${w.adbCalls} chiamate AeroDataBox` : ''}</small>
+      <button type="button" class="ghost small" data-unwatch="${esc(w.id)}" data-k="${esc(`${w.number}|${w.date}|${w.dep}`)}">Togli</button>
+      ${(w.log || []).length ? `<ul class="nlog">${w.log.slice(-5).reverse().map(l => `<li><small>${esc(when(l.at))}</small> ${esc(l.text)}${l.ok ? '' : ' <small>(non consegnata)</small>'}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>`;
+    list.querySelectorAll('[data-unwatch]').forEach(b => b.onclick = async () => {
+      const [n, d, dep] = b.dataset.k.split('|');
+      try { await unwatch(n, d, dep, b.dataset.unwatch); notifySettings(); } catch (e) { alert(e.message); }
+    });
+  } catch (e) { list.innerHTML = errorBox(e); }
 }
 
 // ---------- router ----------

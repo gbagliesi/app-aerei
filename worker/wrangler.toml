@@ -1,0 +1,19 @@
+# Configurazione del Worker "tabelloni-voli" (usata dal workflow Deploy Worker e da `wrangler deploy` sul Mac).
+name = "tabelloni-voli"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+keep_vars = true
+
+# Notifiche sui voli seguiti: un Durable Object (con archivio SQLite, incluso nel piano gratuito)
+[[durable_objects.bindings]]
+name = "WATCHER"
+class_name = "Watcher"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Watcher"]
+
+# Il Durable Object legge i tabelloni chiamando il Worker stesso (così usa la stessa cache di /board)
+[[services]]
+binding = "SELF"
+service = "tabelloni-voli"
