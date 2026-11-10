@@ -97,6 +97,13 @@ dd.big { font-size: 1.3rem; color: var(--amber); line-height: 1.1; }
 .note.warn { color: var(--orange); }
 
 .map { height: 360px; border-radius: 10px; margin-top: .3rem; background: #0a1324; }
+.map.tall { height: 440px; }
+.acsum { margin: -.2rem 0 .8rem; color: var(--muted, #9aa4b2); }
+.acsum a { color: inherit; font-family: var(--mono); font-weight: 700; }
+.maplegend { margin: .5rem 0 0; font-size: .8rem; color: var(--muted, #9aa4b2); display: flex; flex-wrap: wrap; gap: .3rem .9rem; align-items: center; }
+.maplegend .lg { display: inline-block; width: 22px; height: 0; border-top: 3px solid; vertical-align: middle; margin-right: .3rem; }
+.lg.flown { border-color: #38d39f; } .lg.done { border-color: #8e9ab0; } .lg.air { border-color: #f5b301; } .lg.next { border-color: #6ea8fe; border-top-style: dashed; }
+.uff { font-style: normal; font-size: .7rem; padding: 0 4px; border-radius: 4px; background: #38d39f22; color: #38d39f; margin-left: .2rem; }
 .plane div { font-size: 26px; color: var(--green); text-shadow: 0 0 6px #000, 0 0 2px #000; line-height: 30px; text-align: center; }
 .apmark span { display: inline-block; background: var(--amber); color: #1a1300; font: 800 11px var(--mono); padding: 1px 5px; border-radius: 4px; box-shadow: 0 1px 4px #0008; }
 .leaflet-container { font: inherit; }
@@ -121,6 +128,7 @@ dd.big { font-size: 1.3rem; color: var(--amber); line-height: 1.1; }
   .mid { grid-column: 1 / -1; grid-row: 2; padding-top: 0; }
   .end .code { font-size: 1.6rem; }
   .map { height: 280px; }
+  .map.tall { height: 340px; }
   .pagehead { flex-direction: column; }
 }
 .okmsg { background: #0f3a2c; color: var(--green); border-radius: 10px; padding: .8rem 1rem; margin: .8rem 0; }

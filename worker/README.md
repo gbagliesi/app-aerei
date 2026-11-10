@@ -51,6 +51,7 @@ da seguire) e manda le notifiche Web Push al telefono o al computer, anche ad ap
 
 - `https://…workers.dev/board?airport=PSA&nature=D` — partenze di Pisa (`nature=A` per gli arrivi)
 - `https://…workers.dev/debug?airport=FLR&nature=D` — mostra l'indirizzo letto, i tempi e l'inizio della risposta
+- `https://…workers.dev/trace?hex=4ca123` — percorso volato nelle ultime ~24 ore da un aereo (ICAO24), dalle tracce ADS-B pubbliche di adsb.lol, ridotto all'essenziale (cache 60 s); lo usa la pagina dell'aereo quando il browser non può leggere il file direttamente
 
 Di default il Worker risponde solo all'app su `https://gbagliesi.github.io` e a `http://localhost:8000`.
 Per cambiarlo aggiungi in **Settings → Variables** una variabile `ALLOWED_ORIGINS` con gli indirizzi separati da virgola.

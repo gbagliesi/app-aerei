@@ -100,6 +100,28 @@ export default {
         return json({ url: target, hp, status: r.status, cfRay: r.headers.get('cf-ray'), ms: Date.now() - t0, length: t.length, server: r.headers.get('server'), type: r.headers.get('content-type'), start: t.slice(0, 600), matches });
       } catch (e) { return json({ url: target, error: String(e.message || e) }, 502); }
     }
+    // Traccia del giorno di un aereo (ICAO24) dalla rete ADS-B adsb.lol (file "trace" di tar1090), ridotta all'essenziale
+    if (url.pathname === '/trace') {
+      const hex = (url.searchParams.get('hex') || '').toLowerCase();
+      if (!/^~?[0-9a-f]{6}$/.test(hex)) return json({ error: 'hex non valido' }, 400);
+      const kind = url.searchParams.get('recent') ? 'recent' : 'full';
+      const src = `https://globe.adsb.lol/data/traces/${hex.slice(-2)}/trace_${kind}_${hex}.json`;
+      const cache = caches.default, key = new Request(`https://cache.local/trace/${kind}/${hex}`);
+      const hit = await cache.match(key);
+      if (hit) return json(await hit.json());
+      try {
+        const r = await fetch(src, { signal: AbortSignal.timeout(15000), headers: { 'User-Agent': UA, 'Accept': 'application/json', 'Referer': 'https://globe.adsb.lol/' } });
+        if (r.status === 404) return json({ hex, points: [], source: 'adsb.lol' });
+        if (!r.ok) return json({ error: `adsb.lol ha risposto ${r.status}` }, 502);
+        const t = await r.json();
+        const base = t.timestamp || 0;
+        // punto: [secondi unix, lat, lon, quota ft (null = a terra), velocità kt, rotta, nuova tratta 0/1]
+        const points = (t.trace || []).filter(p => p[1] != null).map(p => [Math.round(base + p[0]), +p[1].toFixed(4), +p[2].toFixed(4), p[3] === 'ground' ? null : p[3], p[4] == null ? null : Math.round(p[4]), p[5] == null ? null : Math.round(p[5]), (p[6] & 2) ? 1 : 0]);
+        const out = { hex, reg: t.r || null, type: t.t || null, points, source: 'adsb.lol' };
+        ctx.waitUntil(cache.put(key, new Response(JSON.stringify(out), { headers: { 'Cache-Control': 'max-age=60' } })));
+        return json(out);
+      } catch (e) { return json({ error: String(e.message || e) }, 502); }
+    }
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);
     if (!TOSCANA[airport] && !PUGLIA.includes(airport) && !ADR[airport] && !OTHER[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
 

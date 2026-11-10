@@ -462,6 +462,93 @@ export async function getFlightsByReg(reg, date) {
   });
 }
 
+/**
+ * Tratte di un aereo lette dai tabelloni ufficiali che riportano le marche.
+ * Parte dagli aeroporti già noti (seed) e segue l'aereo di scalo in scalo: dal tabellone partenze
+ * scopre la destinazione, dal tabellone arrivi la provenienza, e così via (al massimo `maxBoards` aeroporti).
+ * Restituisce { legs, boards } con le tratte (formato dell'app, _officialOnly) e gli aeroporti consultati.
+ */
+export async function officialByReg(reg, date, seed = [], maxBoards = 8) {
+  const out = { legs: [], boards: [] };
+  if (isDemo() || !(getSettings().workerUrl || '').trim()) return out;
+  const norm = r => String(r || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const want = norm(reg);
+  const day0 = Date.parse(`${date}T00:00:00`) - 3 * 3600e3, day1 = day0 + 30 * 3600e3;
+  const inDay = f => { const t = Date.parse((f.dep.sched || f.arr.sched)?.utc || ''); return t >= day0 && t < day1; };
+  const seen = new Set();
+  let queue = [...new Set(seed)].filter(c => OFFICIAL_AIRPORTS[c]);
+  while (queue.length && out.boards.length < maxBoards) {
+    const batch = queue.slice(0, maxBoards - out.boards.length);
+    batch.forEach(c => seen.add(c));
+    const found = await Promise.all(batch.map(async c => {
+      const [d, a] = await Promise.all([officialOnly(c, 'D', false).catch(() => []), officialOnly(c, 'A', false).catch(() => [])]);
+      return [...d, ...a].filter(f => norm(f.aircraft?.reg) === want && inDay(f));
+    }));
+    out.boards.push(...batch);
+    const next = new Set();
+    for (const f of found.flat()) {
+      // la stessa tratta letta sia alla partenza sia all'arrivo: unisco i due lati
+      const g = out.legs.find(x => x.number === f.number && x.dep.iata === f.dep.iata && x.arr.iata === f.arr.iata);
+      if (g) { for (const k of ['dep', 'arr']) if (f[k]._off) g[k] = { ...g[k], ...f[k] }; if ((f.status === 'Arrived') || g.status === 'Expected') g.status = f.status; }
+      else out.legs.push(f);
+      for (const c of [f.dep.iata, f.arr.iata]) if (c && OFFICIAL_AIRPORTS[c] && !seen.has(c)) next.add(c);
+    }
+    queue = [...queue.slice(batch.length), ...next].filter(c => !seen.has(c));
+  }
+  for (const l of out.legs) for (const side of [l.dep, l.arr]) {
+    const ap = airportByIata(side.iata);
+    if (ap && side.lat == null) Object.assign(side, { name: side.name || ap.name, lat: ap.lat, lon: ap.lon });
+  }
+  return out;
+}
+
+/** Codice ICAO24 (hex) di un aereo dalle marche: rete ADS-B se è in volo, altrimenti il database pubblico hexdb.io. */
+export async function hexOfReg(reg) {
+  if (isDemo() || !reg) return null;
+  return cached(`hex:${reg}`, 7 * 86400e3, async () => {
+    const live = await liveByReg(reg);
+    if (live?.hex) return live.hex;
+    try {
+      const r = await fetch(`https://hexdb.io/reg-hex?reg=${encodeURIComponent(reg)}`);
+      const t = r.ok ? (await r.text()).trim().toLowerCase() : '';
+      return /^[0-9a-f]{6}$/.test(t) ? t : null;
+    } catch { return null; }
+  });
+}
+
+let traceVia = null; // 'direct' o 'worker': la strada che ha funzionato, per non riprovare quella che fallisce
+/**
+ * Percorso realmente volato da un aereo (ICAO24) secondo la rete ADS-B adsb.lol (ultime ~24 ore).
+ * Prova il file pubblico direttamente dal browser, altrimenti passa dal Worker (/trace).
+ * Restituisce { points: [{ t, lat, lon, alt, gs, track, ground, newLeg }], source } o null.
+ */
+export async function getTrace(hex) {
+  if (isDemo() || !hex) return null;
+  hex = hex.toLowerCase();
+  return cached(`trace:${hex}`, 60e3, async () => {
+    const worker = (getSettings().workerUrl || '').trim().replace(/\/+$/, '');
+    if (traceVia !== 'worker') {
+      try {
+        const r = await fetch(`https://globe.adsb.lol/data/traces/${hex.slice(-2)}/trace_full_${hex}.json`);
+        if (r.ok) {
+          const t = await r.json();
+          traceVia = 'direct';
+          return { source: 'adsb.lol', points: (t.trace || []).filter(p => p[1] != null).map(p => ({ t: (t.timestamp + p[0]) * 1000, lat: p[1], lon: p[2], alt: p[3] === 'ground' ? 0 : p[3], ground: p[3] === 'ground', gs: p[4], track: p[5], newLeg: !!(p[6] & 2) })) };
+        }
+        if (r.status === 404) return { source: 'adsb.lol', points: [] };
+      } catch { /* probabilmente CORS: provo dal Worker */ }
+      if (worker) traceVia = 'worker';
+    }
+    if (!worker) return null;
+    try {
+      const r = await fetch(`${worker}/trace?hex=${hex}`);
+      if (!r.ok) return null;
+      const t = await r.json();
+      return { source: 'adsb.lol (via Worker)', points: (t.points || []).map(p => ({ t: p[0] * 1000, lat: p[1], lon: p[2], alt: p[3] ?? 0, ground: p[3] == null, gs: p[4], track: p[5], newLeg: !!p[6] })) };
+    } catch { return null; }
+  });
+}
+
 /** Coordinate di un aeroporto (db locale, altrimenti API). */
 export async function getAirportInfo(iata) {
   const local = airportByIata(iata);

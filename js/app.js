@@ -1,4 +1,4 @@
-import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
+import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getTrace, hexOfReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
 import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
@@ -57,7 +57,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.0.1 · 26 nuovi aeroporti europei con tabellone ufficiale';
+const APP_VERSION = '4.1 · percorso del giorno di un aereo (clic sulle marche)';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -82,8 +82,8 @@ const star = (on, attrs) => `<button class="star ${on ? 'on' : ''}" ${attrs} ari
 const flightDate = f => f.dep?.sched?.local?.slice(0, 10) || isoDate(new Date());
 const flightLink = f => `#/flight/${encodeURIComponent(f.number)}/${flightDate(f)}${f.dep?.iata ? `?dep=${f.dep.iata}` : ''}`;
 const apName = iata => airportByIata(iata)?.city || iata;
-const regHref = (reg, date) => `#/aircraft/${encodeURIComponent(reg)}/${date || isoDate(new Date())}`;
-const regLink = (reg, date) => `<a class="reglink" href="${regHref(reg, date)}" title="Segui l'aereo (si apre in un nuovo tab)">✈︎ ${esc(reg)}</a>`;
+const regHref = (reg, date, ap) => `#/aircraft/${encodeURIComponent(reg)}/${date || isoDate(new Date())}${ap ? `?ap=${ap}` : ''}`;
+const regLink = (reg, date, ap) => `<a class="reglink" href="${regHref(reg, date, ap)}" title="Percorso di oggi dell'aereo (si apre in un nuovo tab)">✈︎ ${esc(reg)}</a>`;
 function aircraftCard(ac, date, note = '', probable = false) {
   return `<span class="eyebrow">Aeromobile${probable ? ' (probabile)' : ''}</span>
     <p>${ac?.reg ? `${regLink(ac.reg, date)} · <a href="${regHref(ac.reg, date)}">segui l'aereo e i suoi voli del giorno</a>` : '<b>Non ancora assegnato</b>'}${ac?.model ? ` · ${esc(ac.model)}` : ''}${ac?.hex ? ` · ICAO24 <code>${esc(ac.hex)}</code>` : ''}</p>
@@ -196,7 +196,7 @@ function boardTable(list, dir, filter = '', key = '') {
       if (!marked && side?.sched?.utc && new Date(side.sched.utc) > now) { marked = true; nowLine = '<div class="nowline"><span>adesso</span></div>'; }
       return `${nowLine}<div class="row ${x.status === 'Canceled' ? 'cancel' : ''}" role="row" tabindex="0" data-href="${flightLink(x)}">
         <span class="t">${timeCell(side?.sched, side?.revised, side?.actual)}</span>
-        <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x)) : esc(x.airline?.name || '')}</small></span>
+        <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x), (dir === 'dep' ? x.dep : x.arr)?.iata) : esc(x.airline?.name || '')}</small></span>
         <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <button class="csbtn" type="button" title="Anche: ${esc(x.codeshares.join(' '))}">+${x.codeshares.length} code sharing</button>` : ''}</small>${x.codeshares?.length ? `<small class="cslist" hidden>anche ${x.codeshares.map(esc).join(' ')}</small>` : ''}</span>
         <span class="gate">${esc((dir === 'dep' ? side?.gate : side?.belt) || '—')}</span>
         <span>${statusBadge(x.status)}${srcTag(x)}</span>
@@ -562,24 +562,42 @@ function rotRows(list) {
       <span class="t">—</span><span>${statusBadge('EnRoute')}</span></div>`;
     return `<a class="row rot ${AIR.includes(f.status) ? 'live' : ''}" href="${flightLink(f)}">
       <span class="t">${timeCell(f.dep?.sched, f.dep?.revised, f.dep?.actual)}</span>
-      <span class="num"><b>${esc(f.number)}</b><small>${esc(f.airline?.name || '')}</small></span>
+      <span class="num"><b>${esc(f.number)}</b><small>${esc(f.airline?.name || '')}${f._official ? ` <i class="uff" title="Dal tabellone ufficiale di ${esc([f.dep?._off, f.arr?._off].filter(Boolean).join(' e '))}">uff.</i>` : ''}</small></span>
       <span class="dest"><b>${esc(f.dep?.iata || '—')} → ${esc(f.arr?.iata || '—')}</b><small>${esc(apName(f.dep?.iata))} – ${esc(apName(f.arr?.iata))}</small></span>
       <span class="t">${timeCell(f.arr?.sched, f.arr?.revised, f.arr?.actual)}</span>
       <span>${statusBadge(f.status)}${f._inferred ? '<small title="Stato dedotto: una tratta successiva è già partita">dedotto</small>' : ''}</span></a>`;
   }).join('');
 }
 
-async function viewAircraft(reg, date) {
+// unisce alle tratte di AeroDataBox quelle lette dai tabelloni ufficiali che riportano le marche
+const OFF_SIDE = ['gate', 'belt', 'terminal', 'checkIn', 'revised', 'actual', 'officialStatus', '_off'];
+function mergeOfficialLegs(list, off) {
+  const out = list.map(f => ({ ...f, dep: { ...f.dep }, arr: { ...f.arr } }));
+  for (const o of off) {
+    const t = legKey(o);
+    const l = out.find(f => (f.number === o.number || f.codeshares?.includes(o.number) || o._mkt?.includes(f.number))
+      && (f.dep?.iata === o.dep.iata || f.arr?.iata === o.arr.iata) && Math.abs(legKey(f) - t) < 6 * 3600e3);
+    if (!l) { out.push({ ...o, dep: { ...o.dep }, arr: { ...o.arr } }); continue; }
+    for (const k of ['dep', 'arr']) if (o[k]?._off) for (const x of OFF_SIDE) if (o[k][x] != null) l[k][x] = o[k][x];
+    if ((RANK[o.status] || 0) > (RANK[l.status] || 0) || o.status === 'Canceled') l.status = o.status;
+    l._official = true;
+  }
+  return out;
+}
+const legEnd = f => tms(f.arr?.actual) ?? tms(f.arr?.revised) ?? tms(f.arr?.sched);
+const legStart = f => tms(f.dep?.actual) ?? tms(f.dep?.revised) ?? tms(f.dep?.sched);
+const legColor = f => f._adsb || AIR.includes(f.status) ? '#f5b301' : f.status === 'Arrived' ? '#8e9ab0' : f.status === 'Canceled' ? '#e5484d' : '#6ea8fe';
+
+async function viewAircraft(reg, date, apHint) {
   reg = reg.toUpperCase();
   const day = d => isoDate(new Date(new Date(`${date}T12:00:00`).getTime() + d * 86400e3));
   const isToday = date === isoDate(new Date());
+  const recent = Date.now() - new Date(`${date}T00:00:00`).getTime() < 36 * 3600e3 && new Date(`${date}T00:00:00`).getTime() <= Date.now();
   $app.innerHTML = `<div class="loading">Cerco i voli di ${esc(reg)}…</div>`;
-  let list, adsb = null;
-  try {
-    [list, adsb] = await Promise.all([getFlightsByReg(reg, date), isToday ? liveByReg(reg) : null]);
-  } catch (e) { $app.innerHTML = errorBox(e); return; }
+  let list, adsb = null, adbErr = null, off = { legs: [], boards: [] }, trace = null, hex = null;
+  [list, adsb] = await Promise.all([getFlightsByReg(reg, date).catch(e => { adbErr = e; return []; }), isToday ? liveByReg(reg) : null]);
   const build = () => {
-    let legs = cleanLegs(list);
+    let legs = cleanLegs(mergeOfficialLegs(list, off.legs));
     // l'aereo sta volando con un nominativo che non corrisponde a nessuna tratta nota: la aggiungo
     if (adsb?.pos && !adsb.onGround) {
       const cs = adsb.callsign.replace(/\s+/g, '');
@@ -594,67 +612,154 @@ async function viewAircraft(reg, date) {
     return legs;
   };
   let legs = build();
-  const model = list.find(f => f.aircraft?.model)?.aircraft.model || adsb?.model || '';
+  const model = () => [...list, ...off.legs].find(f => f.aircraft?.model)?.aircraft.model || adsb?.model || '';
+  const boardHtml = () => legs.length ? `<div class="board"><div class="row head rot"><span>Partenza</span><span>Volo</span><span>Tratta</span><span>Arrivo</span><span>Stato</span></div>${rotRows(legs)}</div>`
+    : adbErr ? errorBox(adbErr) + '<p class="hint" id="rothint">Cerco l’aereo nei tabelloni ufficiali…</p>'
+    : `<p class="hint">Nessun volo trovato per ${esc(reg)} in questa data. Controlla le marche (es. EI-DCL) o prova il giorno prima/dopo.</p>`;
+  const sources = () => pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
+    adbErr ? `voli dell’aereo: ⚠ <b>AeroDataBox</b> non disponibile ora (${esc(adbErr.message || adbErr)})` : 'voli dell’aereo: <b>AeroDataBox</b>, che conosce una tratta solo quando la compagnia ha assegnato l’aereo (per le low cost le tratte future spesso mancano); “dedotto” = stato corretto dall’app perché una tratta successiva è già partita',
+    off.boards.length ? `tabelloni ufficiali consultati cercando le marche ${esc(reg)}: ${off.boards.map(c => `${esc(OFFICIAL_SOURCES[c] || c)} (${c})`).join(', ')}${off.legs.length ? ` · ${off.legs.length} tratte trovate, segnate “uff.”; gate, orari e stati ufficiali hanno la precedenza` : ' · nessuna tratta con queste marche'}` : '',
+    legs.some(f => f._adsb) && 'riga “dalla rete ADS-B”: il volo che l’aereo sta facendo adesso secondo i ricevitori amatoriali di <b>adsb.lol</b> (nominativo e rotta)',
+    trace?.points?.length ? `percorso realmente volato (linea verde sulla mappa): tracce ADS-B di <b>${esc(trace.source)}</b>, ${trace.points.length} punti${hex ? ` · ICAO24 <code>${esc(hex)}</code>` : ''}` : recent ? 'percorso realmente volato: tracce ADS-B di <b>adsb.lol</b> (non disponibili ora per questo aereo; le tratte sono disegnate come archi)' : '',
+    'archi sulla mappa: tratte del giorno in linea d’aria (grigio = concluse, giallo = in volo, azzurro tratteggiato = previste)',
+    POS_SRC, MAP_SRC]);
+  const render = () => {
+    const sum = summary(legs);
+    const head = document.getElementById('acsum');
+    if (head) head.innerHTML = sum;
+    const r = document.getElementById('rot');
+    if (r) r.innerHTML = boardHtml();
+    const f = document.getElementById('acsrc');
+    if (f) f.innerHTML = sources();
+    const m = document.getElementById('acmodel');
+    if (m) m.textContent = [model(), new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })].filter(Boolean).join(' · ');
+  };
   $app.innerHTML = `
     <div class="pagehead">
-      <div><h1>✈︎ ${esc(reg)} ${star(isFavorite('aircraft', { reg }), favAttrs('aircraft', { reg, model }))}</h1><p class="sub">${esc(model)}${model ? ' · ' : ''}${esc(new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }))}</p></div>
+      <div><h1>✈︎ ${esc(reg)} ${star(isFavorite('aircraft', { reg }), favAttrs('aircraft', { reg, model: model() }))}</h1><p class="sub" id="acmodel"></p></div>
       <div class="daynav"><a class="ghost" href="#/aircraft/${encodeURIComponent(reg)}/${day(-1)}">‹ Ieri</a><a class="ghost" href="#/aircraft/${encodeURIComponent(reg)}/${day(1)}">Domani ›</a></div>
     </div>
-    <div class="card"><div class="leghead"><span class="eyebrow">Posizione dell'aereo</span><span id="acpos" class="sub"></span></div><div id="map" class="map"></div></div>
-    <div id="rot">${legs.length ? `<div class="board"><div class="row head rot"><span>Partenza</span><span>Volo</span><span>Tratta</span><span>Arrivo</span><span>Stato</span></div>${rotRows(legs)}</div>`
-      : `<p class="hint">Nessun volo trovato per ${esc(reg)} in questa data. Controlla le marche (es. EI-DCL) o prova il giorno prima/dopo.</p>`}</div>
-    ${pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
-      'voli dell’aereo: <b>AeroDataBox</b>, che conosce una tratta solo quando la compagnia ha assegnato l’aereo (per le low cost le tratte future spesso mancano); “dedotto” = stato corretto dall’app perché una tratta successiva è già partita',
-      'riga “dalla rete ADS-B”: il volo che l’aereo sta facendo adesso secondo i ricevitori amatoriali di <b>adsb.lol</b> (nominativo e rotta)',
-      POS_SRC, MAP_SRC])}`;
+    <p class="acsum" id="acsum"></p>
+    <div class="card"><div class="leghead"><span class="eyebrow">Percorso del giorno</span><span id="acpos" class="sub"></span></div><div id="map" class="map tall"></div>
+      <p class="maplegend"><span><i class="lg flown"></i>percorso volato (ADS-B)</span><span><i class="lg done"></i>tratta conclusa</span><span><i class="lg air"></i>in volo</span><span><i class="lg next"></i>prevista</span></p></div>
+    <div id="rot"></div>
+    <div id="acsrc"></div>`;
+  render();
   bindStars($app);
   document.title = `✈︎ ${reg} · Voli`;
   const map = L.map('map', { worldCopyJump: true });
   maps.push(map);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 12, attribution: '© OpenStreetMap' }).addTo(map);
   map.setView([45, 10], 4);
-  let marker = null, routeLayer = null, drawnKey = null;
+  let marker = null, dayLayer = null, traceLayer = null, fitKey = null;
   const trail = [];
   const trailLine = L.polyline(trail, { color: '#38d39f', weight: 3 }).addTo(map);
+  const coords = async side => side?.lat != null ? side : side?.iata ? getAirportInfo(side.iata).catch(() => null) : null;
+
+  // tutte le tratte del giorno: archi + aeroporti numerati nell'ordine in cui l'aereo li tocca
+  const drawDay = async () => {
+    const drawn = await Promise.all(legs.map(async f => ({ f, A: await coords(f.dep), B: await coords(f.arr) })));
+    if (dayLayer) dayLayer.remove();
+    dayLayer = L.layerGroup().addTo(map);
+    const pts = [], aps = new Map();
+    drawn.forEach(({ f, A, B }) => {
+      for (const [P, code] of [[A, f.dep?.iata], [B, f.arr?.iata]]) if (P?.lat != null && code) { pts.push([P.lat, P.lon]); if (!aps.has(code)) aps.set(code, P); }
+      if (A?.lat == null || B?.lat == null) return;
+      const future = !f._adsb && !AIR.includes(f.status) && f.status !== 'Arrived';
+      const line = L.polyline(arc(A, B), { color: legColor(f), weight: AIR.includes(f.status) || f._adsb ? 3 : 2, opacity: trace?.points?.length && f.status === 'Arrived' ? 0.45 : 0.9, dashArray: future ? '6 6' : null })
+        .bindTooltip(`<b>${esc(f.number)}</b> ${esc(f.dep.iata)} → ${esc(f.arr.iata)}${f.dep?.sched ? ` · ${hhmm(f.dep.sched)}` : ''}`, { sticky: true });
+      if (!f._adsb) line.on('click', () => { location.hash = flightLink(f); });
+      line.addTo(dayLayer);
+    });
+    [...aps].forEach(([code, P]) => L.marker([P.lat, P.lon], { icon: apIcon(code) }).addTo(dayLayer));
+    if (traceLayer) traceLayer.bringToFront();
+    const key = [...aps.keys()].join(',');
+    if (pts.length && key !== fitKey) { fitKey = key; map.fitBounds(pts, { padding: [30, 30], maxZoom: 8 }); }
+  };
+
+  // percorso realmente volato secondo la rete ADS-B (solo oggi e ieri: i file coprono le ultime ~24 ore)
+  const drawTrace = async () => {
+    if (!recent || isDemo()) return;
+    hex = hex || [...list, ...off.legs].find(f => f.aircraft?.hex)?.aircraft.hex || adsb?.hex || await hexOfReg(reg);
+    if (!hex) return;
+    const t = await getTrace(hex);
+    if (!t) return;
+    const from = legs.length ? Math.min(...legs.map(f => legStart(f) ?? Infinity)) - 3600e3 : new Date(`${date}T00:00:00`).getTime();
+    const to = legs.length ? Math.max(...legs.map(f => legEnd(f) ?? -Infinity)) + 3600e3 : from + 86400e3;
+    const inDay = t.points.filter(p => p.t >= (isFinite(from) ? from : 0) && p.t <= (isFinite(to) ? to : Infinity));
+    trace = { ...t, points: inDay };
+    // spezzo in tratte: inizio di una nuova tratta, aereo a terra, o buchi di copertura oltre 20 minuti
+    const segs = []; let cur = [];
+    inDay.forEach((p, i) => {
+      const prev = inDay[i - 1];
+      if (p.ground || p.newLeg || (prev && p.t - prev.t > 20 * 60e3)) { if (cur.length > 1) segs.push(cur); cur = []; }
+      if (!p.ground) cur.push([p.lat, p.lon]);
+    });
+    if (cur.length > 1) segs.push(cur);
+    if (traceLayer) traceLayer.remove();
+    traceLayer = L.layerGroup(segs.map(s => L.polyline(s, { color: '#38d39f', weight: 3, opacity: 0.95 }))).addTo(map);
+    if (segs.length) trail.length = 0, trailLine.setLatLngs([]);
+    render();
+  };
+
+  // tratte dai tabelloni ufficiali che pubblicano le marche, partendo dagli aeroporti già noti
+  const findOfficial = async () => {
+    if (isDemo()) return;
+    const seed = [apHint, ...legs.flatMap(f => [f.dep?.iata, f.arr?.iata])].filter(Boolean);
+    off = await officialByReg(reg, date, seed).catch(() => off);
+    legs = build();
+    render();
+  };
+
   const live = async () => {
     const el = document.getElementById('acpos');
     if (!el) return;
     if (isToday) { adsb = await liveByReg(reg) || adsb; }
     const flying = legs.find(f => f._adsb) || legs.find(f => AIR.includes(f.status));
-    setTabInfo(`aircraft:${reg}`, { sub: flying ? `in volo · ${flying.number}` : (model || 'aereo'), dot: flying ? 'go' : null });
-    const focus = flying || legs.filter(f => f.dep?.actual).pop() || legs[0];
-    const key = focus && `${focus.dep?.iata}-${focus.arr?.iata}`;
-    if (focus && key !== drawnKey && focus.dep?.iata && focus.arr?.iata) {
-      drawnKey = key;
-      const [A, B] = await Promise.all([focus.dep.lat != null ? focus.dep : getAirportInfo(focus.dep.iata), focus.arr.lat != null ? focus.arr : getAirportInfo(focus.arr.iata)]);
-      if (routeLayer) routeLayer.remove();
-      if (A?.lat != null && B?.lat != null) {
-        routeLayer = L.layerGroup([L.polyline(arc(A, B), { color: '#f5b301', weight: 3 }), L.marker([A.lat, A.lon], { icon: apIcon(focus.dep.iata) }), L.marker([B.lat, B.lon], { icon: apIcon(focus.arr.iata) })]).addTo(map);
-        map.fitBounds([[A.lat, A.lon], [B.lat, B.lon]], { padding: [30, 30] });
-      }
-    }
+    setTabInfo(`aircraft:${reg}`, { sub: flying ? `in volo · ${flying.number}` : (model() || 'aereo'), dot: flying ? 'go' : null });
     let pos = adsb?.pos && !adsb.onGround ? adsb.pos : null;
     if (!pos && flying && !flying._adsb) pos = await getLivePosition(flying).catch(() => null);
     if (!pos) {
-      el.innerHTML = adsb?.onGround ? 'A terra in questo momento (rete ADS-B)' : flying ? `In volo come <b>${esc(flying.number)}</b>, posizione non disponibile` : 'A terra o fuori copertura in questo momento';
+      el.innerHTML = adsb?.onGround ? 'A terra in questo momento (rete ADS-B)' : flying ? `In volo come <b>${esc(flying.number)}</b>, posizione non disponibile` : isToday ? 'A terra o fuori copertura in questo momento' : '';
       return;
     }
-    trail.push([pos.lat, pos.lon]); trailLine.setLatLngs(trail);
-    if (!marker) { marker = L.marker([pos.lat, pos.lon], { icon: planeIcon(pos.track), zIndexOffset: 1000 }).addTo(map); if (!routeLayer) map.setView([pos.lat, pos.lon], 6); }
+    if (!traceLayer) { trail.push([pos.lat, pos.lon]); trailLine.setLatLngs(trail); }
+    if (!marker) { marker = L.marker([pos.lat, pos.lon], { icon: planeIcon(pos.track), zIndexOffset: 1000 }).addTo(map); if (!fitKey) map.setView([pos.lat, pos.lon], 6); }
     else marker.setLatLng([pos.lat, pos.lon]).setIcon(planeIcon(pos.track));
     const label = flying ? (flying._adsb ? `<b>${esc(flying.number)}</b>${flying.dep?.iata ? ` ${esc(flying.dep.iata)} → ${esc(flying.arr.iata)}` : ''}` : `<a href="${flightLink(flying)}"><b>${esc(flying.number)}</b></a> ${esc(flying.dep?.iata || '')} → ${esc(flying.arr?.iata || '')}`) : '';
     el.innerHTML = `In volo${label ? ` come ${label}` : ''}${pos.alt != null ? ` · ${Math.round(pos.alt).toLocaleString('it-IT')} ft` : ''}${pos.gs != null ? ` · ${Math.round(pos.gs)} kt` : ''} · fonte ${esc(pos.source)}`;
   };
+  await drawDay();
   await live();
+  findOfficial().then(drawDay).then(drawTrace).catch(() => {});
   every(15, live);
-  every(getSettings().refreshSec, async () => {
+  every(60, () => drawTrace().catch(() => {}));
+  let ticks = 0;
+  every(Math.max(getSettings().refreshSec, 60), async () => {
     try {
-      list = await getFlightsByReg(reg, date);
-      legs = build();
-      const r = document.getElementById('rot');
-      if (r && legs.length) r.innerHTML = `<div class="board"><div class="row head rot"><span>Partenza</span><span>Volo</span><span>Tratta</span><span>Arrivo</span><span>Stato</span></div>${rotRows(legs)}</div>`;
+      list = await getFlightsByReg(reg, date); adbErr = null;
+      // i tabelloni ufficiali li rileggo ogni 5 aggiornamenti (il Worker li tiene comunque in cache)
+      if (++ticks % 5 === 0) await findOfficial(); else { legs = build(); render(); }
+      await drawDay();
     } catch { /* riprova */ }
   });
+}
+
+// riepilogo del giorno: tratte, aeroporti nell'ordine, distanza e ore di volo
+function summary(legs) {
+  const real = legs.filter(f => !f._adsb && f.status !== 'Canceled');
+  if (!real.length) return '';
+  const chain = [];
+  for (const f of real) for (const c of [f.dep?.iata, f.arr?.iata]) if (c && chain[chain.length - 1] !== c) chain.push(c);
+  let km = 0, min = 0;
+  for (const f of real) {
+    const A = airportByIata(f.dep?.iata), B = airportByIata(f.arr?.iata);
+    if (A && B) km += distanceKm(A, B);
+    const s = legStart(f), e = legEnd(f);
+    if (s && e && e > s) min += Math.round((e - s) / 60e3);
+  }
+  const done = real.filter(f => f.status === 'Arrived').length;
+  return `<b>${real.length} ${real.length === 1 ? 'tratta' : 'tratte'}</b>${done ? ` (${done} concluse)` : ''} · ${chain.map(c => `<a href="#/airport/${c}/dep">${esc(c)}</a>`).join(' → ')}${km ? ` · ${Math.round(km).toLocaleString('it-IT')} km` : ''}${min ? ` · ${fmtDur(min)} di volo` : ''}`;
 }
 const AIR = ['Departed', 'EnRoute', 'Approaching'];
 
@@ -828,7 +933,7 @@ function renderView(parts, params) {
   if (parts[0] === 'airport' && parts[1]) return viewAirport(parts[1], parts[2] === 'arr' ? 'arr' : 'dep');
   if (parts[0] === 'route' && parts[1] && parts[2]) return viewAirport(parts[1], 'dep', parts[2].toUpperCase());
   if (parts[0] === 'flight' && parts[1]) return viewFlight(parts[1].toUpperCase(), parts[2] || isoDate(new Date()), params.get('dep'));
-  if (parts[0] === 'aircraft' && parts[1]) return viewAircraft(parts[1], parts[2] || isoDate(new Date()));
+  if (parts[0] === 'aircraft' && parts[1]) return viewAircraft(parts[1], parts[2] || isoDate(new Date()), (params.get('ap') || '').toUpperCase() || null);
   if (parts[0] === 'settings') return viewSettings();
   return viewHome();
 }
