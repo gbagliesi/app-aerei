@@ -13,12 +13,14 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="left"><button id="back" class="backbtn" hidden aria-label="Indietro">‹ Indietro</button>
-    <a href="#/" class="brand"><img src="icon.svg" alt="" width="28" height="28"> Tabellone Voli</a></div>
-    <nav>
-      <a href="#/" data-nav="home">Preferiti</a>
-      <a href="#/settings" data-nav="settings" aria-label="Impostazioni">⚙︎</a>
-    </nav>
+    <div class="bar">
+      <div class="left"><button id="back" class="backbtn" hidden aria-label="Indietro">‹<span> Indietro</span></button>
+      <a href="#/" class="brand"><img src="icon.svg" alt="" width="28" height="28"><span>Tabellone Voli</span></a></div>
+      <nav>
+        <a href="#/settings" data-nav="settings" aria-label="Impostazioni" title="Impostazioni">⚙︎</a>
+      </nav>
+    </div>
+    <nav id="tabbar" class="tabbar" aria-label="Pagine aperte"></nav>
   </header>
   <div id="demo-banner" class="banner" hidden>Modalità demo: i voli sono simulati. <a href="#/settings">Collega i dati reali</a></div>
   <main id="app" aria-live="polite"></main>

@@ -2,6 +2,7 @@ import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDa
 import { searchAirports, airportByIata } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
+import { initTabs, enterTab, setTabInfo, playEnterAnim, closeAllTabs, openTabsCount } from './tabs.js';
 
 // Riga "Fonti" sotto il tabellone: da dove arrivano i dati mostrati
 function sourcesNote(iata, dir, list, degraded) {
@@ -38,7 +39,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '3.7 · Hong Kong dai dati ufficiali';
+const APP_VERSION = '3.8 · tab per voli e aeroporti, fonti in ogni pagina';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -64,13 +65,20 @@ const flightDate = f => f.dep?.sched?.local?.slice(0, 10) || isoDate(new Date())
 const flightLink = f => `#/flight/${encodeURIComponent(f.number)}/${flightDate(f)}${f.dep?.iata ? `?dep=${f.dep.iata}` : ''}`;
 const apName = iata => airportByIata(iata)?.city || iata;
 const regHref = (reg, date) => `#/aircraft/${encodeURIComponent(reg)}/${date || isoDate(new Date())}`;
-const regLink = (reg, date, small) => `<a class="reglink" href="${regHref(reg, date)}" target="_blank" rel="noopener" title="Segui l'aereo in una nuova scheda">✈︎ ${esc(reg)}${small ? '' : ' ↗'}</a>`;
+const regLink = (reg, date) => `<a class="reglink" href="${regHref(reg, date)}" title="Segui l'aereo (si apre in un nuovo tab)">✈︎ ${esc(reg)}</a>`;
 function aircraftCard(ac, date, note = '', probable = false) {
   return `<span class="eyebrow">Aeromobile${probable ? ' (probabile)' : ''}</span>
-    <p>${ac?.reg ? `${regLink(ac.reg, date)} · <a href="${regHref(ac.reg, date)}" target="_blank" rel="noopener">segui l'aereo e i suoi voli di oggi in una nuova scheda</a>` : '<b>Non ancora assegnato</b>'}${ac?.model ? ` · ${esc(ac.model)}` : ''}${ac?.hex ? ` · ICAO24 <code>${esc(ac.hex)}</code>` : ''}</p>
+    <p>${ac?.reg ? `${regLink(ac.reg, date)} · <a href="${regHref(ac.reg, date)}">segui l'aereo e i suoi voli del giorno</a>` : '<b>Non ancora assegnato</b>'}${ac?.model ? ` · ${esc(ac.model)}` : ''}${ac?.hex ? ` · ICAO24 <code>${esc(ac.hex)}</code>` : ''}</p>
     ${note ? `<p class="hint">${note}</p>` : ''}`;
 }
 const errorBox = e => `<div class="error">⚠️ ${esc(e.message || e)}</div>`;
+// riquadro "Fonti" in fondo a ogni pagina
+const isDemo = () => getSettings().provider !== 'aerodatabox';
+const POS_SRC = 'posizione in tempo reale: AeroDataBox quando disponibile, altrimenti le reti ADS-B <b>adsb.lol</b> e <b>OpenSky Network</b> (la fonte usata è scritta sopra la mappa)';
+const MAP_SRC = 'mappa: © OpenStreetMap';
+const pageSources = items => `<footer class="pagesources"><b>Fonti dei dati di questa pagina</b><ul>${items.filter(Boolean).map(i => `<li>${i}</li>`).join('')}</ul></footer>`;
+const DEMO_SRC = 'voli <b>dimostrativi</b> generati dall’app (modalità demo): nessun dato è reale. Per i dati veri vai in <a href="#/settings">Impostazioni</a>';
+const fmtDur = m => m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;
 
 function timeCell(sched, revised, actual) {
   const best = actual || revised;
@@ -117,40 +125,52 @@ function bindSearch() {
 // ---------- Home / preferiti ----------
 function viewHome() {
   const fav = getFavorites();
-  const popular = ['FCO', 'MXP', 'LIN', 'BGY', 'VCE', 'NAP', 'CTA', 'LHR', 'CDG', 'FRA'];
+  const popular = ['FCO', 'MXP', 'LIN', 'BGY', 'VCE', 'BLQ', 'NAP', 'CTA', 'PMO', 'TRN', 'LHR', 'CDG', 'AMS', 'FRA', 'MUC', 'ZRH', 'MAD', 'BCN'];
+  const hasWorker = !isDemo() && !!(getSettings().workerUrl || '').trim();
+  const offDot = c => hasWorker && OFFICIAL_AIRPORTS[c] ? '<i class="dot go" title="Tabellone ufficiale dell’aeroporto collegato"></i>' : '';
+  const section = (title, items, html) => items?.length ? `<section><h2>${title}</h2><div class="chips">${items.map(html).join('')}</div></section>` : '';
+  const none = !fav.airports.length && !fav.routes.length && !fav.flights.length && !fav.aircraft?.length;
   $app.innerHTML = `
     <section class="hero">${searchBox()}</section>
-    <section><h2>Aeroporti preferiti</h2>
-      ${fav.airports.length ? `<div class="chips">${fav.airports.map(a => `<a class="chip" href="#/airport/${a.iata}/dep"><b>${a.iata}</b> ${esc(a.name || apName(a.iata))}${star(true, favAttrs('airports', { iata: a.iata }))}</a>`).join('')}</div>`
-        : `<p class="hint">Nessun aeroporto salvato. Apri un tabellone e tocca ☆.</p>`}
-    </section>
-    <section><h2>Tratte preferite</h2>
-      ${fav.routes.length ? `<div class="chips">${fav.routes.map(r => `<a class="chip" href="#/route/${r.from}/${r.to}"><b>${r.from} → ${r.to}</b> ${esc(apName(r.from))} – ${esc(apName(r.to))}${star(true, favAttrs('routes', { from: r.from, to: r.to }))}</a>`).join('')}</div>`
-        : `<p class="hint">Nessuna tratta salvata. Dalla pagina di un volo tocca ☆ accanto alla tratta.</p>`}
-    </section>
-    <section><h2>Voli preferiti</h2>
-      ${fav.flights.length ? `<div class="chips">${fav.flights.map(f => `<a class="chip" href="#/flight/${encodeURIComponent(f.number)}/${isoDate(new Date())}${f.dep ? `?dep=${f.dep}` : ''}"><b>${esc(f.number)}</b> ${f.dep && f.arr ? `${f.dep} → ${f.arr}` : ''}${star(true, favAttrs('flights', { number: f.number, dep: f.dep, arr: f.arr }))}</a>`).join('')}</div>`
-        : `<p class="hint">Nessun volo salvato. Si apre sempre il volo di oggi con quel numero.</p>`}
-    </section>
-    <section><h2>Aerei preferiti</h2>
-      ${fav.aircraft?.length ? `<div class="chips">${fav.aircraft.map(a => `<a class="chip" href="${regHref(a.reg)}"><b>${esc(a.reg)}</b> ${esc(a.model || '')}${star(true, favAttrs('aircraft', { reg: a.reg }))}</a>`).join('')}</div>`
-        : `<p class="hint">Nessun aereo salvato. Dalla pagina di un aereo tocca ☆.</p>`}
-    </section>
+    ${none ? `<div class="card"><span class="eyebrow">Come si usa</span>
+      <p class="hint">Cerca un aeroporto, un volo o un aereo. Ogni pagina che apri resta in un <b>tab</b> in alto, così passi in un attimo dal tabellone ai voli che segui${matchMedia('(pointer: coarse)').matches ? ' (anche scorrendo col dito a destra e a sinistra)' : ''}. Tocca ☆ per salvare aeroporti, tratte, voli e aerei qui tra i preferiti.</p></div>` : ''}
+    ${openTabsCount() ? `<p class="hint opentabs">${openTabsCount()} ${openTabsCount() === 1 ? 'pagina aperta' : 'pagine aperte'} nei tab in alto <button class="ghost" type="button" id="closetabs">Chiudi tutti i tab</button></p>` : ''}
+    ${section('Aeroporti preferiti', fav.airports, a => `<a class="chip" href="#/airport/${a.iata}/dep">${offDot(a.iata)}<b>${a.iata}</b> ${esc(a.name || apName(a.iata))}${star(true, favAttrs('airports', { iata: a.iata }))}</a>`)}
+    ${section('Voli preferiti', fav.flights, f => `<a class="chip" href="#/flight/${encodeURIComponent(f.number)}/${isoDate(new Date())}${f.dep ? `?dep=${f.dep}` : ''}"><b>${esc(f.number)}</b> ${f.dep && f.arr ? `${f.dep} → ${f.arr}` : ''}${star(true, favAttrs('flights', { number: f.number, dep: f.dep, arr: f.arr }))}</a>`)}
+    ${section('Tratte preferite', fav.routes, r => `<a class="chip" href="#/route/${r.from}/${r.to}"><b>${r.from} → ${r.to}</b> ${esc(apName(r.from))} – ${esc(apName(r.to))}${star(true, favAttrs('routes', { from: r.from, to: r.to }))}</a>`)}
+    ${section('Aerei preferiti', fav.aircraft, a => `<a class="chip" href="${regHref(a.reg)}"><b>${esc(a.reg)}</b> ${esc(a.model || '')}${star(true, favAttrs('aircraft', { reg: a.reg }))}</a>`)}
+    ${!none && fav.flights.length ? '<p class="hint">I voli preferiti aprono sempre il volo di oggi con quel numero.</p>' : ''}
     <section><h2>Aeroporti principali</h2>
-      <div class="chips">${popular.map(c => `<a class="chip small" href="#/airport/${c}/dep"><b>${c}</b> ${esc(apName(c))}</a>`).join('')}</div>
-    </section>`;
+      <div class="chips">${popular.map(c => `<a class="chip small" href="#/airport/${c}/dep">${offDot(c)}<b>${c}</b> ${esc(apName(c))}</a>`).join('')}</div>
+    </section>
+    ${pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
+      `tabelloni: per ${Object.keys(OFFICIAL_AIRPORTS).length} aeroporti il <b>tabellone ufficiale</b> dell’aeroporto${hasWorker ? ' (pallino verde)' : ' (si attiva con il Worker in Impostazioni)'}, che ha la priorità ed è sempre completato con <b>AeroDataBox</b>; per gli altri aeroporti solo AeroDataBox. L’elenco completo è in <a href="#/settings">Impostazioni</a>`,
+      POS_SRC, MAP_SRC, 'preferiti e tab aperti: salvati solo in questo browser'])}`;
   bindSearch();
   bindStars($app, viewHome);
+  const ct = document.getElementById('closetabs');
+  if (ct) ct.onclick = () => { closeAllTabs(); viewHome(); };
 }
 
 // ---------- Tabellone ----------
-function boardTable(list, dir, filter = '') {
+// voli già partiti/arrivati nascosti in cima al tabellone (si mostrano con un tocco); ricordato per tabellone
+const showPast = new Set();
+function boardTable(list, dir, filter = '', key = '') {
   const f = filter.trim().toLowerCase();
-  const rows = list.filter(x => !f || [x.number, ...(x.codeshares || []), x.airline?.name, x.dep?.iata, x.dep?.name, x.arr?.iata, x.arr?.name].some(v => String(v || '').toLowerCase().includes(f)));
+  let rows = list.filter(x => !f || [x.number, ...(x.codeshares || []), x.airline?.name, x.dep?.iata, x.dep?.name, x.arr?.iata, x.arr?.name].some(v => String(v || '').toLowerCase().includes(f)));
   if (!rows.length) return `<p class="hint">Nessun volo${f ? ' corrisponde al filtro' : ' nella finestra da 2 ore fa a 10 ore avanti'}.</p>`;
   const now = Date.now();
-  let marked = false;
-  return `<div class="board" role="table">
+  let marked = false, pastBtn = '';
+  if (!f && key && !showPast.has(key)) {
+    const DONE = dir === 'dep' ? ['Departed', 'EnRoute', 'Approaching', 'Arrived', 'Canceled', 'Diverted'] : ['Arrived', 'Canceled', 'Diverted'];
+    const past = rows.filter(x => { const t = (dir === 'dep' ? x.dep : x.arr)?.sched?.utc; return t && new Date(t) < now && DONE.includes(x.status); });
+    const hide = new Set(past.slice(0, Math.max(0, past.length - 2)));
+    if (hide.size) {
+      rows = rows.filter(x => !hide.has(x));
+      pastBtn = `<button class="pastbtn" type="button" data-showpast="${esc(key)}">▲ Mostra ${hide.size} voli ${dir === 'dep' ? 'già partiti' : 'già arrivati'} (fino a 2 ore fa)</button>`;
+    }
+  }
+  return `<div class="board" role="table">${pastBtn}
     <div class="row head" role="row"><span>Ora</span><span>Volo</span><span>${dir === 'dep' ? 'Destinazione' : 'Provenienza'}</span><span>${dir === 'dep' ? 'Gate' : 'Nastro'}</span><span>Stato</span></div>
     ${rows.map(x => {
       const side = dir === 'dep' ? x.dep : x.arr, other = dir === 'dep' ? x.arr : x.dep;
@@ -158,7 +178,7 @@ function boardTable(list, dir, filter = '') {
       if (!marked && side?.sched?.utc && new Date(side.sched.utc) > now) { marked = true; nowLine = '<div class="nowline"><span>adesso</span></div>'; }
       return `${nowLine}<div class="row ${x.status === 'Canceled' ? 'cancel' : ''}" role="row" tabindex="0" data-href="${flightLink(x)}">
         <span class="t">${timeCell(side?.sched, side?.revised, side?.actual)}</span>
-        <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x), true) : esc(x.airline?.name || '')}</small></span>
+        <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x)) : esc(x.airline?.name || '')}</small></span>
         <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <button class="csbtn" type="button" title="Anche: ${esc(x.codeshares.join(' '))}">+${x.codeshares.length} code sharing</button>` : ''}</small>${x.codeshares?.length ? `<small class="cslist" hidden>anche ${x.codeshares.map(esc).join(' ')}</small>` : ''}</span>
         <span class="gate">${esc((dir === 'dep' ? side?.gate : side?.belt) || '—')}</span>
         <span>${statusBadge(x.status)}${srcTag(x)}</span>
@@ -172,7 +192,19 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
   const info = airportByIata(iata) || await getAirportInfo(iata) || { iata, name: iata };
   let data = null, filter = '';
   const isRoute = !!onlyTo;
+  const bdir = isRoute ? 'dep' : dir;
+  const bkey = isRoute ? `route:${iata}-${onlyTo}` : `${iata}:${dir}`;
   document.title = isRoute ? `${iata} → ${onlyTo} · Voli` : `${iata} ${dir === 'dep' ? 'Partenze' : 'Arrivi'} · Voli`;
+  const sources = list => {
+    if (isDemo()) return pageSources([DEMO_SRC]);
+    const site = OFFICIAL_SOURCES[iata];
+    return pageSources([
+      OFFICIAL_AIRPORTS[iata] ? `tabellone: <b>tabellone ufficiale dell’aeroporto</b> (${esc(site)}), che ha la priorità per orari, gate, check-in, nastro e stato, completato con <b>AeroDataBox</b> (riepilogo sopra il tabellone)` : `tabellone: <b>AeroDataBox</b>${SITE_BOARDS[iata] ? ` (il sito ufficiale ${esc(SITE_BOARDS[iata].name)} non è leggibile in automatico: c’è il link sopra)` : ''}`,
+      'sotto lo stato di ogni volo: <b>uff.</b> = solo tabellone ufficiale, <b>uff. + ADB</b> = tabellone ufficiale completato da AeroDataBox, <b>ADB</b> = solo AeroDataBox',
+      'orari nell’ora locale dell’aeroporto; in arancione l’orario stimato o effettivo se diverso di almeno 5 minuti',
+      list?.some(x => x.aircraft?.reg) ? 'marche degli aerei (✈︎): tabellone ufficiale o AeroDataBox' : '',
+    ]);
+  };
   const render = () => {
     const title = isRoute ? `${iata} → ${onlyTo}` : `${iata}`;
     const favBtn = isRoute ? star(isFavorite('routes', { from: iata, to: onlyTo }), favAttrs('routes', { from: iata, to: onlyTo }))
@@ -182,7 +214,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
     $app.innerHTML = `
       <div class="pagehead">
         <div><h1>${esc(title)} ${favBtn}</h1><p class="sub">${esc(isRoute ? `${apName(iata)} – ${apName(onlyTo)} · partenze nelle prossime 10 ore` : info.name)}</p></div>
-        <button class="ghost" id="refresh" title="Aggiorna">↻</button>
+        <div class="actions"><button class="ghost" id="refresh" title="Aggiorna adesso" aria-label="Aggiorna adesso">↻</button><span class="updated" id="updated"></span></div>
       </div>
       ${isRoute ? `<p class="links"><a href="#/route/${onlyTo}/${iata}">Tratta inversa ${onlyTo} → ${iata}</a> · <a href="#/airport/${iata}/dep">Tabellone ${iata}</a></p>` : `
       <div class="tabs">
@@ -190,14 +222,16 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
         <a href="#/airport/${iata}/arr" class="${dir === 'arr' ? 'active' : ''}">🛬 Arrivi</a>
         <input id="filter" type="search" placeholder="Filtra: città, volo, compagnia" value="${esc(filter)}">
       </div>`}
-      ${siteLink(iata, isRoute ? 'dep' : dir)}
-      ${data ? sourcesNote(iata, isRoute ? 'dep' : dir, list, data.degraded) : ''}
-      <div id="board">${data ? boardTable(filtered, isRoute ? 'dep' : dir, filter) : '<div class="loading">Caricamento tabellone…</div>'}</div>
-      <p class="updated" id="updated"></p>`;
+      ${siteLink(iata, bdir)}
+      ${data ? sourcesNote(iata, bdir, list, data.degraded) : ''}
+      <div id="board">${data ? boardTable(filtered, bdir, filter, bkey) : '<div class="loading">Caricamento tabellone…</div>'}</div>
+      ${data ? sources(list) : ''}`;
     bindStars($app, render);
     document.getElementById('refresh').onclick = load;
+    const board = document.getElementById('board');
+    board.onclick = e => { const b = e.target.closest('[data-showpast]'); if (b) { showPast.add(b.dataset.showpast); board.innerHTML = boardTable(filtered, bdir, filter, bkey); } };
     const fi = document.getElementById('filter');
-    if (fi) fi.oninput = () => { filter = fi.value; document.getElementById('board').innerHTML = boardTable(filtered, dir, filter); };
+    if (fi) fi.oninput = () => { filter = fi.value; board.innerHTML = boardTable(filtered, bdir, filter, bkey); };
   };
   const load = async () => {
     try {
@@ -205,7 +239,9 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
       const keep = document.getElementById('filter') === document.activeElement;
       render();
       if (keep) { const fi = document.getElementById('filter'); fi.focus(); fi.setSelectionRange(fi.value.length, fi.value.length); }
-      document.getElementById('updated').textContent = `Aggiornato alle ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })} · aggiornamento automatico ogni ${getSettings().refreshSec}s`;
+      const u = document.getElementById('updated');
+      u.textContent = `agg. ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
+      u.title = `Aggiornamento automatico ogni ${getSettings().refreshSec} secondi`;
     } catch (e) { document.getElementById('board').innerHTML = errorBox(e); }
   };
   render();
@@ -257,16 +293,30 @@ function legSources(f) {
   return off.length ? `Fonti: orari, gate, check-in, nastro e stato della ${off.join('; della ')}, che ha la priorità; il resto da ${base}.` : `Fonte: ${base}.`;
 }
 
+// "Parte tra 40 min", "Atterra tra 1 h 05 min", "Atterrato alle 12:06"
+function etaText(f) {
+  if (f.status === 'Canceled') return '';
+  const now = Date.now();
+  const dep = tms(f.dep?.actual) || tms(f.dep?.revised) || tms(f.dep?.sched);
+  const arr = tms(f.arr?.actual) || tms(f.arr?.revised) || tms(f.arr?.sched);
+  if (f.arr?.actual) return `Atterrato alle <b>${hhmm(f.arr.actual)}</b>`;
+  if (f.status === 'Arrived') return 'Atterrato';
+  if (AIR.includes(f.status) && arr) { const m = Math.round((arr - now) / 60e3); return m > 0 ? `Atterra tra <b>${fmtDur(m)}</b>` : 'In atterraggio'; }
+  if (dep && dep > now && !AIR.includes(f.status)) return `Parte tra <b>${fmtDur(Math.round((dep - now) / 60e3))}</b>`;
+  return '';
+}
+
 function legCard(f, title, cls = '') {
   const p = progress(f);
+  const dur = minutesBetween(f.dep?.sched, f.arr?.sched), eta = etaText(f);
   return `<div class="card leg ${cls}">
-    <div class="leghead"><span class="eyebrow">${title}</span>${statusBadge(f.status)}</div>
+    <div class="leghead"><span class="eyebrow">${title}</span><span>${eta ? `<span class="eta">${eta}</span> ` : ''}${statusBadge(f.status)}</span></div>
     <div class="legrow">
       <div class="end"><div class="code">${esc(f.dep.iata || '—')}</div><div class="city">${esc(f.dep.name || '')}</div>
         <div class="time">${timeCell(f.dep.sched, f.dep.revised, f.dep.actual)}</div>
         <dl>${f.dep.terminal ? `<dt>Terminal</dt><dd>${esc(f.dep.terminal)}</dd>` : ''}<dt>Gate</dt><dd class="big">${esc(f.dep.gate || '—')}</dd>${f.dep.checkIn ? `<dt>Check-in</dt><dd>${esc(f.dep.checkIn)}</dd>` : ''}</dl></div>
       <div class="mid"><div class="track"><div class="fill" style="width:${p * 100}%"></div><div class="dot" style="left:${p * 100}%">✈︎</div></div>
-        <small>${esc(f.number)}${f.aircraft?.model ? ` · ${esc(f.aircraft.model)}` : ''}</small></div>
+        <small>${esc(f.number)}${f.aircraft?.model ? ` · ${esc(f.aircraft.model)}` : ''}</small>${dur > 0 ? `<small class="dur">durata prevista ${fmtDur(dur)}</small>` : ''}</div>
       <div class="end right"><div class="code">${esc(f.arr.iata || '—')}</div><div class="city">${esc(f.arr.name || '')}</div>
         <div class="time">${timeCell(f.arr.sched, f.arr.revised, f.arr.actual)}</div>
         <dl>${f.arr.terminal ? `<dt>Terminal</dt><dd>${esc(f.arr.terminal)}</dd>` : ''}<dt>Gate</dt><dd>${esc(f.arr.gate || '—')}</dd><dt>Nastro</dt><dd>${esc(f.arr.belt || '—')}</dd></dl></div>
@@ -282,6 +332,11 @@ async function viewFlight(number, date, depHint) {
   if (!legs.length) { $app.innerHTML = `<div class="error">Nessun volo ${esc(number)} trovato il ${esc(date)}.</div><p><a href="#/">← Torna ai preferiti</a></p>`; return; }
   let f = legs.find(l => l.dep?.iata === depHint) || legs[0];
   document.title = `${f.number} ${f.dep?.iata || ''}→${f.arr?.iata || ''} · Voli`;
+  const tabInfo = () => setTabInfo(`flight:${number}`, {
+    sub: `${date !== isoDate(new Date()) ? `${new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })} · ` : ''}${f.dep?.iata || '?'}→${f.arr?.iata || '?'} · ${hhmm(f.dep?.revised || f.dep?.sched)}`,
+    dot: (STATUS[f.status] || [])[1] || 'muted',
+  });
+  tabInfo();
 
   const day = d => isoDate(new Date(new Date(`${date}T12:00:00`).getTime() + d * 86400e3));
   $app.innerHTML = `
@@ -298,7 +353,12 @@ async function viewFlight(number, date, depHint) {
     <div id="leg">${legCard(f, 'Questo volo')}</div>
     <div class="card"><div class="leghead"><span class="eyebrow">Posizione dell'aereo</span><span id="livemeta" class="sub"></span></div><div id="map" class="map"></div></div>
     <div class="card" id="aircraft">${aircraftCard(f.aircraft, date)}</div>
-    <div id="inbound"><div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="loading">Cerco la tratta precedente…</p></div></div>`;
+    <div id="inbound"><div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="loading">Cerco la tratta precedente…</p></div></div>
+    ${pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
+      'orari, terminal, gate, check-in, nastro e stato: indicati in fondo a ogni riquadro (il <b>tabellone ufficiale dell’aeroporto</b> ha la priorità, il resto da <b>AeroDataBox</b>)',
+      'aereo assegnato e volo precedente: <b>AeroDataBox</b>, completato con la rete ADS-B <b>adsb.lol</b>; quando è scritto “probabile” o “stima” è una deduzione dell’app',
+      'ritardo previsto, tempo di rotazione, durata e “parte tra / atterra tra”: calcolati dall’app con gli orari qui sopra',
+      POS_SRC, MAP_SRC])}`;
   bindStars($app);
 
   // mappa
@@ -364,7 +424,7 @@ async function viewFlight(number, date, depHint) {
       const where = P?.[0]?.iata;
       if (where && where === f.dep.iata && AIR.includes(f.status)) {
         groundAtDep = true; f.status = 'OnGround';
-        document.getElementById('leg').innerHTML = legCard(f, 'Questo volo');
+        document.getElementById('leg').innerHTML = legCard(f, 'Questo volo'); tabInfo();
       }
       if (!marker) marker = L.marker([pos.lat, pos.lon], { icon: planeIcon(pos.track), zIndexOffset: 1000 }).addTo(map);
       else marker.setLatLng([pos.lat, pos.lon]).setIcon(planeIcon(pos.track));
@@ -391,7 +451,7 @@ async function viewFlight(number, date, depHint) {
   every(getSettings().refreshSec, async () => {
     try {
       const fresh = (await getFlight(number, date, depHint)).find(l => l.dep?.iata === f.dep.iata);
-      if (fresh) { Object.assign(f, fresh); if (groundAtDep && AIR.includes(f.status)) f.status = 'OnGround'; document.getElementById('leg').innerHTML = legCard(f, 'Questo volo'); }
+      if (fresh) { Object.assign(f, fresh); if (groundAtDep && AIR.includes(f.status)) f.status = 'OnGround'; document.getElementById('leg').innerHTML = legCard(f, 'Questo volo'); tabInfo(); }
     } catch { /* riprova al giro successivo */ }
   });
 }
@@ -476,7 +536,10 @@ async function viewAircraft(reg, date) {
     <div class="card"><div class="leghead"><span class="eyebrow">Posizione dell'aereo</span><span id="acpos" class="sub"></span></div><div id="map" class="map"></div></div>
     <div id="rot">${legs.length ? `<div class="board"><div class="row head rot"><span>Partenza</span><span>Volo</span><span>Tratta</span><span>Arrivo</span><span>Stato</span></div>${rotRows(legs)}</div>`
       : `<p class="hint">Nessun volo trovato per ${esc(reg)} in questa data. Controlla le marche (es. EI-DCL) o prova il giorno prima/dopo.</p>`}</div>
-    <p class="hint">I voli vengono da AeroDataBox, che conosce una tratta solo quando la compagnia ha assegnato l'aereo: per le low cost le tratte future spesso mancano. La riga "dalla rete ADS-B" è il volo che l'aereo sta facendo adesso secondo i ricevitori radar amatoriali.</p>`;
+    ${pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
+      'voli dell’aereo: <b>AeroDataBox</b>, che conosce una tratta solo quando la compagnia ha assegnato l’aereo (per le low cost le tratte future spesso mancano); “dedotto” = stato corretto dall’app perché una tratta successiva è già partita',
+      'riga “dalla rete ADS-B”: il volo che l’aereo sta facendo adesso secondo i ricevitori amatoriali di <b>adsb.lol</b> (nominativo e rotta)',
+      POS_SRC, MAP_SRC])}`;
   bindStars($app);
   document.title = `✈︎ ${reg} · Voli`;
   const map = L.map('map', { worldCopyJump: true });
@@ -491,6 +554,7 @@ async function viewAircraft(reg, date) {
     if (!el) return;
     if (isToday) { adsb = await liveByReg(reg) || adsb; }
     const flying = legs.find(f => f._adsb) || legs.find(f => AIR.includes(f.status));
+    setTabInfo(`aircraft:${reg}`, { sub: flying ? `in volo · ${flying.number}` : (model || 'aereo'), dot: flying ? 'go' : null });
     const focus = flying || legs.filter(f => f.dep?.actual).pop() || legs[0];
     const key = focus && `${focus.dep?.iata}-${focus.arr?.iata}`;
     if (focus && key !== drawnKey && focus.dep?.iata && focus.arr?.iata) {
@@ -552,8 +616,14 @@ function viewSettings() {
       <p class="hint">La posizione dell'aereo arriva da AeroDataBox quando disponibile, altrimenti dalle reti ADS-B gratuite <b>adsb.lol</b> e <b>OpenSky Network</b>, cercando l'aereo per codice ICAO24. Nessuna chiave richiesta.</p>
     </div>
     <div class="card">
-      <span class="eyebrow">Preferiti</span>
-      <p class="hint">I preferiti sono salvati in questo browser. Esportali per spostarli su un altro dispositivo.</p>
+      <span class="eyebrow">Tabelloni ufficiali collegati</span>
+      <p class="hint">Con il Worker impostato, per questi aeroporti orari, gate, check-in, nastro e stato arrivano dal tabellone dell’aeroporto (hanno la priorità) e sono completati con AeroDataBox. Per tutti gli altri si usa solo AeroDataBox.</p>
+      <ul class="srclist">${Object.keys(OFFICIAL_SOURCES).filter(k => OFFICIAL_AIRPORTS[k]).sort().map(k => `<li><a href="#/airport/${k}/dep"><b>${k}</b></a> ${esc(apName(k))} · <small>${esc(OFFICIAL_SOURCES[k])}</small></li>`).join('')}</ul>
+      <p class="hint">Solo AeroDataBox, con il link al tabellone sul sito ufficiale: ${Object.entries(SITE_BOARDS).map(([k, b]) => `<b>${k}</b> (${esc(b.name)})`).join(', ')}.</p>
+    </div>
+    <div class="card">
+      <span class="eyebrow">Preferiti e tab</span>
+      <p class="hint">I preferiti e i tab aperti sono salvati in questo browser. Esporta i preferiti per spostarli su un altro dispositivo.</p>
       <button id="exp" class="ghost">Esporta</button> <label class="ghost filebtn">Importa<input id="imp" type="file" accept="application/json" hidden></label>
     </div>`;
   document.getElementById('sf').addEventListener('submit', e => {
@@ -636,18 +706,23 @@ function route() {
   clearPage();
   const seq = ++routeSeq;
   let saved = 0, savedRow = null;
-  if (entryId()) { saved = scrollPos[entryId()] || 0; savedRow = scrollPos[`${entryId()}:row`] || null; }
+  const isNew = !entryId();
+  if (!isNew) { saved = scrollPos[entryId()] || 0; savedRow = scrollPos[`${entryId()}:row`] || null; }
   else history.replaceState({ ...(history.state || {}), sid: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, depth: curDepth + 1 }, '');
   curDepth = history.state?.depth || 1;
   if ($back) $back.hidden = curDepth <= 1;
-  restoring = saved > 0 || !!savedRow; userScrolled = false;
   document.title = 'Tabellone Voli';
   const [path, qs] = location.hash.slice(1).split('?');
   const parts = path.split('/').filter(Boolean).map(decodeURIComponent);
   const params = new URLSearchParams(qs || '');
+  // tab: apre/aggiorna il tab di questa pagina; tornando su un tab già aperto si ritrova la posizione
+  const tabY = enterTab(parts, location.hash || '#/', isNew);
+  if (isNew && tabY) saved = tabY;
+  restoring = saved > 0 || !!savedRow; userScrolled = false;
   document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === (parts[0] || 'home')));
   window.scrollTo(0, 0);
   const p = renderView(parts, params);
+  playEnterAnim($app);
   if (restoring) Promise.resolve(p).catch(() => {}).finally(() => restoreScroll(seq, saved, savedRow));
 }
 
@@ -670,6 +745,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { const row = e.target.closest?.('.row[data-href]'); if (row && e.key === 'Enter') { rememberRow(row.dataset.href); location.hash = row.dataset.href; } });
 window.addEventListener('hashchange', route);
+initTabs($app);
 updateBanner();
 route();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
