@@ -1,0 +1,5 @@
+# https://sacal.it/it/crotone/arrivi/
+# status 0 final https://sacal.it/it/crotone/arrivi/
+# {}
+
+ERR <urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1000)>
