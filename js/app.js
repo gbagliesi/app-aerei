@@ -36,6 +36,17 @@ const SITE_BOARDS = {
   LHR: { dep: 'https://www.heathrow.com/departures', arr: 'https://www.heathrow.com/arrivals', name: 'heathrow.com' },
   CDG: { dep: 'https://www.parisaeroport.fr/', name: 'parisaeroport.fr' },
   ORY: { dep: 'https://www.parisaeroport.fr/', name: 'parisaeroport.fr' },
+  CPH: { dep: 'https://www.cph.dk/en/flight-info/departures', arr: 'https://www.cph.dk/en/flight-info/arrivals', name: 'cph.dk' },
+  HEL: { dep: 'https://www.finavia.fi/en/airports/helsinki-airport/flights?tab=dep', arr: 'https://www.finavia.fi/en/airports/helsinki-airport/flights?tab=arr', name: 'finavia.fi' },
+  ATH: { dep: 'https://www.aia.gr/en/flights', name: 'aia.gr' },
+  HER: { dep: 'https://www.heraklion-airport.gr/', name: 'heraklion-airport.gr' },
+  BRU: { dep: 'https://www.brusselsairport.be/en/passengers/flights', name: 'brusselsairport.be' },
+  STR: { dep: 'https://www.stuttgart-airport.com/', name: 'stuttgart-airport.com' },
+  GLA: { dep: 'https://www.glasgowairport.com/flight-information/', name: 'glasgowairport.com' },
+  SPU: { dep: 'https://www.split-airport.hr/', name: 'split-airport.hr' },
+  BSL: { dep: 'https://www.euroairport.com/en/vols-au-depart', arr: 'https://www.euroairport.com/en/vols-a-l-arrivee', name: 'euroairport.com' },
+  BRN: { dep: 'https://www.bernairport.ch/en/', name: 'bernairport.ch' },
+  MST: { dep: 'https://www.maa.nl/en/flights/', name: 'maa.nl' },
 };
 const siteLink = (iata, dir) => {
   const b = SITE_BOARDS[iata];
@@ -45,7 +56,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '3.9 · notifiche sui voli seguiti';
+const APP_VERSION = '4.0 · 27 nuovi aeroporti europei con tabellone ufficiale';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];

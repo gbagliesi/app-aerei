@@ -149,6 +149,10 @@ export const OFFICIAL_AIRPORTS = {
   GVA: 'Europe/Zurich', ZRH: 'Europe/Zurich', FRA: 'Europe/Berlin', MUC: 'Europe/Berlin',
   MAD: 'Europe/Madrid', BCN: 'Europe/Madrid', LIS: 'Europe/Lisbon', TRN: 'Europe/Rome', CAG: 'Europe/Rome',
   STN: 'Europe/London', LGW: 'Europe/London', LTN: 'Europe/London', LCY: 'Europe/London', LYS: 'Europe/Paris', BVA: 'Europe/Paris', AMS: 'Europe/Amsterdam', GOA: 'Europe/Rome', VCE: 'Europe/Rome', HKG: 'Asia/Hong_Kong',
+  TFS: 'Atlantic/Canary', TFN: 'Atlantic/Canary', LPA: 'Atlantic/Canary', ACE: 'Atlantic/Canary', FUE: 'Atlantic/Canary', VLC: 'Europe/Madrid',
+  MAN: 'Europe/London', EDI: 'Europe/London', DUB: 'Europe/Dublin', HAM: 'Europe/Berlin', BER: 'Europe/Berlin', CGN: 'Europe/Berlin', FKB: 'Europe/Berlin',
+  ARN: 'Europe/Stockholm', VIE: 'Europe/Vienna', PRG: 'Europe/Prague', BUD: 'Europe/Budapest', WAW: 'Europe/Warsaw', KRK: 'Europe/Warsaw',
+  SKG: 'Europe/Athens', CHQ: 'Europe/Athens', LCA: 'Asia/Nicosia', PFO: 'Asia/Nicosia', MLA: 'Europe/Malta', ZAG: 'Europe/Zagreb', DBV: 'Europe/Zagreb', SXB: 'Europe/Paris',
 };
 // Da dove arriva il tabellone ufficiale di ogni aeroporto (mostrato nella pagina come fonte)
 export const OFFICIAL_SOURCES = {
@@ -161,6 +165,11 @@ export const OFFICIAL_SOURCES = {
   MAD: 'aena.es', BCN: 'aena.es', LIS: 'aeroportolisboa.pt (ANA)', TRN: 'aeroportoditorino.it', CAG: 'sogaer.it',
   STN: 'stanstedairport.com', LGW: 'gatwickairport.com', LTN: 'london-luton.co.uk', LCY: 'londoncityairport.com',
   LYS: 'lyonaeroports.com', BVA: 'aeroportparisbeauvais.com', AMS: 'Schiphol Public Flight API', GOA: 'airport.genova.it', VCE: 'veneziaairport.it', HKG: 'hongkongairport.com (open data)',
+  TFS: 'aena.es', TFN: 'aena.es', LPA: 'aena.es', ACE: 'aena.es', FUE: 'aena.es', VLC: 'aena.es', MAN: 'manchesterairport.co.uk',
+  HAM: 'hamburg-airport.de', BER: 'ber.berlin-airport.de', ARN: 'swedavia.com', VIE: 'viennaairport.com', PRG: 'prg.aero', DUB: 'dublinairport.com',
+  EDI: 'edinburghairport.com', CGN: 'koeln-bonn-airport.de', BUD: 'bud.hu', SKG: 'skg-airport.gr (Fraport Greece)', CHQ: 'chq-airport.gr (Fraport Greece)',
+  WAW: 'lotnisko-chopina.pl', KRK: 'krakowairport.pl', LCA: 'hermesairports.com', PFO: 'hermesairports.com', MLA: 'maltairport.com',
+  ZAG: 'zagreb-airport.hr', DBV: 'dbv.hr', SXB: 'strasbourg.aeroport.fr', FKB: 'baden-airpark.de',
 };
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {
