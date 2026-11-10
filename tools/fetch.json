@@ -1,67 +1,68 @@
 [
 {
-"id": "VIE_main",
-"url": "https://viennaairport.com/jart/prj3/va/resources/_main/main.js"
+"id": "ARN_api",
+"url": "https://www.swedavia.com/services/publicflightsboard/v3/departures/en/ARN/2026-11-10",
+"headers": {
+"Accept": "application/json"
+}
 },
 {
-"id": "ARN_dp",
-"url": "https://www.swedavia.com/Static/Vue3/chunk/flightslisting-dataprovider-lCcW7gHY.js"
+"id": "VIE_out",
+"url": "https://viennaairport.com/jart/prj3/va/data/flights/out.json"
 },
 {
-"id": "CGN_fs",
+"id": "PRG_api",
+"url": "https://api.prg.aero/en/departures-shorttime?offset=0&limit=50&from=10-11-2026_18-00",
+"headers": {
+"Accept": "application/json"
+}
+},
+{
+"id": "DUB_d1",
+"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10"
+},
+{
+"id": "DUB_d2",
+"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T18:00:00.000Z"
+},
+{
+"id": "SKG_f",
+"url": "https://www.skg-airport.gr/en/_jcr_content.flights.json/filter?perpage=100&lang=en&page=1&flighttype=departures"
+},
+{
+"id": "SKG_p2",
+"url": "https://www.skg-airport.gr/en/_jcr_content.departures.json?page=2"
+},
+{
+"id": "BUD_info",
+"url": "https://www.bud.hu/build/assets/Information-BsEPmhrj.js"
+},
+{
+"id": "EDI_p1",
+"url": "https://www.edinburghairport.com/assets/page-CEhZK-p0.js"
+},
+{
+"id": "EDI_p2",
+"url": "https://www.edinburghairport.com/assets/page-DHeno0L8.js"
+},
+{
+"id": "EDI_p3",
+"url": "https://www.edinburghairport.com/assets/page-DOt_SD_6.js"
+},
+{
+"id": "CGN_A",
 "url": "https://www.koeln-bonn-airport.de/fluggaeste/fluege/abflug-ankunft/fsjson",
-"body": "mode=D&tolerance=&page=0&START=&END=&destination=&date=2026-11-10T19%3A00&more=",
+"body": "mode=A&tolerance=&page=1&START=&END=&destination=&date=2026-11-10T19%3A00&more=",
 "headers": {
 "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
 "X-Requested-With": "XMLHttpRequest"
 }
 },
 {
-"id": "BUD_dep",
-"url": "https://www.bud.hu/en/flight-and-travel-information/flights/departures"
-},
-{
-"id": "DUB_api",
-"url": "https://www.dublinairport.com/api/flight-listing/departures"
-},
-{
-"id": "DUB_api2",
-"url": "https://www.dublinairport.com/api/v2/flight-listing/departures"
-},
-{
-"id": "EDI_dep",
-"url": "https://www.edinburghairport.com/flights/live-flight-departures"
-},
-{
-"id": "PRG_app",
-"url": "https://www.prg.aero/modules/kraken_custom/arrivals_departures_aplication/app/dist/static/js/app.js"
-},
-{
-"id": "SXB_dep",
-"url": "https://www.strasbourg.aeroport.fr/en/passengers/to-travel/live-flight-information/?active=depart"
-},
-{
-"id": "BER_D2",
-"url": "https://ber.berlin-airport.de/api.flights.json?arrivalDeparture=D&dateFrom=2026-11-10T19:00&dateUntil=2026-11-11&search=&lang=en&page=1&terminal=&itemsPerPage=16",
+"id": "BER_noref",
+"url": "https://ber.berlin-airport.de/api.flights.json?arrivalDeparture=A&dateFrom=2026-11-10T19:00&dateUntil=2026-11-11&search=&lang=en&page=1&terminal=&itemsPerPage=50",
 "headers": {
-"Referer": "https://ber.berlin-airport.de/en/flying/departures-arrivals.html",
 "Accept": "application/json, text/plain, */*"
 }
-},
-{
-"id": "HEL_vendor",
-"url": "https://www.finavia.fi/modules/custom/finavia_frontend/app/dist/js/vendor.bundle.js"
-},
-{
-"id": "DBV_en",
-"url": "https://www.dbv.hr/en"
-},
-{
-"id": "BRN_de",
-"url": "https://www.bernairport.ch/de/"
-},
-{
-"id": "MST_en",
-"url": "https://www.maa.nl/en/"
 }
 ]
