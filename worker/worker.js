@@ -26,7 +26,7 @@ const ADR = {
   CIA: 'https://www.adr.it/pax-cia-voli-in-tempo-reale',
 };
 // Altri aeroporti: funzione che legge il tabellone (definite più sotto)
-const PROBE_HOSTS = ['veniceairport.it', 'veneziaairport.it', 'aeroportodigenova.it', 'airport.genova.it', 'geasar.it', 'aeroportodialghero.it', 'milanbergamoairport.it', 'orioaeroporto.it', 'aeroportodinapoli.it', 'gesac.it',
+const PROBE_HOSTS = ['aeroportoverona.it', 'trevisoairport.it', 'riminiairport.com', 'veniceairport.it', 'veneziaairport.it', 'aeroportodigenova.it', 'airport.genova.it', 'geasar.it', 'aeroportodialghero.it', 'milanbergamoairport.it', 'orioaeroporto.it', 'aeroportodinapoli.it', 'gesac.it',
   // grandi hub e USA (prova 2026-11-09)
   'hongkongairport.com', 'changiairport.com', 'dubaiairports.ae', 'dohahamadairport.com', 'zayedinternationalairport.ae', 'abudhabiairport.ae',
   'tokyo-haneda.com', 'narita-airport.jp', 'bcia.com.cn', 'istairport.com', 'jfkairport.com', 'newarkairport.com', 'flylax.com', 'flysfo.com',
@@ -36,7 +36,7 @@ const PROBE_HOSTS = ['veniceairport.it', 'veneziaairport.it', 'aeroportodigenova
   'baden-airpark.de', 'bru-system.be', 'airport.ai', 'lameziaairport.it', 'sacal.it'];
 const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
-  ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
+  ZRH: zurich, FRA: frankfurt, CTA: catania, CIY: (n, log) => catania(n, log, 'CIY'), TPS: trapani, AOI: ancona, TRS: trieste, MUC: munich, PMO: palermo, BLQ: bologna,
   MAD: (n, log) => aena('MAD', n, log), BCN: (n, log) => aena('BCN', n, log),
   LIS: lisbon, TRN: torino, CAG: cagliari, STN: stansted, LGW: gatwick, LTN: luton, LCY: londonCity, LYS: lyon, BVA: beauvais, AMS: schiphol, GOA: genova, VCE: venezia, HKG: hongKong,
   // altri aeroporti europei (2026-11-10)
@@ -372,7 +372,7 @@ function statusIt(t, nature) {
   const map = [
     [/annul|cancel|soppress/, 'Cancellato'], [/umgeleitet|divert|dérout|dirott/, 'Dirottato'],
     [/boarding (closed|finished|completed)|embarquement terminé|eingestiegen/, 'Gate chiuso'],
-    [/gelandet|landed|auf position|gepäck|baggage|bags|arrived|arrivé|arrive [aà]|atterr|bagagli/, 'Atterrato'],
+    [/gelandet|landed|auf position|gepäck|baggage|bags|arrived|arrivat|arrivé|arrive [aà]|atterr|bagagli/, 'Atterrato'],
     [/anflug|approach|approche|in arrivo/, 'In arrivo'],
     [/gestartet|departed|airborne|en route|unterwegs|décollé|decoll|partito/, nature === 'A' ? 'In volo' : 'Decollato'],
     [/rolling|rollt|taxied/, 'In rullaggio'],
@@ -510,7 +510,7 @@ async function frankfurt(nature, log) {
 // API GraphQL del sito aeroporto.catania.it (nessuna chiave): una chiamata per giornata, fino a 200 voli.
 // Orari "DD/MM/YYYY, HH:MM" in ora locale.
 const CTA_QUERY = 'query flights($offset:Int=0,$size:Int=10,$airport:Airport!,$date:FlightDay!,$keyword:String,$locale:Locale!,$timeRange:String,$type:FlightType!){flights(offsetPagination:{offset:$offset,size:$size},filters:{airport:$airport,date:$date,locale:$locale,type:$type,timeRange:$timeRange,keyword:$keyword}){edges{node{airline terminal scheduledTime rescheduledTime origin flightStatus gate flightNumber estimatedTime destination codesharing{flightNumber airline} checkIn baggageClaim destinationCity originCity divertedTo}} pageInfo{offsetPagination{total hasMore}}}}';
-async function catania(nature, log) {
+async function catania(nature, log, airport = 'CTA') {
   const A = nature === 'A';
   // TOMORROW è un tentativo (verificato solo TODAY): se l'API non lo accetta resta solo oggi
   const days = localNow('Europe/Rome').min >= 13 * 60 ? ['TODAY', 'TOMORROW'] : ['TODAY'];
@@ -522,11 +522,11 @@ async function catania(nature, log) {
       const r = await fetch(u, {
         method: 'POST', signal: AbortSignal.timeout(15000),
         headers: { 'User-Agent': UA, 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ query: CTA_QUERY, variables: { offset: 0, size: 200, airport: 'CTA', date: day, locale: 'IT', type: A ? 'ARRIVALS' : 'DEPARTURES', timeRange: '00:00 - 23:59', keyword: '' } }),
+        body: JSON.stringify({ query: CTA_QUERY, variables: { offset: 0, size: 200, airport, date: day, locale: 'IT', type: A ? 'ARRIVALS' : 'DEPARTURES', timeRange: '00:00 - 23:59', keyword: '' } }),
       });
       const t = await r.text();
       log.push({ url: u, day, status: r.status, length: t.length, ms: Date.now() - t0, start: t.slice(0, 200) });
-      if (!r.ok) { if (day === 'TODAY') throw new Error(`Catania: errore ${r.status}`); continue; }
+      if (!r.ok) { if (day === 'TODAY') throw new Error(`${airport === 'CIY' ? 'Comiso' : 'Catania'}: errore ${r.status}`); continue; }
       all.push(...(JSON.parse(t)?.data?.flights?.edges || []).map(e => e.node));
     } catch (e) { if (day === 'TODAY') throw e; }
   }
@@ -1554,6 +1554,79 @@ async function malta(nature, log) {
       city: f.destination || f.origin, airline: f.airline }, nature));
   }
   return finish(out, tz, 'Malta');
+}
+
+// ---------- Trapani (Airgest) ----------
+// JSON del sito airgest.it (/voli-dati?type=dep|arr), voli di oggi. "terminal" è il gate (partenze) o il nastro (arrivi).
+async function trapani(nature, log) {
+  const A = nature === 'A', tz = 'Europe/Rome';
+  const list = JSON.parse(await getText(`https://www.airgest.it/voli-dati?type=${A ? 'arr' : 'dep'}`, log, { name: 'Trapani', headers: { 'X-Requested-With': 'XMLHttpRequest' } }));
+  const out = (Array.isArray(list) ? list : []).map(f => {
+    const date = (f.date || localNow(tz).date).replace(/\//g, '-');
+    const schedDate = clock(f.scheduled) ? `${date}T${clock(f.scheduled)}` : null;
+    const st = trimOrNull(f.statusEN) || trimOrNull(f.statusIT) || '';
+    const status = statusIt(st, nature);
+    const t = clock(f.actual), at = t && schedDate ? `${date}T${t}` : null;
+    const done = isDone(status);
+    return rec({ number: f.flightCode, schedDate, estAt: !done && at !== schedDate ? at : null, actualAt: done ? at || schedDate : null,
+      status, statusCode: trimOrNull(f.statusIT), gate: A ? null : f.terminal, belt: A ? f.terminal : null,
+      city: titleCase(f.destinationIT || f.destinationEN), cityCode: f.airportCode, airline: titleCase(f.airline) }, nature);
+  });
+  return finish(out, tz, 'Trapani');
+}
+
+// ---------- Ancona (Aeroporto delle Marche) ----------
+// La home e le pagine partenze/arrivi di ancona-airport.com contengono l'XML <FLIGHTS> del giorno (widget_voli_stamp).
+// stato: C = partito, J = atterrato (visti il 2026-11-10); gli altri codici si mostrano come sono.
+async function ancona(nature, log) {
+  const A = nature === 'A', tz = 'Europe/Rome';
+  const t = await getText(`https://www.ancona-airport.com/passeggeri/voli/${A ? 'arrivi' : 'partenze'}/`, log, { name: 'Ancona', quiet: true, accept: 'text/html' });
+  const x = /<FLIGHTS update="(\d\d)\/(\d\d)\/(\d{4})[^"]*">([\s\S]*?)<\/FLIGHTS>/.exec(t);
+  if (!x) throw new Error('Ancona: tabellone non trovato');
+  const date = `${x[3]}-${x[2]}-${x[1]}`;
+  const CODES = { C: A ? 'Atterrato' : 'Decollato', J: A ? 'Atterrato' : 'Decollato', X: 'Cancellato', D: 'Dirottato', R: 'Ritardato', B: 'Imbarco', I: 'Imbarco', K: 'Check-in' };
+  const out = [...x[4].matchAll(/<FLIGHT ([^>]*)\/>/g)].map(m => {
+    const a = unesc(m[1]), g = n => attr(a, n);
+    const schedDate = clock(g('sched')) ? `${date}T${clock(g('sched'))}` : null;
+    const code = trimOrNull(g('stato'));
+    let status = CODES[code] || code;
+    if (trimOrNull(g('dirottato_su'))) status = 'Dirottato';
+    const e = clock(g('expect')), at = e && schedDate ? textTimes(e, schedDate, nature).estAt || null : null;
+    const done = isDone(status);
+    return rec({ number: `${g('code')}${g('numero')}`, schedDate, estAt: done ? null : at, actualAt: done ? at || schedDate : null,
+      status, statusCode: code, terminal: g('terminal'), city: titleCase(g('city')), cityCode: g('airport_iata'), airline: titleCase(g('carrier')) }, nature);
+  });
+  return finish(out, tz, 'Ancona');
+}
+
+// ---------- Trieste ----------
+// Tabelle HTML "Voli in tempo reale" di triesteairport.it: Volo, Destinazione/Provenienza (città + IATA), Previsto, Stimato, Note.
+// Le righe non hanno la data: l'elenco va da adesso in avanti, quindi quando l'orario torna indietro di molto si passa a domani.
+async function trieste(nature, log) {
+  const A = nature === 'A', tz = 'Europe/Rome';
+  const t = await getText('https://triesteairport.it/it/airport/voli-e-destinazioni/voli-in-tempo-reale/', log, { name: 'Trieste', quiet: true, accept: 'text/html' });
+  const parts = t.split(/<h3>\s*(?:Partenze|Arrivi)\s*<\/h3>/);
+  const html = (A ? parts[2] : parts[1]) || '';
+  const tbl = (/<table[\s\S]*?<\/table>/.exec(html) || [''])[0];
+  const now = localNow(tz);
+  let date = now.date, prev = null, first = true;
+  const out = [];
+  for (const c of tableRows(tbl)) {
+    if (c.length < 4) continue;
+    const sched = clock(c[2]);
+    if (!sched) continue;
+    if (first && hmMin(sched) < now.min - 6 * 60) date = addDays(now.date, 1);
+    else if (prev != null && hmMin(sched) < prev - 6 * 60) date = addDays(date, 1);
+    first = false; prev = hmMin(sched);
+    const schedDate = `${date}T${sched}`, st = c[4] || '';
+    const status = /check-?in (chius|closed)/i.test(st) ? 'Check-in chiuso' : statusIt(st, nature), exp = clock(c[3]);
+    const at = exp ? textTimes(exp, schedDate, nature).estAt || null : null;
+    const done = isDone(status);
+    const pm = /^(.*?)\s+([A-Z]{3})$/.exec(c[1] || '');
+    out.push(rec({ number: c[0], schedDate, estAt: done ? null : at, actualAt: done ? at || schedDate : null, status, statusCode: st || null,
+      city: pm ? pm[1] : c[1], cityCode: pm ? pm[2] : null }, nature));
+  }
+  return finish(out, tz, 'Trieste');
 }
 
 // Zagabria: tabella HTML con attributi data-*, oggi e domani (?sutra=1)

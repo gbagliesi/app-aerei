@@ -29,6 +29,12 @@ function boardCounts(list) {
 }
 // Aeroporti senza tabellone ufficiale leggibile dal Worker (siti protetti): link alla pagina ufficiale
 const SITE_BOARDS = {
+  VRN: { dep: 'https://www.aeroportoverona.it/it_it/voli/partenze', arr: 'https://www.aeroportoverona.it/it_it/voli/arrivi', name: 'aeroportoverona.it' },
+  TSF: { dep: 'https://www.trevisoairport.it/it_it/voli/partenze', arr: 'https://www.trevisoairport.it/it_it/voli/arrivi', name: 'trevisoairport.it' },
+  RMI: { dep: 'https://www.riminiairport.com/', name: 'riminiairport.com' },
+  QSR: { dep: 'https://www.aeroportodisalerno.it/', name: 'aeroportodisalerno.it' },
+  PSR: { dep: 'https://www.abruzzoairport.eu/index.php/voli-in-tempo-reale/', name: 'abruzzoairport.eu' },
+  PNL: { dep: 'https://www.aeroportodipantelleria.it/info-voli/arrivi-partenze/', name: 'aeroportodipantelleria.it' },
   NAP: { dep: 'https://www.aeroportodinapoli.it/partenze', arr: 'https://www.aeroportodinapoli.it/arrivi', name: 'aeroportodinapoli.it' },
   BGY: { dep: 'https://www.milanbergamoairport.it/it/voli-tempo-reale/', name: 'milanbergamoairport.it' },
   OLB: { dep: 'https://www.geasar.it/voli/i-voli-di-oggi/?type=departures', arr: 'https://www.geasar.it/voli/i-voli-di-oggi/?type=arrivals', name: 'geasar.it' },
@@ -57,7 +63,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.1.4 · Stoccarda con tabellone ufficiale';
+const APP_VERSION = '4.1.5 · Comiso, Trapani, Ancona, Trieste con tabellone ufficiale';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
