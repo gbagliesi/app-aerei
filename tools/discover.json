@@ -49,6 +49,52 @@
     "Content-Type": "application/json"
    },
    "show": 500
+  },
+  {
+   "code": "CIY",
+   "url": "https://www.aeroporto.catania.it/api/middleware/flights",
+   "headers": {
+    "Content-Type": "application/json",
+    "Accept": "application/json"
+   },
+   "body": "{\"query\": \"query flights($offset:Int=0,$size:Int=10,$airport:Airport!,$date:FlightDay!,$keyword:String,$locale:Locale!,$timeRange:String,$type:FlightType!){flights(offsetPagination:{offset:$offset,size:$size},filters:{airport:$airport,date:$date,locale:$locale,type:$type,timeRange:$timeRange,keyword:$keyword}){edges{node{airline scheduledTime flightStatus gate flightNumber destination}} pageInfo{offsetPagination{total hasMore}}}}\", \"variables\": {\"offset\": 0, \"size\": 5, \"airport\": \"CIY\", \"date\": \"TODAY\", \"locale\": \"IT\", \"type\": \"DEPARTURES\", \"timeRange\": \"00:00 - 23:59\", \"keyword\": \"\"}}",
+   "show": 900
+  },
+  {
+   "code": "VRN",
+   "url": "https://www.aeroportoverona.it/it_it/rest/V1/flights/get",
+   "headers": {
+    "Content-Type": "application/json"
+   },
+   "body": "{\"query\": null, \"date\": \"any\", \"type\": \"departures\", \"page\": 1, \"store_code\": \"vrn_store_it\"}",
+   "show": 900
+  },
+  {
+   "code": "TSF",
+   "url": "https://www.trevisoairport.it/it_it/rest/V1/flights/get",
+   "headers": {
+    "Content-Type": "application/json"
+   },
+   "body": "{\"query\": null, \"date\": \"any\", \"type\": \"departures\", \"page\": 1, \"store_code\": \"tsf_store_it\"}",
+   "show": 900
+  },
+  {
+   "code": "VRN",
+   "url": "https://www.veneziaairport.it/it_it/rest/V1/flights/get",
+   "headers": {
+    "Content-Type": "application/json"
+   },
+   "body": "{\"query\": null, \"date\": \"any\", \"type\": \"departures\", \"page\": 1, \"store_code\": \"vrn_store_it\"}",
+   "show": 900
+  },
+  {
+   "code": "TSF",
+   "url": "https://www.veneziaairport.it/it_it/rest/V1/flights/get",
+   "headers": {
+    "Content-Type": "application/json"
+   },
+   "body": "{\"query\": null, \"date\": \"any\", \"type\": \"departures\", \"page\": 1, \"store_code\": \"tsf_store_it\"}",
+   "show": 900
   }
  ],
  "airports": {
@@ -219,6 +265,111 @@
     "https://www.sacal.it/lamezia-terme/voli/",
     "https://www.lameziaairport.it/"
    ]
+  },
+  "VRN": {
+   "name": "Verona",
+   "home": "https://www.aeroportoverona.it/",
+   "pages": [
+    "https://www.aeroportoverona.it/it_it/voli/partenze"
+   ]
+  },
+  "TSF": {
+   "name": "Treviso",
+   "home": "https://www.trevisoairport.it/",
+   "pages": [
+    "https://www.trevisoairport.it/it_it/voli/partenze"
+   ]
+  },
+  "TRS": {
+   "name": "Trieste",
+   "home": "https://www.triesteairport.it/",
+   "pages": [
+    "https://www.triesteairport.it/it/voli/partenze-e-arrivi"
+   ]
+  },
+  "AOI": {
+   "name": "Ancona",
+   "home": "https://www.aeroportomarche.com/",
+   "pages": []
+  },
+  "PSR": {
+   "name": "Pescara",
+   "home": "https://www.abruzzoairport.com/",
+   "pages": []
+  },
+  "REG": {
+   "name": "Reggio Calabria SACAL",
+   "home": "https://www.sacal.it/reggio-calabria/",
+   "pages": []
+  },
+  "CRV": {
+   "name": "Crotone SACAL",
+   "home": "https://www.sacal.it/crotone/",
+   "pages": []
+  },
+  "TPS": {
+   "name": "Trapani Airgest",
+   "home": "https://www.airgest.it/",
+   "pages": []
+  },
+  "CIY": {
+   "name": "Comiso",
+   "home": "https://www.aeroportodicomiso.eu/",
+   "pages": []
+  },
+  "RMI": {
+   "name": "Rimini",
+   "home": "https://www.riminiairport.com/",
+   "pages": []
+  },
+  "BZO": {
+   "name": "Bolzano",
+   "home": "https://www.bolzanoairport.it/",
+   "pages": []
+  },
+  "QSR": {
+   "name": "Salerno",
+   "home": "https://www.aeroportosalerno.it/",
+   "pages": [
+    "https://www.aeroportodisalerno.it/"
+   ]
+  },
+  "PEG": {
+   "name": "Perugia",
+   "home": "https://www.airport.umbria.it/",
+   "pages": []
+  },
+  "PMF": {
+   "name": "Parma",
+   "home": "https://www.parma-airport.it/",
+   "pages": []
+  },
+  "FRL": {
+   "name": "Forli",
+   "home": "https://www.forliairport.com/",
+   "pages": []
+  },
+  "CUF": {
+   "name": "Cuneo",
+   "home": "https://www.aeroporto.cuneo.it/",
+   "pages": []
+  },
+  "EBA": {
+   "name": "Elba",
+   "home": "https://www.elbaisland-airport.it/",
+   "pages": [
+    "https://www.aeroportoelba.it/"
+   ]
+  },
+  "LMP": {
+   "name": "Lampedusa",
+   "home": "https://www.aeroportodilampedusa.it/",
+   "pages": []
+  },
+  "PNL": {
+   "name": "Pantelleria",
+   "home": "https://www.aeroportodipantelleria.it/",
+   "pages": []
   }
  }
 }
