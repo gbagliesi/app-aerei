@@ -188,11 +188,112 @@ export const AIRPORTS = [
 const byIata = new Map(AIRPORTS.map(a => [a.iata, a]));
 export const airportByIata = code => byIata.get((code || '').toUpperCase());
 
-export function searchAirports(q) {
-  q = (q || '').trim().toLowerCase();
+// Altri nomi per la ricerca: città in inglese e in lingua locale, nomi alternativi dell'aeroporto.
+// (Il nome italiano della città e il nome dell'aeroporto sono già nella tabella sopra.)
+const ALIASES = {
+  FCO: 'Rome|Leonardo da Vinci', CIA: 'Rome|Giovan Battista Pastine', MXP: 'Milan', LIN: 'Milan|Forlanini', BGY: 'Milan Bergamo|Il Caravaggio|Orio',
+  VCE: 'Venice|Tessera', BLQ: 'Guglielmo Marconi', PSA: 'Galileo Galilei', FLR: 'Florence|Amerigo Vespucci', NAP: 'Naples|Capodichino',
+  CTA: 'Vincenzo Bellini|Sicily|Sicilia', PMO: 'Punta Raisi|Sicily|Sicilia', BRI: 'Puglia|Apulia', BDS: 'Salento|Puglia|Apulia', CAG: 'Mario Mameli|Sardinia|Sardegna',
+  GOA: 'Genoa|Genua', TRN: 'Turin|Sandro Pertini', LHR: 'London', LGW: 'London', STN: 'London', LTN: 'London', LCY: 'London',
+  CDG: 'Paris|Roissy', ORY: 'Paris', BVA: 'Paris|Tillé', LYS: 'Lyon|Lione', AMS: 'Amsterdam', FRA: 'Frankfurt am Main|Frankfurt|Rhein-Main',
+  MUC: 'Munich|München|Franz Josef Strauss|Monaco', ZRH: 'Zurich|Zürich|Kloten', VIE: 'Vienna|Wien', MAD: 'Madrid|Adolfo Suárez',
+  BCN: 'Barcelona|Josep Tarradellas', LIS: 'Lisbon|Lisboa|Portela', ATH: 'Athens|Athina|Αθήνα', IST: 'Istanbul|İstanbul|Costantinopoli',
+  HKG: 'Hong Kong|Chek Lap Kok|香港', DXB: 'Dubai', DOH: 'Doha|Hamad International', JFK: 'New York|John F. Kennedy', EWR: 'New York|Newark',
+  BRU: 'Brussels|Brussel|Bruxelles|Zaventem', CPH: 'Copenhagen|København|Kastrup', DUB: 'Dublin|Baile Átha Cliath', TIA: 'Tirana|Nënë Tereza|Madre Teresa',
+  MLA: 'Malta|Valletta|La Valletta|Luqa', CAI: 'Cairo|Al Qahira|القاهرة', TLV: 'Tel Aviv|Ben Gurion|Israel', TFS: 'Tenerife South|Reina Sofía|Canarie|Canarias',
+  TFN: 'Tenerife North|Los Rodeos|Canarie|Canarias', LPA: 'Gran Canaria|Las Palmas|Canarie|Canarias', ACE: 'Lanzarote|Arrecife|César Manrique|Canarie|Canarias',
+  FUE: 'Fuerteventura|Puerto del Rosario|Canarie|Canarias', VLC: 'Valencia|València|Manises', MAN: 'Manchester', EDI: 'Edinburgh|Edimburgo', GLA: 'Glasgow',
+  HAM: 'Hamburg|Amburgo|Helmut Schmidt', BER: 'Berlin|Berlino|Willy Brandt', CGN: 'Cologne|Köln|Colonia|Bonn|Konrad Adenauer', STR: 'Stuttgart|Stoccarda|Manfred Rommel',
+  FKB: 'Karlsruhe|Baden-Baden|Baden Airpark', MST: 'Maastricht|Aachen|Aquisgrana', BSL: 'Basel|Bâle|Basilea|Mulhouse|Freiburg|Friburgo', BRN: 'Bern|Berne|Berna|Belp',
+  SXB: 'Strasbourg|Strasburgo|Entzheim', ARN: 'Stockholm|Stoccolma|Arlanda', HEL: 'Helsinki|Vantaa|Helsingfors', WAW: 'Warsaw|Warszawa|Varsavia|Fryderyk Chopin|Chopin',
+  KRK: 'Krakow|Cracow|Kraków|Cracovia|Giovanni Paolo II|John Paul II', PRG: 'Prague|Praha|Praga|Vaclav Havel', BUD: 'Budapest|Ferenc Liszt|Liszt',
+  SKG: 'Thessaloniki|Salonicco|Makedonia|Θεσσαλονίκη', HER: 'Heraklion|Iraklio|Candia|Creta|Crete|Nikos Kazantzakis', CHQ: 'Chania|La Canea|Creta|Crete|Daskalogiannis',
+  LCA: 'Larnaca|Larnaka|Cipro|Cyprus', PFO: 'Paphos|Pafos|Cipro|Cyprus', ZAG: 'Zagreb|Zagabria|Franjo Tuđman', SPU: 'Split|Spalato', DBV: 'Dubrovnik|Ragusa|Čilipi',
+  GVA: 'Geneva|Genève|Genf|Cointrin', FOG: 'Gino Lisa|Puglia', TAR: 'Grottaglie|Marcello Arlotta|Puglia', TRS: 'Ronchi dei Legionari|Friuli Venezia Giulia',
+  AOI: 'Falconara|Raffaello Sanzio', PSR: 'Abruzzo', SUF: 'Calabria|Sant\'Eufemia', REG: 'Tito Minniti|Calabria', OLB: 'Costa Smeralda|Sardinia|Sardegna',
+  AHO: 'Riviera del Corallo|Fertilia|Sardinia|Sardegna', CUF: 'Levaldigi', PEG: 'San Francesco d\'Assisi|Umbria', RMI: 'Federico Fellini|Miramare',
+  RAK: 'Marrakesh|Menara', CMN: 'Casablanca|Dar el Beida|Mohammed V', AGA: 'Agadir|Al Massira', TNG: 'Tangier|Tanger|Ibn Battuta', FEZ: 'Fez|Fès|Saïss',
+  RBA: 'Rabat|Salé', TUN: 'Tunis|Tunisi|Carthage|Cartagine', DJE: 'Djerba|Jerba|Zarzis', HRG: 'Hurghada|Al Ghardaqa|Egitto|Egypt', SSH: 'Sharm el Sheikh|Sharm|Egitto|Egypt',
+  OSL: 'Oslo|Gardermoen', BGO: 'Bergen|Flesland', GOT: 'Gothenburg|Göteborg|Goteborg|Landvetter', BLL: 'Billund|Legoland', AAL: 'Aalborg|Ålborg',
+  KEF: 'Reykjavík|Reykjavik|Keflavík|Islanda|Iceland', RIX: 'Riga|Rīga', TLL: 'Tallinn|Lennart Meri', VNO: 'Vilnius|Vilna',
+  SAW: 'Istanbul|İstanbul|Sabiha Gökçen', AYT: 'Antalya', DLM: 'Dalaman', BJV: 'Bodrum|Milas', ADB: 'Izmir|İzmir|Smirne|Adnan Menderes', ESB: 'Ankara|Esenboğa',
+  NCE: 'Nice|Nizza|Côte d\'Azur|Costa Azzurra|Monaco|Monte Carlo', MRS: 'Marseille|Marsiglia|Provence|Marignane', TLS: 'Toulouse|Tolosa|Blagnac',
+  BOD: 'Bordeaux|Mérignac', NTE: 'Nantes|Atlantique', MLH: 'Mulhouse|Basel|Basilea|Freiburg', OPO: 'Porto|Oporto|Francisco Sá Carneiro', FAO: 'Faro|Algarve|Gago Coutinho',
+  FNC: 'Funchal|Madeira|Cristiano Ronaldo', PDL: 'Ponta Delgada|Azores|Açores|Azzorre|João Paulo II', AGP: 'Málaga|Malaga|Costa del Sol', ALC: 'Alicante|Alacant|Elche',
+  PMI: 'Palma de Mallorca|Palma|Mallorca|Majorca|Maiorca|Son Sant Joan|Baleari|Balearics', IBZ: 'Ibiza|Eivissa|Baleari|Balearics', MAH: 'Menorca|Minorca|Mahón|Maó|Baleari|Balearics',
+  SVQ: 'Seville|Sevilla|Siviglia|San Pablo', BIO: 'Bilbao|Bilbo|Loiu', CRL: 'Brussels South Charleroi|Bruxelles Sud|Charleroi', EIN: 'Eindhoven',
+  RTM: 'Rotterdam|The Hague|Den Haag|L\'Aia', LUX: 'Luxembourg|Lëtzebuerg|Luxemburg|Lussemburgo|Findel', DUS: 'Düsseldorf|Dusseldorf', HAJ: 'Hanover|Hannover|Langenhagen',
+  NUE: 'Nuremberg|Nürnberg|Norimberga|Albrecht Dürer', LEJ: 'Leipzig|Halle|Lipsia', DRS: 'Dresden|Dresda', BRS: 'Bristol', BHX: 'Birmingham', EMA: 'East Midlands|Nottingham|Derby|Leicester',
+  LPL: 'Liverpool|John Lennon', NCL: 'Newcastle', ABZ: 'Aberdeen|Dyce', BFS: 'Belfast|Aldergrove', ORK: 'Cork|Corcaigh', SNN: 'Shannon|Limerick',
+  SZG: 'Salzburg|Salisburgo|W. A. Mozart|Mozart', INN: 'Innsbruck|Kranebitten', GRZ: 'Graz|Thalerhof', LNZ: 'Linz|Blue Danube|Hörsching', KTW: 'Katowice|Pyrzowice',
+  GDN: 'Gdansk|Gdańsk|Danzica|Lech Wałęsa', WRO: 'Wroclaw|Wrocław|Breslavia|Breslau', POZ: 'Poznan|Poznań|Posen|Ławica', BTS: 'Bratislava|Milan Rastislav Štefánik',
+  LJU: 'Ljubljana|Lubiana|Jože Pučnik|Brnik', PUY: 'Pula|Pola|Istria', BEG: 'Belgrade|Beograd|Belgrado|Nikola Tesla', TGD: 'Podgorica|Montenegro',
+  SJJ: 'Sarajevo', SKP: 'Skopje|Macedonia', OTP: 'Bucharest|București|Bucarest|Henri Coandă|Otopeni', CLJ: 'Cluj-Napoca|Cluj|Avram Iancu',
+  SOF: 'Sofia|София|Vasil Levski', BOJ: 'Burgas|Bourgas', VAR: 'Varna', KIV: 'Chisinau|Kishinev|Chișinău|Moldova', TBS: 'Tbilisi|Tiflis|Shota Rustaveli|Georgia',
+  EVN: 'Yerevan|Erevan|Zvartnots|Armenia', RHO: 'Rhodes|Rodos|Rodi|Diagoras', CFU: 'Corfu|Kerkyra|Corfù|Ioannis Kapodistrias', JMK: 'Mykonos|Mikonos|Micono',
+  JTR: 'Santorini|Thira|Fira', KGS: 'Kos|Coo|Hippocrates',
+};
+
+// Codici di città (più aeroporti): ROM → FCO, CIA ecc.
+const CITY_CODES = { ROM: ['FCO', 'CIA'], MIL: ['MXP', 'LIN', 'BGY'], LON: ['LHR', 'LGW', 'STN', 'LTN', 'LCY'], PAR: ['CDG', 'ORY', 'BVA'],
+  NYC: ['JFK', 'EWR'], STO: ['ARN'], OSL: ['OSL'], BUH: ['OTP'], IST: ['IST', 'SAW'], TCI: ['TFS', 'TFN'], BER: ['BER'], EAP: ['BSL', 'MLH'] };
+
+/** Minuscolo, senza accenti né punteggiatura: "Zürich" → "zurich", "Sant'Eufemia" → "sant eufemia". */
+export function norm(s) {
+  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/ß/g, 'ss').replace(/[øØ]/g, 'o').replace(/[łŁ]/g, 'l').replace(/[đĐ]/g, 'd').replace(/ı/g, 'i').replace(/[æÆ]/g, 'ae')
+    .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+// per ogni aeroporto: nomi (normalizzati) su cui cercare
+const KEYS = new Map(AIRPORTS.map(a => [a.iata, [a.city, a.name, ...(ALIASES[a.iata] || '').split('|')].filter(Boolean).map(norm)]));
+const keysOf = a => KEYS.get(a.iata) || [norm(a.city), norm(a.name)];
+
+/** Nomi normalizzati (città e aeroporto in italiano, inglese e lingua locale) di un aeroporto, per i filtri. */
+export const airportSearchText = iata => (KEYS.get((iata || '').toUpperCase()) || []).join(' | ');
+
+/** Punteggio di corrispondenza (0 = nessuna). Ogni parola cercata deve comparire, anche parziale. */
+function score(a, q, words) {
+  const Q = q.replace(/ /g, '').toUpperCase();
+  if (a.iata === Q) return 1000;
+  if (a.icao === Q) return 900;
+  if (CITY_CODES[Q]?.includes(a.iata)) return 800 - CITY_CODES[Q].indexOf(a.iata);
+  const keys = keysOf(a);
+  let s = 0;
+  if (Q.length >= 2 && a.iata.startsWith(Q)) s = 300;
+  else if (Q.length >= 2 && a.icao.startsWith(Q)) s = 250;
+  for (const k of keys) {
+    let t = 0;
+    if (k === q) t = 600;
+    else if (k.startsWith(q)) t = 500;
+    else if ((' ' + k).includes(' ' + q)) t = 400;
+    else if (words.every(w => (' ' + k).includes(' ' + w))) t = 350;
+    else if (q.length >= 3 && k.includes(q)) t = 200;
+    if (t > s) s = t;
+  }
+  if (!s && words.length > 1) {
+    // parole sparse tra città e nome (es. "londra gatwick", "milan bergamo")
+    const all = ' ' + keys.join(' ');
+    if (words.every(w => all.includes(' ' + w))) s = 300;
+  }
+  if (s && keys[0].startsWith(q)) s += 20; // la città prima del resto
+  return s;
+}
+
+export function searchAirports(q, limit = 8) {
+  q = norm(q);
   if (!q) return [];
-  return AIRPORTS.filter(a =>
-    a.iata.toLowerCase().startsWith(q) || a.icao.toLowerCase().startsWith(q) ||
-    a.name.toLowerCase().includes(q) || a.city.toLowerCase().includes(q)
-  ).slice(0, 8);
+  const words = q.split(' ');
+  return AIRPORTS.map((a, i) => ({ a, s: score(a, q, words), i }))
+    .filter(x => x.s > 0).sort((x, y) => y.s - x.s || x.i - y.i).slice(0, limit).map(x => x.a);
+}
+
+/** Codice IATA dal nome di una città (qualunque lingua), solo se univoco. */
+export function iataByCityName(city) {
+  const c = norm(city);
+  if (!c) return null;
+  const main = AIRPORTS.filter(a => keysOf(a)[0] === c || keysOf(a)[1] === c); // città o nome dell'aeroporto
+  if (main.length) return main.length === 1 ? main[0].iata : null;
+  const hits = AIRPORTS.filter(a => keysOf(a).includes(c)); // altri nomi
+  return hits.length === 1 ? hits[0].iata : null;
 }

@@ -1,7 +1,7 @@
 // Livello dati: provider "demo" (dati simulati) o "aerodatabox" (dati reali via RapidAPI),
 // più il tracking live della posizione dell'aereo (AeroDataBox / adsb.lol / OpenSky).
 import { getSettings } from './store.js';
-import { airportByIata, AIRPORTS } from './airports.js';
+import { airportByIata, AIRPORTS, iataByCityName } from './airports.js';
 import * as demo from './demo.js';
 
 const ADB_HOST = 'aerodatabox.p.rapidapi.com';
@@ -380,9 +380,7 @@ const CITY_ALIASES = { ROME: 'Roma', MILAN: 'Milano', NAPLES: 'Napoli', FLORENCE
 function cityToIata(city) {
   if (!city) return null;
   const c = String(city).trim().toUpperCase();
-  const it = (CITY_ALIASES[c] || c).toLowerCase();
-  const hits = AIRPORTS.filter(a => a.city.toLowerCase() === it || a.name.toLowerCase() === it);
-  return hits.length === 1 ? hits[0].iata : null;
+  return iataByCityName(CITY_ALIASES[c] || city) || iataByCityName(city);
 }
 
 /** Voli (formato dell'app) costruiti dalle righe del tabellone ufficiale. */

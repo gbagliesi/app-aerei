@@ -1,5 +1,5 @@
 import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getTrace, hexOfReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
-import { searchAirports, airportByIata, AIRPORTS } from './airports.js';
+import { searchAirports, airportByIata, AIRPORTS, norm, airportSearchText } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
 import { pushProblem, watchFlight, refreshWatch, unwatch, getWatch, listWatches, testPush, EVENT_LABELS, DEFAULT_EVENTS } from './notify.js';
@@ -57,7 +57,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.1.2 · pagina aereo: aeroporti mancanti ricavati da città e traccia ADS-B';
+const APP_VERSION = '4.1.3 · ricerca aeroporti in italiano, inglese e lingua locale';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -135,8 +135,12 @@ function bindSearch() {
     if (!v) return;
     if (/^[A-Z0-9]{1,2}-[A-Z0-9]{2,5}$/.test(v) || /^N\d{1,5}[A-Z]{0,2}$/.test(v)) { location.hash = `#/aircraft/${v}/${isoDate(new Date())}`; return; }
     if (/^[A-Z0-9]{2}\d{1,4}[A-Z]?$/.test(v) && !/^[A-Z]{3}$/.test(v)) location.hash = `#/flight/${v}/${isoDate(new Date())}`;
-    else if (/^[A-Z]{3}$/.test(v)) location.hash = `#/airport/${v}/dep`;
-    else { const a = searchAirports(v)[0]; if (a) location.hash = `#/airport/${a.iata}/dep`; }
+    else {
+      // codice IATA noto, poi nome (anche parziale, in qualunque lingua), infine un codice IATA non in elenco
+      const a = airportByIata(v) || searchAirports(q.value)[0];
+      if (a) location.hash = `#/airport/${a.iata}/dep`;
+      else if (/^[A-Z]{3}$/.test(v)) location.hash = `#/airport/${v}/dep`;
+    }
   });
 }
 
@@ -174,8 +178,9 @@ function viewHome() {
 // voli già partiti/arrivati nascosti in cima al tabellone (si mostrano con un tocco); ricordato per tabellone
 const showPast = new Set();
 function boardTable(list, dir, filter = '', key = '') {
-  const f = filter.trim().toLowerCase();
-  let rows = list.filter(x => !f || [x.number, ...(x.codeshares || []), x.airline?.name, x.dep?.iata, x.dep?.name, x.arr?.iata, x.arr?.name].some(v => String(v || '').toLowerCase().includes(f)));
+  const f = norm(filter);
+  // il filtro trova anche la città in italiano, inglese o lingua locale (es. "Londra" per "London Gatwick")
+  let rows = list.filter(x => !f || [x.number, ...(x.codeshares || []), x.airline?.name, x.dep?.iata, x.dep?.name, x.arr?.iata, x.arr?.name, airportSearchText(x.dep?.iata), airportSearchText(x.arr?.iata)].some(v => norm(v).includes(f)));
   if (!rows.length) return `<p class="hint">Nessun volo${f ? ' corrisponde al filtro' : ' nella finestra da 2 ore fa a 10 ore avanti'}.</p>`;
   const now = Date.now();
   let marked = false, pastBtn = '';
