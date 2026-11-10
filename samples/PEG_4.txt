@@ -1,0 +1,5 @@
+# https://www.aeroportodiperugia.it/
+# status 0 final https://www.aeroportodiperugia.it/
+# {}
+
+ERR <urlopen error [Errno -2] Name or service not known>

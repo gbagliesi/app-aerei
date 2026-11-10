@@ -1,0 +1,1796 @@
+# https://triesteairport.it/it/airport/voli-e-destinazioni/voli-in-tempo-reale/
+# status 200 final https://triesteairport.it/it/airport/voli-e-destinazioni/voli-in-tempo-reale/
+# {"Server": "nginx/1.18.0", "Date": "Tue, 10 Nov 2026 18:01:42 GMT", "Content-Type": "text/html; charset=utf-8", "Content-Length": "40105", "Connection": "close", "X-Frame-Options": "DENY", "Content-Language": "it", "Vary": "Cookie", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "same-origin", "Cross-Origin-Opener-Policy": "same-origin", "Strict-Transport-Security": "max-age=31536000; preload", "X-XSS-Protection": "1; mode=block"}
+
+
+
+
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <title>
+      
+        
+          Voli in tempo reale
+        
+      
+      
+        
+        - Trieste Airport
+      
+    </title>
+    <meta name="description" content="&amp;#13;" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/static/favicon.png">
+
+    
+    
+
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://kit.fontawesome.com" crossorigin>
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+
+    
+    <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Fira+Sans:ital,wght@0,100;0,300;0,400;0,500;0,700;1,300;1,400&display=swap" rel="stylesheet">
+
+    
+
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <link href="/static/css/style.min.css?3" rel="stylesheet">
+    <link href="/static/css/mega-menu.css?c" rel="stylesheet" media="screen and (max-width: 767px)">
+
+    
+    <link href="/static/css/jquery.fancybox.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="/static/css/jquery.fancybox.min.css" rel="stylesheet"></noscript>
+
+    
+
+    
+    <script src="https://kit.fontawesome.com/51f11f635e.js" crossorigin="anonymous" defer></script>
+
+    
+    <script src="/static/js/main.js" defer type="module"></script>
+  </head>
+
+  <body class="
+  section-airport
+">
+    
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-TXPN8BL');
+    </script>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TXPN8BL"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
+    
+    
+  <a class="skip-link" href="#contenuto">Salta al contenuto</a>
+
+  
+
+<header id="header" class="cd-main-header">
+  <div id="top">
+    <div class="container">
+      <div class="row justify-content-between">
+        <div class="col-sm-6 search d-none d-sm-block">
+          <form action="/it/search/" class="d-flex align-items-center">
+            <label for="global_search">Cerca</label>
+            <input id="global_search"
+                    type="search"
+                    name="q"
+                    autocomplete="search"
+                    >
+            <input class="flex-shrink-0" type="image" src="/static/img/icon-lens.png" alt="Cerca">
+          </form>
+        </div>
+        <div class="col-xs-12 col-sm-6 d-flex justify-content-end">
+          <div class="languages">
+            
+            
+              
+                
+                
+                  
+                    <a href="/it/airport/voli-e-destinazioni/voli-in-tempo-reale/"
+                       class="selected">ITA</a>
+                  
+                
+              
+                
+                
+                  
+                    <a href="/en/airport/flights-and-destinations/live-flight-information/"
+                       >ENG</a>
+                  
+                
+              
+                
+                
+                  
+                    <a href="/sl/airport/informacije-o-poletih/leti-v-realnem-casu/"
+                       >SLO</a>
+                  
+                
+              
+            
+          </div>
+
+          <div class="d-inline-block d-md-none ms-2">
+            <a class="cd-nav-trigger" href="#cd-primary-nav" aria-label="Apri menu">
+              <span aria-hidden="true"></span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="row">
+      <div id="logo" class="col-sm-4">
+        <a href="/it/" title="Home page">
+          <img src="/static/img/logo.png" alt="Trieste Airport">
+        </a>
+      </div>
+      <div class="col-sm-8">
+<ul id="top-menu" class="list-unstyled">
+  
+    <li class="selected">
+      <a href="/it/airport/">Aerei</a>
+    </li>
+  
+    <li >
+      <a href="/it/treni/">Treni</a>
+    </li>
+  
+    <li >
+      <a href="/it/autobus/">Bus</a>
+    </li>
+  
+    <li >
+      <a href="/it/parcheggi/">Parcheggi</a>
+    </li>
+  
+    <li >
+      <a href="/it/corporate/">Corporate</a>
+    </li>
+  
+    <li >
+      <a href="/it/sostenibilita-esg/">Sostenibilità - ESG</a>
+    </li>
+  
+</ul>
+</div>
+    </div>
+  </div>
+
+  <nav class="cd-nav">
+    
+
+
+
+
+  
+  <ul id="cd-primary-nav" class="list-unstyled cd-primary-nav is-fixed">
+    <li class="section">
+      <a href="/it/">HOME ›</a>
+    </li>
+
+    
+      <li class="has-children">
+        <a href="/it/airport/">Aerei</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/airport/">Aerei ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Aerei</a>
+    </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/airport/in-partenza/">
+      In partenza</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/airport/in-partenza/">In partenza ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">In partenza</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/come-arrivare/">
+      Come arrivare</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/viaggiare-in-sicurezza-1/">
+      Viaggiare in sicurezza</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/documenti-di-viaggio/">
+      Documenti di viaggio</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/famiglia-e-minori/">
+      Famiglia e minori</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/passeggeri-a-ridotta-mobilita/">
+      Passeggeri a ridotta mobilità</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/la-tutela-dei-diritti-dei-passeggeri-a-ridotta-mobilita/">
+      ENAC e la tutela dei diritti dei passeggeri a ridotta mobilità</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/animali-al-seguito-1/">
+      Animali al seguito</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/biglietteria/">
+      Biglietteria</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/check-in/">
+      Check-in</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/bagagli/">
+      Bagagli</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/controlli-di-sicurezza/">
+      Controlli di sicurezza</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/vip-lounge/">
+      VIP Lounge Trieste Airport</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/mappa-dellaeroporto/">
+      Mappa dell&#x27;aeroporto</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/servizi/">
+      Servizi</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/fast-track/">
+      Fast Track</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/trs-club/">
+      TRS Club</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-partenza/richiesta-trs-card/">
+      Richiesta TRS Card</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/airport/in-arrivo/">
+      In arrivo</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/airport/in-arrivo/">In arrivo ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">In arrivo</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/assistenza-bagagli/">
+      Assistenza bagagli</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/oggetti-smarriti/">
+      Oggetti smarriti</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/informazioni-doganali/">
+      Informazioni doganali</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/collegamenti-con-il-territorio-1/">
+      Collegamenti con il territorio</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/passeggeri-a-ridotta-mobilita/">
+      Passeggeri a ridotta mobilità</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/servizi/">
+      Servizi</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/info-point-promoturismo-fvg/">
+      Info point PromoTurismo FVG</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/autonoleggi-1/">
+      Autonoleggi</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/mappa-dellaeroporto/">
+      Mappa dell‘aeroporto</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/in-arrivo/enrty-exit-system/">
+      Entry-Exit System</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/airport/voli-e-destinazioni/">
+      Voli e destinazioni</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/airport/voli-e-destinazioni/">Voli e destinazioni ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Voli e destinazioni</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/airport/voli-e-destinazioni/voli-in-tempo-reale/">
+      Voli in tempo reale</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/voli-e-destinazioni/lilberi-di-volare/">
+      Liberi di Volare</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/voli-e-destinazioni/voli-diretti/">
+      Voli diretti</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/voli-e-destinazioni/compagnie-aeree/">
+      Compagnie aeree</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/voli-e-destinazioni/web-check-in/">
+      Prenotazioni e web check-in</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/airport/diritti-del-passeggero/">
+      Diritti del passeggero</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/airport/diritti-del-passeggero/">Diritti del passeggero ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Diritti del passeggero</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/airport/diritti-del-passeggero/diritti-del-passeggero/">
+      Diritti del passeggero</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/diritti-del-passeggero/carta-dei-servizi/">
+      Carta dei servizi</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/diritti-del-passeggero/suggerimenti-e-reclami/">
+      Suggerimenti e reclami</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/diritti-del-passeggero/passeggeri-a-ridotta-mobilita/">
+      Passeggeri a ridotta mobilità</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/business-general-aviation/">
+      Business &amp; general aviation</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/turismo-e-ospitalita/">
+      Turismo e ospitalità</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/airport/polo-intermodale/">
+      Polo Intermodale</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li >
+        <a href="/it/treni/">Treni</a>
+        
+      </li>
+    
+      <li class="has-children">
+        <a href="/it/autobus/">Bus</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/autobus/">Bus ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Bus</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/autobus/sconto-abbonati-apt/">
+      Sconti parcheggio per abbonati bus</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/autobus/informazioni-per-i-vettori/">
+      Informazioni per i vettori</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/autobus/diritti-del-passeggero-e-assistenze-speciali/">
+      Diritti del passeggero e assistenze speciali</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/autobus/pia-prospetto-informativo-autostazione/">
+      PIA (Prospetto Informativo Autostazione)</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li class="has-children">
+        <a href="/it/parcheggi/">Parcheggi</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/parcheggi/">Parcheggi ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Parcheggi</a>
+    </li>
+    
+      <li >
+      
+          <a href="https://park.triesteairport.it/">
+      Prenota il tuo parcheggio</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/parcheggi/guida-parcheggi/">
+      Guida Parcheggi</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/parcheggi/p8-il-tuo-parcheggio-intelligente/">
+      P8 IL TUO PARCHEGGIO INTELLIGENTE</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/parcheggi/richiesta-fattura/">
+      Richiesta fattura</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/parcheggi/infoviaggiando-informati-sul-traffico-e-la-viabilita-in-autostrada/">
+      InfoViaggiando: informati sul traffico e la viabilità in autostrada</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li class="has-children">
+        <a href="/it/corporate/">Corporate</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/corporate/">Corporate ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Corporate</a>
+    </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/corporate/lazienda/">
+      L&#x27;Azienda</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/corporate/lazienda/">L&#x27;Azienda ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">L&#x27;Azienda</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/corporate/lazienda/aeroporto-fvg/">
+      Aeroporto Friuli - Venezia Giulia S.p.A.</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/lazienda/carta-dei-servizi/">
+      Carta dei servizi</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/lazienda/albo-fornitori-e-procurement/">
+      Albo fornitori e-procurement</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/lazienda/regolamenti/">
+      Regolamenti</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/lazienda/pagamenti-on-line/">
+      Pagamenti online</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/lazienda/bandi-di-gara/">
+      Bandi di gara ante 2019</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/download/">
+      Download</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/lavora-con-noi/">
+      Lavora con noi</a>
+        
+      </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/corporate/b2b-non-aviation/">
+      B2B 
+Non-Aviation</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/corporate/b2b-non-aviation/">B2B 
+Non-Aviation ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">B2B 
+Non-Aviation</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-non-aviation/pubblicita-in-aeroporto-def/">
+      Pubblicità in aeroporto</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-non-aviation/manifestazioni-di-interesse/">
+      Manifestazioni di interesse</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-non-aviation/welcome-desk/">
+      Welcome desk</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-non-aviation/sale-riunioni-e-conferenze/">
+      Sale riunioni e conferenze</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-non-aviation/foto-e-film/">
+      Foto e Film</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/corporate/b2b-aviation/">
+      B2B 
+Aviation</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/corporate/b2b-aviation/">B2B 
+Aviation ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">B2B 
+Aviation</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/av-commerciale/">
+      Aviazione Commerciale</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/politiche-di-sviluppo-traffico-1/">
+      Politiche di sviluppo traffico</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/aviazione-generale/">
+      Business &amp; general aviation</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/merci/">
+      Merci</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/informazioni-per-le-compagnie-aeree/">
+      Informazioni per le compagnie aeree</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/tariffe-aeroportuali-per-lanno-2027/">
+      Tariffe aeroportuali per l&#x27;anno 2027</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/consultazione-annuale-degli-utenti-2026-tariffa-prm-2027/">
+      Consultazione Annuale degli utenti 2026 Tariffa PRM 2027</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/consultazione-annuale-degli-utenti-2026/">
+      Consultazione annuale degli utenti 2026</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/tariffe-aeroportuali-per-lanno-2026/">
+      Tariffe aeroportuali per l&#x27;anno 2026</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/consultazione-tariffa-prm-2026/">
+      Consultazione Annuale degli utenti 2025 Tariffa PRM 2026</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/consultazione-annuale-degli-utenti-2025-def/">
+      Consultazione annuale degli utenti 2025</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/tariffe-aeroportuali-per-lanno-2025/">
+      Tariffe aeroportuali per l&#x27;anno 2025</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/consultazione-tariffa-prm-2025/">
+      Consultazione Annuale degli utenti 2024 Tariffa PRM 2025</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/consultazione-annuale-degli-utenti-2024-def/">
+      Consultazione annuale degli utenti 2024</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/conclusione-della-procedura-di-consultazione-tariffaria-2024-2027/">
+      Conclusione della procedura di Consultazione tariffaria 2024 - 2027</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/consultazione-nuove-tariffe-aeroportuali-2024-2027/">
+      Consultazione nuove Tariffe Aeroportuali 2024 - 2027</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/tariffe-aeroportuali-per-lanno-2024/">
+      Tariffe aeroportuali per l’anno 2024</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/audizione-annuale-degli-utenti-2023/">
+      Audizione Annuale degli utenti 2023</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/tariffe-aeroportuali-per-lanno-2023/">
+      Tariffe aeroportuali per l’anno 2023</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/audizione-annuale-degli-utenti-2022-1/">
+      Audizione Annuale degli utenti 2022</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/tariffe-aeroportuali-per-lanno-2022/">
+      Tariffe aeroportuali per l&#x27;anno 2022</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/audizione-annuale-degli-utenti-2021/">
+      Audizione annuale degli utenti 2021</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/tariffe-aeroportuali-per-lanno-2021/">
+      Tariffe aeroportuali per l’anno 2021</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/audizione-annuale-degli-utenti-2020/">
+      Audizione annuale degli utenti 2020</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/conclusione-della-procedura-di-consultazione-tariffaria-2020-2023/">
+      Conclusione della procedura di Consultazione tariffaria 2020 - 2023</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/consultazione-nuove-tariffe-aeroportuali/">
+      Consultazione nuove Tariffe Aeroportuali 2020 - 2023</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/b2b-aviation/audizione-annuale-degli-utenti-2019-tariffe-2020/">
+      Audizione Annuale degli utenti 2019</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/corporate/polo-intermodale/">
+      Polo intermodale</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/corporate/polo-intermodale/">Polo intermodale ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Polo intermodale</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/corporate/polo-intermodale/descrizione-opera/">
+      Descrizione opera</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/polo-intermodale/posa-della-prima-pietra-23-012017/">
+      Photogallery: posa della prima pietra 23-01-2017</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/polo-intermodale/realizzazione-del-parcheggio-multipiano/">
+      Time-lapse: realizzazione parcheggio multipiano</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/polo-intermodale/installazione-passerella-di-collegamento-tra-polo-intermodale-e-trieste-airport/">
+      Time-lapse: passerella di collegamento tra il terminal Trieste Airport e il Polo Intermodale</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/polo-intermodale/photo-gallery-installazione-passerella-di-collegamento-terminal-trieste-airport-e-polo-intermodale/">
+      Photogallery: installazione passerella di collegamento terminal Trieste Airport e Polo Intermodale</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/polo-intermodale/photo-gallery-completamento-installazione-passerella_sormonto-ferrovia/">
+      Photogallery: completamento installazione passerella_sormonto ferrovia</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/polo-intermodale/video-panoramica-su-polo-intermodale/">
+      Video panoramica su Polo Intermodale</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/polo-intermodale/photo-gallery-il-polo-intermodale/">
+      Photogallery: il Polo Intermodale</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/corporate/amministrazione-trasparente/">
+      Società trasparente</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/corporate/amministrazione-trasparente/">Società trasparente ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Società trasparente</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/corporate/amministrazione-trasparente/aeroporto/">
+      Aeroporto Friuli Venezia Giulia SpA</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/amministrazione-trasparente/afvg-security/">
+      AFVG Security srl</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/download/">
+      Download</a>
+        
+      </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/corporate/stampa-e-media/">
+      Stampa e media</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/corporate/stampa-e-media/">Stampa e media ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Stampa e media</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/corporate/stampa-e-media/news/">
+      News</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/corporate/stampa-e-media/comunicati-stampa/">
+      Comunicati stampa</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li class="has-children">
+        <a href="/it/sostenibilita-esg/">Sostenibilità - ESG</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/sostenibilita-esg/">Sostenibilità - ESG ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Sostenibilità - ESG</a>
+    </li>
+    
+      <li class="has-children">
+      
+          <a href="/it/sostenibilita-esg/ambiente/">
+      Ambiente</a>
+        
+          
+
+
+
+
+  <ul class="list-unstyled cd-secondary-nav is-hidden">
+    <li class="section">
+      <a href="/it/sostenibilita-esg/ambiente/">Ambiente ›</a>
+    </li>
+    <li class="go-back">
+      <a href="#0">Ambiente</a>
+    </li>
+    
+      <li >
+      
+          <a href="/it/sostenibilita-esg/ambiente/politica-di-riduzione-delle-emissioni-di-co2/">
+      Politica di riduzione delle emissioni di CO2</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/sostenibilita-esg/ambiente/analisi-tecniche-e-misure-ambientali/">
+      Analisi tecniche e misure ambientali rumore</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/sostenibilita-esg/ambiente/definizione-delle-rotte-e-procedure-antirumore/">
+      Definizione delle rotte e procedure antirumore</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/sostenibilita-esg/ambiente/verbali-della-commissione-ambiente/">
+      Verbali della Commissione Ambiente</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/sostenibilita-esg/politica-e-piano-di-sostenibilita/">
+      Politica e piano di sostenibilità</a>
+        
+      </li>
+    
+      <li >
+      
+          <a href="/it/sostenibilita-esg/bilancio-di-sostenibilita/">
+      Bilancio di Sostenibilità</a>
+        
+      </li>
+    
+  </ul>
+
+
+
+        
+      </li>
+    
+    
+  </ul>
+
+
+
+  </nav>
+</header>
+
+
+  
+    
+
+  
+    <div id="menu">
+      <div class="container">
+        <ul class="list-unstyled">
+          
+            <li >
+              <a href="/it/airport/in-partenza/">In partenza</a>
+            </li>
+          
+            <li >
+              <a href="/it/airport/in-arrivo/">In arrivo</a>
+            </li>
+          
+            <li class="selected">
+              <a href="/it/airport/voli-e-destinazioni/">Voli e destinazioni</a>
+            </li>
+          
+            <li >
+              <a href="/it/airport/diritti-del-passeggero/">Diritti del passeggero</a>
+            </li>
+          
+            <li >
+              <a href="/it/airport/business-general-aviation/">Business &amp; general aviation</a>
+            </li>
+          
+            <li >
+              <a href="/it/airport/turismo-e-ospitalita/">Turismo e ospitalità</a>
+            </li>
+          
+            <li >
+              <a href="/it/airport/polo-intermodale/">Polo Intermodale</a>
+            </li>
+          
+        </ul>
+      </div>
+    </div>
+  
+
+
+  
+
+  
+    
+<div class="container">
+  <div id="breadcrumbs">
+    <a href="/it/">Home</a> <span class="sep">›</span>
+    
+      <a href="/it/airport/">Aerei</a> <span class="sep">›</span>
+    
+      <a href="/it/airport/voli-e-destinazioni/">Voli e destinazioni</a> <span class="sep">›</span>
+    
+    <span class="current">Voli in tempo reale</span>
+  </div>
+</div>
+
+  
+
+  <main id="contenuto" class="cd-main-content" tabindex="-1">
+    
+  <div class="container">
+    <div class="row">
+      
+      <div class="col-md-3 submenu">
+        
+  
+
+
+  
+  
+    <nav>
+      <ul class="list-unstyled">
+        
+          <li class="selected">
+            <a href="/it/airport/voli-e-destinazioni/voli-in-tempo-reale/">Voli in tempo reale</a>
+          </li>
+        
+          <li >
+            <a href="/it/airport/voli-e-destinazioni/lilberi-di-volare/">Liberi di Volare</a>
+          </li>
+        
+          <li >
+            <a href="/it/airport/voli-e-destinazioni/voli-diretti/">Voli diretti</a>
+          </li>
+        
+          <li >
+            <a href="/it/airport/voli-e-destinazioni/compagnie-aeree/">Compagnie aeree</a>
+          </li>
+        
+          <li >
+            <a href="/it/airport/voli-e-destinazioni/web-check-in/">Prenotazioni e web check-in</a>
+          </li>
+        
+      </ul>
+    </nav>
+  
+
+
+
+      </div>
+      
+      <div class="col-md-8 content">
+        <article>
+          
+
+  <h1>Voli in tempo reale</h1>
+  
+
+
+
+  <div class="pagetext">
+    
+
+
+    <p class="updated-date">Ultimo aggiornamento: 19:00</p>
+    <div class="voli-diretti">
+      <h3>Partenze</h3>
+      <table>
+        <tr>
+          <th>Volo</th>
+          <th>Destinazione</th>
+          <th class="d-none d-sm-table-cell">Previsto</th>
+          <th>Effettivo</th>
+          <th>Note</th>
+        </tr>
+        
+          <tr>
+            <td>XZ  02912</td>
+            <td>Milano LIN</td>
+            <td class="d-none d-sm-table-cell">17:00</td>
+            <td>
+              
+                18:55
+              
+            </td>
+            <td>Check-in chiuso</td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01364</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">19:15</td>
+            <td>
+              
+                19:15
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01356</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">06:35</td>
+            <td>
+              
+                06:35
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>XZ  02910</td>
+            <td>Milano LIN</td>
+            <td class="d-none d-sm-table-cell">07:40</td>
+            <td>
+              
+                07:40
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01358</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">11:15</td>
+            <td>
+              
+                11:15
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01360</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">15:15</td>
+            <td>
+              
+                15:15
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>XZ  02912</td>
+            <td>Milano LIN</td>
+            <td class="d-none d-sm-table-cell">17:00</td>
+            <td>
+              
+                17:00
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01364</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">19:15</td>
+            <td>
+              
+                19:15
+              
+            </td>
+            <td></td>
+          </tr>
+        
+      </table>
+
+      <h3>Arrivi</h3>
+      <table>
+        <tr>
+          <th>Volo</th>
+          <th>Provenienza</th>
+          <th class="d-none d-sm-table-cell">Previsto</th>
+          <th>Effettivo</th>
+          <th>Note</th>
+        </tr>
+        
+          <tr>
+            <td>AZ  01359</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">18:30</td>
+            <td>
+              
+                18:21
+              
+            </td>
+            <td>Arrivato</td>
+          </tr>
+        
+          <tr>
+            <td>XZ  02913</td>
+            <td>Milano LIN</td>
+            <td class="d-none d-sm-table-cell">20:05</td>
+            <td>
+              
+                22:00
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01363</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">22:55</td>
+            <td>
+              
+                22:55
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01357</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">10:25</td>
+            <td>
+              
+                10:25
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>XZ  02911</td>
+            <td>Milano LIN</td>
+            <td class="d-none d-sm-table-cell">10:55</td>
+            <td>
+              
+                10:55
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01365</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">14:30</td>
+            <td>
+              
+                14:30
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01359</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">18:30</td>
+            <td>
+              
+                18:30
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>XZ  02913</td>
+            <td>Milano LIN</td>
+            <td class="d-none d-sm-table-cell">20:05</td>
+            <td>
+              
+                20:05
+              
+            </td>
+            <td></td>
+          </tr>
+        
+          <tr>
+            <td>AZ  01363</td>
+            <td>Roma FCO</td>
+            <td class="d-none d-sm-table-cell">22:55</td>
+            <td>
+              
+                22:55
+              
+            </td>
+            <td></td>
+          </tr>
+        
+      </table>
+    </div>
+  </div>
+
+        </article>
+      </div>
+    </div>
+  </div>
+
+    <div class="cd-overlay"></div>
+  </main>
+
+  
+
+
+
+<footer id="footer">
+  <div id="footer-menu">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-9">
+          
+            
+              <nav>
+                <ul class="list-unstyled">
+                  
+                    <li>
+                      <a href="/it/airport/altre-informazioni/termini-duso/">Termini d&#x27;uso</a>
+                    </li>
+                  
+                    <li>
+                      <a href="/it/airport/altre-informazioni/privacy-policy/">Privacy</a>
+                    </li>
+                  
+                    <li>
+                      <a href="/it/airport/altre-informazioni/privacy-policy-informativa-utenti/">Privacy Utenti</a>
+                    </li>
+                  
+                    <li>
+                      <a href="/it/airport/altre-informazioni/cookie-policy/">Cookie</a>
+                    </li>
+                  
+                    <li>
+                      <a href="/it/airport/altre-informazioni/accessibilita/">Accessibilità del sito</a>
+                    </li>
+                  
+                    <li>
+                      <a href="/it/corporate/amministrazione-trasparente/">Società trasparente</a>
+                    </li>
+                  
+                    <li>
+                      <a href="/it/airport/altre-informazioni/numeri-utili-aeroporto/">Contatti</a>
+                    </li>
+                  
+                    <li>
+                      <a href="https://pass.triesteairport.it/">Pass</a>
+                    </li>
+                  
+                </ul>
+              </nav>
+            
+          
+        </div>
+
+        <div class="col-md-3 socials">
+          <a href="https://www.facebook.com/AeroportoTRS/?fref=ts" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="https://www.instagram.com/triesteairport/" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.linkedin.com/company/trieste-airport/" target="_blank" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <div class="row bottom">
+      <div class="logo col-md-4">
+        <img src="/static/img/logo-footer.png"
+             alt="Trieste Airport • Friuli Venezia Giulia">
+      </div>
+      <div class="col-md-8 address">
+        <p>
+          © Aeroporto Friuli Venezia Giulia SpA
+          <br>
+          Direzione e Coordinamento ex Art. 2497-bis C.C. di 2I Aeroporti SpA
+          <br>
+          CF, P. IVA, iscrizione R.I. GO 00520800319 – Capitale sociale 8.500.000&nbsp;€
+        </p>
+        
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js"
+            integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ="
+            crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+
+    <script src="/static/js/cookie-consent.js?a"></script>
+    <script src="/static/js/jquery.fancybox.min.js"></script>
+    <script src="/static/js/mega-menu.js?c"></script>
+    <script src="/static/js/functions.js?v=6"></script>
+    
+  </body>
+</html>

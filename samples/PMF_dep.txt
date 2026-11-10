@@ -1,0 +1,100 @@
+# https://www.parma-airport.it/it/partenze.aspx
+# status 500 final https://www.parma-airport.it/it/partenze.aspx
+# {"Cache-Control": "private", "Content-Type": "text/html; charset=utf-8", "Server": "", "X-AspNet-Version": "4.0.30319", "X-Powered-By": "ASP.NET", "Strict-Transport-Security": "max-age=31536000", "Date": "Tue, 10 Nov 2026 18:01:34 GMT", "Connection": "close", "Content-Length": "6363"}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Errore del parser</title>
+        <meta name="viewport" content="width=device-width" />
+        <style>
+         body {font-family:"Verdana";font-weight:normal;font-size: .7em;color:black;} 
+         p {font-family:"Verdana";font-weight:normal;color:black;margin-top: -5px}
+         b {font-family:"Verdana";font-weight:bold;color:black;margin-top: -5px}
+         H1 { font-family:"Verdana";font-weight:normal;font-size:18pt;color:red }
+         H2 { font-family:"Verdana";font-weight:normal;font-size:14pt;color:maroon }
+         pre {font-family:"Consolas","Lucida Console",Monospace;font-size:11pt;margin:0;padding:0.5em;line-height:14pt}
+         .marker {font-weight: bold; color: black;text-decoration: none;}
+         .version {color: gray;}
+         .error {margin-bottom: 10px;}
+         .expandable { text-decoration:underline; font-weight:bold; color:navy; cursor:pointer; }
+         @media screen and (max-width: 639px) {
+          pre { width: 440px; overflow: auto; white-space: pre-wrap; word-wrap: break-word; }
+         }
+         @media screen and (max-width: 479px) {
+          pre { width: 280px; }
+         }
+        </style>
+    </head>
+
+    <body bgcolor="white">
+
+            <span><H1>Errore server nell'applicazione '/'.<hr width=100% size=1 color=silver></H1>
+
+            <h2> <i>Errore del parser</i> </h2></span>
+
+            <font face="Arial, Helvetica, Geneva, SunSans-Regular, sans-serif ">
+
+            <b> Descrizione: </b>Errore durante l'analisi di una risorsa necessaria per soddisfare la richiesta. Rivedere i dettagli relativi all'errore e modificare in modo appropriato il file di origine.
+            <br><br>
+
+            <b> Messaggio di errore del parser: </b>Non &#232; stato possibile caricare il tipo 'it_partenze' dall'assembly 'parma-airport, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null'.<br><br>
+
+            <b>Errore nel codice sorgente:</b> <br><br>
+
+            <table width=100% bgcolor="#ffffcc">
+               <tr>
+                  <td>
+                      <code><pre>
+
+<font color=red>Riga 1:  &lt;%@ page language=&quot;c#&quot; inherits=&quot;it_partenze, parma-airport&quot; %&gt;
+</font>Riga 2:  
+Riga 3:  &lt;!DOCTYPE html&gt;</pre>                      </code>
+
+                  </td>
+               </tr>
+            </table>
+
+            <br>
+
+            <b> File di origine: </b> /it/partenze.aspx<b> &nbsp;&nbsp; Riga: </b> 1
+            <br><br>
+
+            <hr width=100% size=1 color=silver>
+
+            <b>Informazioni di versione:</b>&nbsp;Versione di Microsoft .NET Framework:4.0.30319; Versione di ASP.NET:4.8.4805.0
+
+            </font>
+
+    </body>
+</html>
+<!-- 
+[TypeLoadException]: Non &#232; stato possibile caricare il tipo &#39;it_partenze&#39; dall&#39;assembly &#39;parma-airport, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null&#39;.
+   in System.Reflection.RuntimeAssembly.GetType(RuntimeAssembly assembly, String name, Boolean throwOnError, Boolean ignoreCase, ObjectHandleOnStack type)
+   in System.Reflection.RuntimeAssembly.GetType(String name, Boolean throwOnError, Boolean ignoreCase)
+   in System.Web.UI.TemplateParser.ProcessInheritsAttribute(String baseTypeName, String codeFileBaseTypeName, String src, Assembly assembly)
+   in System.Web.UI.TemplateParser.PostProcessMainDirectiveAttributes(IDictionary parseData)
+[HttpParseException]: Non &#232; stato possibile caricare il tipo &#39;it_partenze&#39; dall&#39;assembly &#39;parma-airport, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null&#39;.
+   in System.Web.UI.TemplateParser.ProcessException(Exception ex)
+   in System.Web.UI.TemplateParser.ParseStringInternal(String text, Encoding fileEncoding)
+   in System.Web.UI.TemplateParser.ParseString(String text, VirtualPath virtualPath, Encoding fileEncoding)
+[HttpParseException]: Non &#232; stato possibile caricare il tipo &#39;it_partenze&#39; dall&#39;assembly &#39;parma-airport, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null&#39;.
+   in System.Web.UI.TemplateParser.ParseString(String text, VirtualPath virtualPath, Encoding fileEncoding)
+   in System.Web.UI.TemplateParser.ParseFile(String physicalPath, VirtualPath virtualPath)
+   in System.Web.UI.TemplateParser.ParseInternal()
+   in System.Web.UI.TemplateParser.Parse()
+   in System.Web.Compilation.BaseTemplateBuildProvider.get_CodeCompilerType()
+   in System.Web.Compilation.BuildProvider.GetCompilerTypeFromBuildProvider(BuildProvider buildProvider)
+   in System.Web.Compilation.BuildProvidersCompiler.ProcessBuildProviders()
+   in System.Web.Compilation.BuildProvidersCompiler.PerformBuild()
+   in System.Web.Compilation.BuildManager.CompileWebFile(VirtualPath virtualPath)
+   in System.Web.Compilation.BuildManager.GetVPathBuildResultInternal(VirtualPath virtualPath, Boolean noBuild, Boolean allowCrossApp, Boolean allowBuildInPrecompile, Boolean throwIfNotFound, Boolean ensureIsUpToDate)
+   in System.Web.Compilation.BuildManager.GetVPathBuildResultWithNoAssert(HttpContext context, VirtualPath virtualPath, Boolean noBuild, Boolean allowCrossApp, Boolean allowBuildInPrecompile, Boolean throwIfNotFound, Boolean ensureIsUpToDate)
+   in System.Web.Compilation.BuildManager.GetVirtualPathObjectFactory(VirtualPath virtualPath, HttpContext context, Boolean allowCrossApp, Boolean throwIfNotFound)
+   in System.Web.Compilation.BuildManager.CreateInstanceFromVirtualPath(VirtualPath virtualPath, Type requiredBaseType, HttpContext context, Boolean allowCrossApp)
+   in System.Web.UI.PageHandlerFactory.GetHandlerHelper(HttpContext context, String requestType, VirtualPath virtualPath, String physicalPath)
+   in System.Web.HttpApplication.MaterializeHandlerExecutionStep.System.Web.HttpApplication.IExecutionStep.Execute()
+   in System.Web.HttpApplication.ExecuteStepImpl(IExecutionStep step)
+   in System.Web.HttpApplication.ExecuteStep(IExecutionStep step, Boolean& completedSynchronously)
+--><!-- 
+La pagina di errore potrebbe contenere informazioni riservate poiché ASP.NET è configurato per visualizzare messaggi di errore dettagliati mediante &lt;customErrors mode="Off"/&gt;. Si consiglia di utilizzare &lt;customErrors mode="On"/&gt; o &lt;customErrors mode="RemoteOnly"/&gt; negli ambienti di produzione.-->
