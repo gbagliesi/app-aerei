@@ -44,7 +44,7 @@ const OTHER = {
   MAN: manchester, HAM: hamburg, BER: berlin, ARN: (n, log) => swedavia('ARN', n, log), VIE: vienna, PRG: prague, DUB: dublin, EDI: edinburgh,
   CGN: cologne, BUD: budapest, SKG: (n, log) => fraportGreece('skg-airport.gr', 'Salonicco', n, log), CHQ: (n, log) => fraportGreece('chq-airport.gr', 'Chania', n, log),
   WAW: warsaw, KRK: krakow, LCA: (n, log) => hermes('LCA', n, log), PFO: (n, log) => hermes('PFO', n, log), MLA: malta, ZAG: zagreb, DBV: dubrovnik,
-  SXB: strasbourg, // FKB (baden-airpark.de) risponde 403 al Worker: lettore badenAirpark pronto ma non attivo
+  SXB: strasbourg, BSL: euroairport, // FKB (baden-airpark.de) risponde 403 al Worker: lettore badenAirpark pronto ma non attivo
 };
 
 const isSupported = a => !!(TOSCANA[a] || PUGLIA.includes(a) || ADR[a] || OTHER[a] || a === 'GVA');
@@ -1400,6 +1400,48 @@ async function fraportGreece(host, name, nature, log) {
       city: f.apname, cityCode: f.iata, airline: f.alname, codeshare: f.cs,
     }, nature);
   }), tz, name);
+}
+
+// ---------- Basilea-Mulhouse (EuroAirport) ----------
+// Elenco del sito (Drupal, 10 voli per pagina, dall'ora indicata) + JSON pubblico del singolo volo /eap_api/data/flight/{id}/en
+// (orari stimati ed effettivi, gate, stand, nastro, marche e tipo aereo). Orari locali (Europe/Paris).
+async function euroairport(nature, log) {
+  const tz = 'Europe/Paris', A = nature === 'A', from = localNow(tz, -180);
+  const base = `https://www.euroairport.com/en/${A ? 'vols-a-l-arrivee' : 'vols-au-depart'}?flight_type=passagers&field_scheduled_time=${encodeURIComponent(`${from.date} ${from.hm}`)}`;
+  const pages = await Promise.all([0, 1, 2, 3, 4].map(p => getText(`${base}&page=${p}`, log, { name: 'EuroAirport', quiet: true, accept: 'text/html' }).catch(() => '')));
+  if (!pages.some(Boolean)) throw new Error('EuroAirport: nessuna risposta');
+  const rows = new Map();
+  for (const t of pages) for (const m of t.matchAll(/data-eap-flight-id="(\d+)"([\s\S]*?)<\/article>/g)) {
+    const h = m[2];
+    rows.set(m[1], { sched: clock(/<time[^>]*>([^<]*)</.exec(h)?.[1]), city: strip(/flight-teaser__airport">([\s\S]*?)<\/a>/.exec(h)?.[1] || ''),
+      number: strip(/body__code">([^<]*)</.exec(h)?.[1] || ''), airline: strip((/<\/span>([^<]*)<\/p>/.exec(h)?.[1]) || '') });
+  }
+  const ids = [...rows.keys()].slice(0, 40), today = localNow(tz).date, out = [];
+  const at = (date, hm, ref) => { // HH:MM vicino all'orario previsto (passaggio della mezzanotte)
+    if (!clock(hm)) return null;
+    let d = date; const diff = hmMin(hm) - hmMin(ref || hm);
+    if (ref && diff < -720) d = addDays(date, 1); else if (ref && diff > 720) d = addDays(date, -1);
+    return `${d}T${clock(hm)}`;
+  };
+  const det = await Promise.all(ids.map(id => getText(`https://www.euroairport.com/eap_api/data/flight/${id}/en`, log, { name: 'EuroAirport', quiet: true, timeout: 10000 })
+    .then(t => JSON.parse(t).flights?.[0]).catch(() => null)));
+  ids.forEach((id, i) => {
+    const r = rows.get(id), f = det[i];
+    if (!f) { // solo l'elenco: orario previsto, città, volo
+      if (r.sched && r.number) out.push(rec({ number: r.number, schedDate: `${today}T${r.sched}`, city: titleCase(r.city), airline: r.airline }, nature));
+      return;
+    }
+    const s = A ? f.sta : f.std, date = f.flight_date || today, schedDate = at(date, s);
+    if (!schedDate) return;
+    const st = (f.flight_status_text || '').trim(), dash = v => (v && v !== '-' ? v : null);
+    out.push(rec({ number: f.flight_no_iata || f.flight_no || r.number, schedDate,
+      estAt: at(date, A ? f.eta : f.etd, s), actualAt: at(date, A ? f.ata : f.atd, s),
+      status: statusIt(st.replace(/\s*\d{1,2}:\d{2}.*$/, ''), nature), statusCode: f.flight_status_code || st || null,
+      gate: A ? null : dash(f.boarding_gate), checkin: A ? null : dash(f.check_in_counter), stand: dash(f.aircraft_parking_position), belt: A ? dash(f.belt_no) : null,
+      reg: f.aircraft_reg_no, type: f.aircraft_type_code || f.aircraft_type, city: titleCase(f.airport_name || f.airport_name_custom || r.city), cityCode: f.airport_iata,
+      airline: f.airline_name || r.airline, codeshare: (f.code_share_no || []).map(c => typeof c === 'string' ? c : c?.flight_no_iata || c?.flight_no) }, nature));
+  });
+  return finish(out, tz, 'EuroAirport');
 }
 
 // ---------- Tabelloni HTML ----------

@@ -57,7 +57,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.1 · percorso del giorno di un aereo (clic sulle marche)';
+const APP_VERSION = '4.1.1 · Basilea-Mulhouse con tabellone ufficiale';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
