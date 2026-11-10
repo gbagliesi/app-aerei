@@ -23,6 +23,6 @@ jobs:
             # formato: URL|regex|corpo POST|content-type|profilo header (browser, curl, xhr; tutti facoltativi)
             IFS='|' read -r u g b c h <<< "$p"
             echo "=== $u ${b:+(POST)}"
-            curl -s -G "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/probe" --data-urlencode "url=$u" --data-urlencode "grep=$g" ${b:+--data-urlencode "body=$b"} ${c:+--data-urlencode "ctype=$c"} ${h:+--data-urlencode "hp=$h"} | head -c 6000
+            curl -s -G "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/probe" --data-urlencode "url=$u" --data-urlencode "grep=$g" ${b:+--data-urlencode "body=$b"} ${c:+--data-urlencode "ctype=$c"} ${h:+--data-urlencode "hp=$h"} > r.json; if [ -n "$g" ]; then jq -c 'del(.start) | select((.matches // []) | length > 0 or .status != 200)' r.json 2>/dev/null || head -c 3000 r.json; else head -c 6000 r.json; fi
             echo
           done
