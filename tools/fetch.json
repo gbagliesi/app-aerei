@@ -1,34 +1,20 @@
 [
 {
-"id": "EDI_idx",
-"url": "https://www.edinburghairport.com/assets/index-DNc32LqK.js"
+"id": "HAM_dep",
+"url": "https://www.hamburg-airport.de/service/flightdata/departures",
+"headers": {
+"Accept": "application/json"
+}
 },
 {
-"id": "DUB_q0",
-"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&pageSize=100"
+"id": "HAM_arr",
+"url": "https://www.hamburg-airport.de/service/flightdata/arrivals",
+"headers": {
+"Accept": "application/json"
+}
 },
 {
-"id": "DUB_q1",
-"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&limit=100"
-},
-{
-"id": "DUB_q2",
-"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&size=100"
-},
-{
-"id": "DUB_q3",
-"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&page=2"
-},
-{
-"id": "DUB_q4",
-"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&cursor=177014&direction=next"
-},
-{
-"id": "DUB_q5",
-"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&after=177014"
-},
-{
-"id": "SKG_arr2",
-"url": "https://www.skg-airport.gr/en/_jcr_content.arrivals.json?date=2026-11-11"
+"id": "EDI_api",
+"url": "https://flights-api.edinburghairport.com/flights/departures?version=2"
 }
 ]
