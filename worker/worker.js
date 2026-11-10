@@ -32,7 +32,8 @@ const PROBE_HOSTS = ['veniceairport.it', 'veneziaairport.it', 'aeroportodigenova
   'tokyo-haneda.com', 'narita-airport.jp', 'bcia.com.cn', 'istairport.com', 'jfkairport.com', 'newarkairport.com', 'flylax.com', 'flysfo.com',
   'dfwairport.com', 'atl.com', 'flychicago.com', 'iah.org', 'fly2houston.com', 'mia-airport.com', 'flydenver.com', 'iflyorlando.com', 'orlandoairports.net',
   // aeroporti europei bloccati dal server di GitHub (prova dal Worker, 2026-11-10)
-  'cph.dk', 'aia.gr', 'heraklion-airport.gr', 'brusselsairport.be', 'stuttgart-airport.com', 'flughafen-stuttgart.de', 'glasgowairport.com', 'split-airport.hr', 'euroairport.com', 'finavia.fi', 'maa.nl'];
+  'cph.dk', 'aia.gr', 'heraklion-airport.gr', 'brusselsairport.be', 'stuttgart-airport.com', 'flughafen-stuttgart.de', 'glasgowairport.com', 'split-airport.hr', 'euroairport.com', 'finavia.fi', 'maa.nl',
+  'baden-airpark.de', 'bru-system.be', 'airport.ai'];
 const OTHER = {
   MXP: (n, log, env) => sea('mxp', n, log, env), LIN: (n, log, env) => sea('lin', n, log, env),
   ZRH: zurich, FRA: frankfurt, CTA: catania, MUC: munich, PMO: palermo, BLQ: bologna,
@@ -85,14 +86,18 @@ export default {
       const t0 = Date.now();
       try {
         const body = url.searchParams.get('body');
+        // hp: profilo di intestazioni (browser, curl, xhr) per capire se un 403 dipende dagli header o dalla rete
+        const hp = url.searchParams.get('hp') || 'browser';
+        const base = hp === 'curl' ? { 'User-Agent': 'curl/8.5.0', 'Accept': '*/*' }
+          : { 'User-Agent': UA, 'Accept': 'application/json, text/html;q=0.9, */*;q=0.8', 'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8,it;q=0.7' };
+        if (hp === 'xhr') Object.assign(base, { 'X-Requested-With': 'XMLHttpRequest', 'Referer': new URL(target).origin + '/' });
         const r = await fetch(target, { signal: AbortSignal.timeout(15000), method: body ? 'POST' : 'GET', body: body || undefined,
-          headers: { 'User-Agent': UA, 'Accept': 'application/json, text/html;q=0.9, */*;q=0.8', 'Accept-Language': 'it-IT,it;q=0.9,en;q=0.8',
-            ...(body ? { 'Content-Type': url.searchParams.get('ctype') || 'application/json' } : {}) } });
+          headers: { ...base, ...(body ? { 'Content-Type': url.searchParams.get('ctype') || 'application/json' } : {}) } });
         const t = await r.text();
         const grep = url.searchParams.get('grep');
         let matches;
         if (grep) { try { matches = [...new Set((t.match(new RegExp(grep, 'gi')) || []))].slice(0, 60); } catch (e) { matches = [String(e.message)]; } }
-        return json({ url: target, status: r.status, ms: Date.now() - t0, length: t.length, server: r.headers.get('server'), type: r.headers.get('content-type'), start: t.slice(0, 600), matches });
+        return json({ url: target, hp, status: r.status, cfRay: r.headers.get('cf-ray'), ms: Date.now() - t0, length: t.length, server: r.headers.get('server'), type: r.headers.get('content-type'), start: t.slice(0, 600), matches });
       } catch (e) { return json({ url: target, error: String(e.message || e) }, 502); }
     }
     if (!['/board', '/debug'].includes(url.pathname)) return json({ error: 'not found' }, 404);
