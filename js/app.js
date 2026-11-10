@@ -5,21 +5,26 @@ import { greatCircle, distanceKm } from './demo.js';
 import { initTabs, enterTab, setTabInfo, playEnterAnim, closeAllTabs, openTabsCount } from './tabs.js';
 
 // Riga "Fonti" sotto il tabellone: da dove arrivano i dati mostrati
+// Avviso breve sopra il tabellone (i dettagli sono nel riquadro "Fonti" in fondo alla pagina)
 function sourcesNote(iata, dir, list, degraded) {
   const s = getSettings();
-  if (s.provider !== 'aerodatabox') return '<p class="hint sources">Fonte: dati dimostrativi (modalità demo, nessun dato reale).</p>';
+  const note = (txt, cls = '') => `<p class="hint sources ${cls}">${txt}</p>`;
+  if (s.provider !== 'aerodatabox') return note('Fonte: dati dimostrativi.');
   const site = OFFICIAL_SOURCES[iata];
-  if (!OFFICIAL_AIRPORTS[iata]) return '<p class="hint sources">Fonte: AeroDataBox. Per questo aeroporto non c’è un tabellone ufficiale collegato.</p>';
-  if (!(s.workerUrl || '').trim()) return `<p class="hint sources">Fonte: AeroDataBox. Il tabellone ufficiale (${esc(site)}) si attiva impostando il Worker in Impostazioni.</p>`;
+  if (!OFFICIAL_AIRPORTS[iata] || !(s.workerUrl || '').trim()) return note('Fonte: AeroDataBox.');
   const i = officialInfo[`${iata}:${dir === 'dep' ? 'D' : 'A'}`] || {};
-  if (i.error) return `<p class="hint sources">Fonte: AeroDataBox. ⚠ Tabellone ufficiale (${esc(site)}) non disponibile: ${esc(i.error)}</p>`;
-  if (degraded) return `<p class="hint sources official">Fonte: tabellone ufficiale dell’aeroporto (${esc(site)}). ⚠ AeroDataBox non disponibile: ${esc(degraded)}</p>`;
+  if (i.error) return note(`Fonte: AeroDataBox · ⚠ tabellone ufficiale non disponibile ora.`);
+  if (degraded) return note(`Fonte: ${esc(site)} · ⚠ AeroDataBox non disponibile ora.`, 'official');
+  return note(`Fonti: ${esc(site)} + AeroDataBox.`, 'official');
+}
+// riepilogo per il riquadro "Fonti": quanti voli da quale fonte
+function boardCounts(list) {
   const both = list.filter(x => x._official && !x._officialOnly).length, only = list.filter(x => x._officialOnly).length, adb = list.length - both - only;
   const parts = [];
-  if (both) parts.push(`${both} con orari, gate, check-in e stato dal tabellone ufficiale e gli altri dati da AeroDataBox`);
+  if (both) parts.push(`${both} dal tabellone ufficiale completati da AeroDataBox`);
   if (only) parts.push(`${only} solo nel tabellone ufficiale`);
   if (adb) parts.push(`${adb} solo da AeroDataBox`);
-  return `<p class="hint sources official">Fonti: tabellone ufficiale dell’aeroporto (${esc(site)}), che ha la priorità, e AeroDataBox. ${parts.length ? `Voli: ${parts.join('; ')}.` : ''}</p>`;
+  return parts.length ? `voli in questa vista: ${parts.join('; ')}` : '';
 }
 // Aeroporti senza tabellone ufficiale leggibile dal Worker (siti protetti): link alla pagina ufficiale
 const SITE_BOARDS = {
@@ -39,7 +44,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '3.8 · tab per voli e aeroporti, fonti in ogni pagina';
+const APP_VERSION = '3.8.1 · tab, fonti in ogni pagina, avviso fonti breve';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -199,7 +204,9 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
     if (isDemo()) return pageSources([DEMO_SRC]);
     const site = OFFICIAL_SOURCES[iata];
     return pageSources([
-      OFFICIAL_AIRPORTS[iata] ? `tabellone: <b>tabellone ufficiale dell’aeroporto</b> (${esc(site)}), che ha la priorità per orari, gate, check-in, nastro e stato, completato con <b>AeroDataBox</b> (riepilogo sopra il tabellone)` : `tabellone: <b>AeroDataBox</b>${SITE_BOARDS[iata] ? ` (il sito ufficiale ${esc(SITE_BOARDS[iata].name)} non è leggibile in automatico: c’è il link sopra)` : ''}`,
+      OFFICIAL_AIRPORTS[iata] ? `tabellone: <b>tabellone ufficiale dell’aeroporto</b> (${esc(site)}), che ha la priorità per orari, gate, check-in, nastro e stato, completato con <b>AeroDataBox</b>${(getSettings().workerUrl || '').trim() ? '' : ' (si attiva impostando il Worker in Impostazioni; ora si usa solo AeroDataBox)'}` : `tabellone: <b>AeroDataBox</b>${SITE_BOARDS[iata] ? ` (il sito ufficiale ${esc(SITE_BOARDS[iata].name)} non è leggibile in automatico: c’è il link sopra)` : ' (per questo aeroporto non c’è un tabellone ufficiale collegato)'}`,
+      (() => { const i = officialInfo[`${iata}:${bdir === 'dep' ? 'D' : 'A'}`] || {}; return i.error ? `⚠ tabellone ufficiale non disponibile: ${esc(i.error)}` : data?.degraded ? `⚠ AeroDataBox non disponibile: ${esc(data.degraded)}` : ''; })(),
+      OFFICIAL_AIRPORTS[iata] && list ? boardCounts(list) : '',
       'sotto lo stato di ogni volo: <b>uff.</b> = solo tabellone ufficiale, <b>uff. + ADB</b> = tabellone ufficiale completato da AeroDataBox, <b>ADB</b> = solo AeroDataBox',
       'orari nell’ora locale dell’aeroporto; in arancione l’orario stimato o effettivo se diverso di almeno 5 minuti',
       list?.some(x => x.aircraft?.reg) ? 'marche degli aerei (✈︎): tabellone ufficiale o AeroDataBox' : '',
