@@ -44,7 +44,7 @@ const OTHER = {
   MAN: manchester, HAM: hamburg, BER: berlin, ARN: (n, log) => swedavia('ARN', n, log), VIE: vienna, PRG: prague, DUB: dublin, EDI: edinburgh,
   CGN: cologne, BUD: budapest, SKG: (n, log) => fraportGreece('skg-airport.gr', 'Salonicco', n, log), CHQ: (n, log) => fraportGreece('chq-airport.gr', 'Chania', n, log),
   WAW: warsaw, KRK: krakow, LCA: (n, log) => hermes('LCA', n, log), PFO: (n, log) => hermes('PFO', n, log), MLA: malta, ZAG: zagreb, DBV: dubrovnik,
-  SXB: strasbourg, BSL: euroairport, // FKB (baden-airpark.de) risponde 403 al Worker: lettore badenAirpark pronto ma non attivo
+  SXB: strasbourg, BSL: euroairport, STR: stuttgart, // FKB (baden-airpark.de) risponde 403 al Worker: lettore badenAirpark pronto ma non attivo
 };
 
 const isSupported = a => !!(TOSCANA[a] || PUGLIA.includes(a) || ADR[a] || OTHER[a] || a === 'GVA');
@@ -371,7 +371,7 @@ function statusIt(t, nature) {
   if (/^(departing|expected|estimated|prévu|on time|in orario|previsto|scheduled)\b/i.test(s) && !/annul|cancel/i.test(s)) return null;
   const map = [
     [/annul|cancel|soppress/, 'Cancellato'], [/umgeleitet|divert|dérout|dirott/, 'Dirottato'],
-    [/boarding (closed|finished|completed)|embarquement terminé/, 'Gate chiuso'],
+    [/boarding (closed|finished|completed)|embarquement terminé|eingestiegen/, 'Gate chiuso'],
     [/gelandet|landed|auf position|gepäck|baggage|bags|arrived|arrivé|arrive [aà]|atterr|bagagli/, 'Atterrato'],
     [/anflug|approach|approche|in arrivo/, 'In arrivo'],
     [/gestartet|departed|airborne|en route|unterwegs|décollé|decoll|partito/, nature === 'A' ? 'In volo' : 'Decollato'],
@@ -1442,6 +1442,31 @@ async function euroairport(nature, log) {
       airline: f.airline_name || r.airline, codeshare: (f.code_share_no || []).map(c => typeof c === 'string' ? c : c?.flight_no_iata || c?.flight_no) }, nature));
   });
   return finish(out, tz, 'EuroAirport');
+}
+
+// ---------- Stoccarda (STR) ----------
+// Tabellone HTML del sito (ieri sera, oggi e domani in un'unica pagina, ~1,2 MB). Orari locali "H:MM";
+// is--yesterday = ieri; data-flights-day = today/tomorrow. Codice IATA della città in fondo a data-filter.
+async function stuttgart(nature, log) {
+  const tz = 'Europe/Berlin', A = nature === 'A', today = localNow(tz).date, out = [];
+  const t = await getText('https://www.stuttgart-airport.com/de/reisende-besucher/fliegen/ankunft-abflug', log, { name: 'Stoccarda', quiet: true, accept: 'text/html', timeout: 20000 });
+  const re = new RegExp(`<a href="[^"]*/ankunft-abflug/\\d+"[^>]*data-flights-day="([a-z]+)"[^>]*data-flights-table-traffic="${A ? 'arrival' : 'departure'}" data-filter="([^"]*)">([\\s\\S]*?)</a>`, 'g');
+  for (const m of t.matchAll(re)) {
+    const h = m[3], cell = c => strip((new RegExp(`flights-table__cell-${c}[^"]*">([\\s\\S]*?)</div>\\s*(?:<div data-role|$)`).exec(h) || [])[1] || '').replace(/^[A-Za-z-]+:\s*/, '');
+    const plan = clock(/is--plan">([^<]*)</.exec(h)?.[1]), est = clock(/<span class="is--(?:late|early|ontime|delayed)">([^<]*)</.exec(h)?.[1]);
+    if (!plan) continue;
+    const day = /is--yesterday/.test(h) ? -1 : m[1] === 'tomorrow' ? 1 : 0, date = addDays(today, day), schedDate = `${date}T${plan}`;
+    const air = /flights-table__cell-airline">[\s\S]*?<p>\s*([^<]+?)\s*(?:<br>\s*([^<]+?)\s*)?<\/p>/.exec(h) || [];
+    const st = strip((/data-tag><span>([^<]*)</.exec(h) || [])[1] || '');
+    let estAt = null;
+    if (est) { let d = date; const diff = hmMin(est) - hmMin(plan); if (diff < -720) d = addDays(date, 1); else if (diff > 720) d = addDays(date, -1); estAt = `${d}T${est}`; }
+    const done = /gestartet|gelandet|gepäck/i.test(st);
+    const code = (/([A-Z]{3})\s*$/.exec(m[2]) || [])[1];
+    out.push(rec({ number: air[1], schedDate, estAt: done ? null : estAt, actualAt: done ? estAt : null,
+      status: statusIt(st, nature), statusCode: st || null, gate: A ? null : cell('gate') || null, checkin: A ? null : cell('checkin') || null,
+      terminal: cell('terminal') || null, type: cell('aircraft') || null, city: titleCase(cell('from')), cityCode: code, airline: air[2] }, nature));
+  }
+  return finish(out, tz, 'Stoccarda');
 }
 
 // ---------- Tabelloni HTML ----------

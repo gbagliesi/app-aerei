@@ -152,7 +152,7 @@ export const OFFICIAL_AIRPORTS = {
   TFS: 'Atlantic/Canary', TFN: 'Atlantic/Canary', LPA: 'Atlantic/Canary', ACE: 'Atlantic/Canary', FUE: 'Atlantic/Canary', VLC: 'Europe/Madrid',
   MAN: 'Europe/London', EDI: 'Europe/London', DUB: 'Europe/Dublin', HAM: 'Europe/Berlin', BER: 'Europe/Berlin', CGN: 'Europe/Berlin',
   ARN: 'Europe/Stockholm', VIE: 'Europe/Vienna', PRG: 'Europe/Prague', BUD: 'Europe/Budapest', WAW: 'Europe/Warsaw', KRK: 'Europe/Warsaw',
-  SKG: 'Europe/Athens', CHQ: 'Europe/Athens', LCA: 'Asia/Nicosia', PFO: 'Asia/Nicosia', MLA: 'Europe/Malta', ZAG: 'Europe/Zagreb', DBV: 'Europe/Zagreb', SXB: 'Europe/Paris', BSL: 'Europe/Paris',
+  SKG: 'Europe/Athens', CHQ: 'Europe/Athens', LCA: 'Asia/Nicosia', PFO: 'Asia/Nicosia', MLA: 'Europe/Malta', ZAG: 'Europe/Zagreb', DBV: 'Europe/Zagreb', SXB: 'Europe/Paris', BSL: 'Europe/Paris', STR: 'Europe/Berlin',
 };
 // Da dove arriva il tabellone ufficiale di ogni aeroporto (mostrato nella pagina come fonte)
 export const OFFICIAL_SOURCES = {
@@ -169,7 +169,7 @@ export const OFFICIAL_SOURCES = {
   HAM: 'hamburg-airport.de', BER: 'ber.berlin-airport.de', ARN: 'swedavia.com', VIE: 'viennaairport.com', PRG: 'prg.aero', DUB: 'dublinairport.com',
   EDI: 'edinburghairport.com', CGN: 'koeln-bonn-airport.de', BUD: 'bud.hu', SKG: 'skg-airport.gr (Fraport Greece)', CHQ: 'chq-airport.gr (Fraport Greece)',
   WAW: 'lotnisko-chopina.pl', KRK: 'krakowairport.pl', LCA: 'hermesairports.com', PFO: 'hermesairports.com', MLA: 'maltairport.com',
-  ZAG: 'zagreb-airport.hr', DBV: 'dbv.hr', SXB: 'strasbourg.aeroport.fr', BSL: 'euroairport.com',
+  ZAG: 'zagreb-airport.hr', DBV: 'dbv.hr', SXB: 'strasbourg.aeroport.fr', BSL: 'euroairport.com', STR: 'stuttgart-airport.com',
 };
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {
