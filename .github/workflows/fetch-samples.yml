@@ -4,6 +4,15 @@ name: Fetch samples
 
 on:
   workflow_dispatch:
+    inputs:
+      file:
+        description: 'Elenco richieste'
+        required: false
+        default: 'tools/fetch.json'
+      branch:
+        description: 'Ramo di destinazione'
+        required: false
+        default: 'samples-tmp'
 
 permissions:
   contents: write
@@ -15,10 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Fetch
-        run: python3 tools/fetch_samples.py tools/fetch.json
+        run: python3 tools/fetch_samples.py "${{ inputs.file || 'tools/fetch.json' }}"
       - name: Push samples-tmp
         run: |
           mkdir /tmp/s && mv samples /tmp/s/ && cd /tmp/s
-          git init -q -b samples-tmp && git add samples
+          git init -q -b "${{ inputs.branch || 'samples-tmp' }}" && git add samples
           git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -qm samples
-          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" samples-tmp
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" "${{ inputs.branch || 'samples-tmp' }}"
