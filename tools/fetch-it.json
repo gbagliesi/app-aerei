@@ -1,70 +1,54 @@
 [
  {
-  "id": "TRS_live",
-  "url": "https://triesteairport.it/en/airport/flights-and-destinations/live-flight-information/"
+  "id": "PSR_rt",
+  "url": "https://www.abruzzoairport.eu/index.php/voli-in-tempo-reale/"
  },
  {
-  "id": "TPS_page",
-  "url": "https://www.airgest.it/voli-del-giorno"
+  "id": "PMF_dep",
+  "url": "https://www.parma-airport.it/it/partenze.aspx"
  },
  {
-  "id": "TPS_live",
-  "url": "https://www.airgest.it/api/flight-live?"
+  "id": "PMF_arr",
+  "url": "https://www.parma-airport.it/it/arrivi.aspx"
  },
  {
-  "id": "TPS_liveD",
-  "url": "https://www.airgest.it/api/flight-live?type=D"
+  "id": "CUF_rv",
+  "url": "https://cuneoairport.com/ricerca-voli/"
  },
  {
-  "id": "PSR_home",
-  "url": "https://www.abruzzoairport.eu/"
+  "id": "TPS_dep",
+  "url": "https://www.airgest.it/voli-dati?type=dep"
  },
  {
-  "id": "PMF_flights",
-  "url": "https://www.parma-airport.it/it/flights.aspx"
+  "id": "TPS_arr",
+  "url": "https://www.airgest.it/voli-dati?type=arr"
  },
  {
-  "id": "LMP_voli",
-  "url": "https://www.aeroportodilampedusa.it/voli"
+  "id": "AOI_dep",
+  "url": "https://www.ancona-airport.com/passeggeri/voli/partenze/"
  },
  {
-  "id": "PNL_ap",
-  "url": "https://www.aeroportodipantelleria.it/info-voli/arrivi-partenze"
+  "id": "AOI_arr",
+  "url": "https://www.ancona-airport.com/passeggeri/voli/arrivi/"
  },
  {
-  "id": "CUF_home",
-  "url": "https://cuneoairport.com/"
+  "id": "TRS_it",
+  "url": "https://triesteairport.it/it/airport/voli-e-destinazioni/voli-in-tempo-reale/"
  },
  {
-  "id": "BZO_linea",
-  "url": "https://www.bolzanoairport.it/it/voli-di-linea"
+  "id": "FRL_2",
+  "url": "https://www.forli-airport.it/"
  },
  {
-  "id": "FRL_home",
-  "url": "https://www.forliairport.com/"
+  "id": "FRL_3",
+  "url": "https://www.aeroportoforli.it/"
  },
  {
-  "id": "AOI_1",
-  "url": "https://www.marcheairport.com/"
+  "id": "PEG_3",
+  "url": "https://www.airport.umbria.it/it/"
  },
  {
-  "id": "AOI_2",
-  "url": "https://www.ancona-airport.com/"
- },
- {
-  "id": "PEG_1",
-  "url": "https://airport.umbria.it/"
- },
- {
-  "id": "PEG_2",
-  "url": "https://www.perugia-airport.com/"
- },
- {
-  "id": "CIY_dep",
-  "url": "https://www.aeroportodicomiso.eu/departures"
- },
- {
-  "id": "EBA_home",
-  "url": "https://www.elbaisland-airport.it/"
+  "id": "PEG_4",
+  "url": "https://www.aeroportodiperugia.it/"
  }
 ]
