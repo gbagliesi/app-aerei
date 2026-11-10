@@ -1,58 +1,34 @@
 [
 {
-"id": "EDI_data",
-"url": "https://www.edinburghairport.com/flights/live-flight-departures.data"
+"id": "EDI_idx",
+"url": "https://www.edinburghairport.com/assets/index-DNc32LqK.js"
 },
 {
-"id": "EDI_data2",
-"url": "https://www.edinburghairport.com/flights/live-flight-departures.data?_routes=pages%2Fpassenger%2Fflights%2Flive-flight-departures%2Fpage"
+"id": "DUB_q0",
+"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&pageSize=100"
 },
 {
-"id": "BUD_ajax",
-"url": "https://www.bud.hu/ajax/flight-search?locale=en&query=&date=2026-11-10&time=18:00&hideDeparted=0&hideArrived=0&direction=departures",
-"headers": {
-"X-Requested-With": "XMLHttpRequest",
-"Accept": "application/json"
-}
+"id": "DUB_q1",
+"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&limit=100"
 },
 {
-"id": "DBV_dep",
-"url": "https://www.dbv.hr/en/departures/42"
+"id": "DUB_q2",
+"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&size=100"
 },
 {
-"id": "MST_fl",
-"url": "https://www.maa.nl/en/flights/"
+"id": "DUB_q3",
+"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&page=2"
 },
 {
-"id": "BRN_flug",
-"url": "https://www.bernairport.ch/de/passagiere-besucher/flugplan"
+"id": "DUB_q4",
+"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&cursor=177014&direction=next"
 },
 {
-"id": "BRN_home2",
-"url": "https://www.bernairport.ch/en/"
+"id": "DUB_q5",
+"url": "https://www.dublinairport.com/api/flight-listing/departures?date=2026-11-10T19:00:00.000Z&after=177014"
 },
 {
-"id": "SPU_www",
-"url": "https://www.split-airport.hr/index.php?lang=en"
-},
-{
-"id": "SPU_alt2",
-"url": "https://split-airport.hr/"
-},
-{
-"id": "GLA_home",
-"url": "https://www.glasgowairport.com/"
-},
-{
-"id": "CPH_api",
-"url": "https://www.cph.dk/api/FlightInformation/GetFlightInfoTable?direction=D&lang=en"
-},
-{
-"id": "STR_de",
-"url": "https://www.flughafen-stuttgart.de/"
-},
-{
-"id": "HEL_fv",
-"url": "https://www.finavia.fi/en/api/flights/HEL/departures"
+"id": "SKG_arr2",
+"url": "https://www.skg-airport.gr/en/_jcr_content.arrivals.json?date=2026-11-11"
 }
 ]
