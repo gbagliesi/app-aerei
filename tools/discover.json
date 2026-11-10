@@ -210,6 +210,15 @@
    "name": "Prague",
    "home": "https://www.prg.aero/en",
    "pages": []
+  },
+  "SUF": {
+   "name": "Lamezia Terme",
+   "home": "https://www.sacal.it/",
+   "pages": [
+    "https://www.sacal.it/voli/",
+    "https://www.sacal.it/lamezia-terme/voli/",
+    "https://www.lameziaairport.it/"
+   ]
   }
  }
 }
