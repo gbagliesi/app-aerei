@@ -44,7 +44,8 @@ const OTHER = {
   MAN: manchester, HAM: hamburg, BER: berlin, ARN: (n, log) => swedavia('ARN', n, log), VIE: vienna, PRG: prague, DUB: dublin, EDI: edinburgh,
   CGN: cologne, BUD: budapest, SKG: (n, log) => fraportGreece('skg-airport.gr', 'Salonicco', n, log), CHQ: (n, log) => fraportGreece('chq-airport.gr', 'Chania', n, log),
   WAW: warsaw, KRK: krakow, LCA: (n, log) => hermes('LCA', n, log), PFO: (n, log) => hermes('PFO', n, log), MLA: malta, ZAG: zagreb, DBV: dubrovnik,
-  SXB: strasbourg, BSL: euroairport, STR: stuttgart, // FKB (baden-airpark.de) risponde 403 al Worker: lettore badenAirpark pronto ma non attivo
+  SXB: strasbourg, BSL: euroairport, STR: stuttgart,
+  SUF: (n, log) => sacal('SUF', n, log), REG: (n, log) => sacal('REG', n, log), CRV: (n, log) => sacal('CRV', n, log), // FKB (baden-airpark.de) risponde 403 al Worker: lettore badenAirpark pronto ma non attivo
 };
 
 const isSupported = a => !!(TOSCANA[a] || PUGLIA.includes(a) || ADR[a] || OTHER[a] || a === 'GVA');
@@ -374,6 +375,7 @@ function statusIt(t, nature) {
     [/boarding (closed|finished|completed)|embarquement terminé|eingestiegen/, 'Gate chiuso'],
     [/gelandet|landed|auf position|gepäck|baggage|bags|arrived|arrivat|arrivé|arrive [aà]|atterr|bagagli/, 'Atterrato'],
     [/anflug|approach|approche|in arrivo/, 'In arrivo'],
+    [/attesa decollo/, 'In rullaggio'],
     [/gestartet|departed|airborne|en route|unterwegs|décollé|decoll|partito/, nature === 'A' ? 'In volo' : 'Decollato'],
     [/rolling|rollt|taxied/, 'In rullaggio'],
     [/letzter aufruf|last call|final call|ultima chiamata|ultimo avviso|dernier appel/, 'Ultima chiamata'],
@@ -1687,6 +1689,37 @@ async function strasbourg(nature, log) {
       city: titleCase(v('ville')), airline: v('compagnie') }, nature));
   }
   return finish(out, tz, 'Strasburgo');
+}
+
+// SACAL (Lamezia, Reggio Calabria, Crotone): tabella HTML del giorno su sacal.it/it/<aeroporto>/arrivi|partenze/
+// (volo, città, orario, "est.HH:MM", stato); gate e nastro dai pochi voli in JSON nella home dell'aeroporto
+const SACAL = { SUF: ['lamezia-terme', 'Lamezia Terme'], REG: ['reggio-calabria', 'Reggio Calabria'], CRV: ['crotone', 'Crotone'] };
+async function sacal(code, nature, log) {
+  const tz = 'Europe/Rome', A = nature === 'A', [slug, name] = SACAL[code];
+  const [t, home] = await Promise.all([
+    getText(`https://sacal.it/it/${slug}/${A ? 'arrivi' : 'partenze'}/`, log, { name, quiet: true, accept: 'text/html' }),
+    getText(`https://sacal.it/it/${slug}/`, log, { name, quiet: true, accept: 'text/html' }).catch(() => ''),
+  ]);
+  const extra = {};
+  const js = new RegExp(`${A ? 'arrivals' : 'departures'}\\s*:\\s*(\\[[\\s\\S]*?\\])\\s*[,}]`).exec(home);
+  if (js) try { for (const o of JSON.parse(js[1])) extra[normNum(o.flight)] = o; } catch {}
+  const i = t.indexOf(A ? 'id="container-arrivi"' : 'id="container-partenze"'), seg = i >= 0 ? t.slice(i) : t;
+  const today = localNow(tz).date, out = [];
+  for (const m of seg.slice(0, Math.max(0, seg.indexOf('</table>')) || undefined).matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)) {
+    const td = [...m[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(x => strip(x[1]));
+    if (td.length < 4) continue;
+    const sched = clock(td[2]);
+    if (!td[0] || !sched) continue;
+    const schedDate = `${today}T${sched}`, st = td[4] || '', e = clock((/(\d{1,2}:\d{2})/.exec(td[3]) || [])[1]);
+    let estAt = null;
+    if (e) { const diff = hmMin(e) - hmMin(sched); estAt = `${diff < -720 ? addDays(today, 1) : diff > 720 ? addDays(today, -1) : today}T${e}`; }
+    const done = /atterrat|decollat|arrivat/i.test(st), x = extra[normNum(td[0])] || {};
+    const cm = /^(.*?)\s*\(([A-Z]{3})\)\s*$/.exec(td[1]);
+    out.push(rec({ number: td[0], schedDate, estAt: done ? null : estAt, actualAt: done ? estAt : null,
+      status: statusIt(st || x.gate_status || '', nature), statusCode: st || null,
+      gate: A ? null : x.gate, belt: A ? x.belt : null, city: cm ? cm[1] : td[1], cityCode: cm ? cm[2] : null }, nature));
+  }
+  return finish(out, tz, name);
 }
 
 // Karlsruhe/Baden-Baden: pagina "Tagesaktueller Flugplan" (HTML), solo orario; "Morgen" = domani
