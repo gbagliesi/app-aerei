@@ -234,11 +234,23 @@ function mapStatus(t) {
 function mergeOfficial(flights, official, sideKey, iata, used = null) {
   if (!official?.length) return flights;
   const tz = OFFICIAL_AIRPORTS[iata];
-  const byNum = new Map(official.flatMap(o => [...(o.codeshare || []).map(c => [c, o]), [o.number, o]]));
+  // stessa sigla in giorni diversi (alcuni tabelloni coprono più giorni): scelgo la riga con l'orario
+  // programmato più vicino, entro 12 ore, altrimenti non abbino
+  const byNum = new Map();
+  for (const o of official) for (const n of [o.number, ...(o.codeshare || [])]) { if (!byNum.has(n)) byNum.set(n, []); byNum.get(n).push(o); }
+  const offMs = o => o.schedDate ? Date.parse(`${o.schedDate.slice(0, 10)}T${o.schedDate.slice(11, 16)}:00${tzOffset(tz, o.schedDate.slice(0, 10))}`) : NaN;
+  const pick = (rows, ref) => {
+    if (!rows?.length) return null;
+    const t = Date.parse(ref?.utc || '');
+    if (isNaN(t)) return rows.length === 1 ? rows[0] : null;
+    let best = null, bd = 12 * 3600e3;
+    for (const o of rows) { const d = Math.abs(offMs(o) - t); if (isNaN(d) ? rows.length === 1 && !best : d <= bd) { best = o; if (!isNaN(d)) bd = d; } }
+    return best;
+  };
   for (const f of flights) {
     const side = f[sideKey];
     if (!side || side.iata !== iata) continue;
-    const o = byNum.get(f.number) || (f.codeshares || []).map(n => byNum.get(n)).find(Boolean);
+    const o = pick(byNum.get(f.number), side.sched) || (f.codeshares || []).map(n => pick(byNum.get(n), side.sched)).find(Boolean);
     if (!o) continue;
     used?.add(o);
     if (o.gate) side.gate = o.gate;
