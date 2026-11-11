@@ -49,7 +49,7 @@ const OTHER = {
   CGN: cologne, BUD: budapest, SKG: (n, log) => fraportGreece('skg-airport.gr', 'Salonicco', n, log), CHQ: (n, log) => fraportGreece('chq-airport.gr', 'Chania', n, log),
   WAW: warsaw, KRK: krakow, LCA: (n, log) => hermes('LCA', n, log), PFO: (n, log) => hermes('PFO', n, log), MLA: malta, ZAG: zagreb, DBV: dubrovnik,
   SXB: strasbourg, BSL: euroairport, STR: stuttgart,
-  SUF: (n, log) => sacal('SUF', n, log), REG: (n, log) => sacal('REG', n, log), CRV: (n, log) => sacal('CRV', n, log), // FKB (baden-airpark.de) risponde 403 al Worker: lettore badenAirpark pronto ma non attivo
+  SUF: (n, log) => sacal('SUF', n, log), REG: (n, log) => sacal('REG', n, log), CRV: (n, log) => sacal('CRV', n, log), RMI: rimini, // FKB (baden-airpark.de) risponde 403 al Worker: lettore badenAirpark pronto ma non attivo
 };
 
 const isSupported = a => !!(TOSCANA[a] || PUGLIA.includes(a) || ADR[a] || OTHER[a] || a === 'GVA');
@@ -1750,4 +1750,36 @@ async function badenAirpark(nature, log) {
       gate: A ? null : g[0], city: titleCase(o[0]), airline: col('airline')[0] }, nature));
   }
   return finish(out, tz, 'Baden-Airpark');
+}
+
+// Rimini (riminiairport.com, WordPress): righe "row-volo" in HTML (orario, città, compagnia nel logo, aereo, volo, stato),
+// raggruppate sotto intestazioni "row-data" con la data ("12 Novembre 2026"). OGGI ha lo stato in tempo reale;
+// SETTIMANALI serve per i voli di domani mattina che cadono nella finestra del tabellone (lì lo stato è solo LINEA/CHARTER).
+const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+async function rimini(nature, log) {
+  const tz = 'Europe/Rome', A = nature === 'A', today = localNow(tz).date;
+  const page = (sd, i) => getText(`https://riminiairport.com/it/voli/?direction=${A ? 'ARRIVALS' : 'DEPARTURES'}&airline=&city=&fascia=&pg=1&sched_date=${sd}&svol=`, log,
+    { name: 'Rimini', quiet: i > 0, accept: 'text/html' });
+  const [oggi, sett] = await Promise.all([page('OGGI', 0), page('SETTIMANALI', 1).catch(() => '')]);
+  const parse = (t, live) => {
+    const out = [];
+    let date = today;
+    for (const m of t.matchAll(/class="row-data"[\s\S]*?<div class="col-12[^"]*">\s*(\d{1,2}) (\w+) (\d{4})|class="row-volo [^"]*"([\s\S]*?)(?=class="(?:collapse |row-volo |row-data")|$)/g)) {
+      if (m[1]) { const mi = MESI.indexOf(m[2].toLowerCase()); if (mi >= 0) date = `${m[3]}-${String(mi + 1).padStart(2, '0')}-${m[1].padStart(2, '0')}`; continue; }
+      const c = [...m[4].matchAll(/<div class="col-[^"]*"[^>]*>([\s\S]*?)<\/div>/g)].map(x => strip(x[1]));
+      const sched = clock(c[0]);
+      if (!sched || !c[4]) continue;
+      const schedDate = `${date}T${sched}`, st = live && !/^(linea|charter)$/i.test(c[5] || '') ? (c[5] || '') : '';
+      const e = timeIn(st), done = /partit|decollat|atterrat|arrivat|landed|departed/i.test(st);
+      let at = null;
+      if (e) { const diff = hmMin(e) - hmMin(sched); at = `${diff < -720 ? addDays(date, 1) : diff > 720 ? addDays(date, -1) : date}T${e}`; }
+      out.push(rec({ number: c[4], schedDate, estAt: done ? null : at, actualAt: done ? at || schedDate : null,
+        status: st ? statusIt(st.replace(/\s*\d{1,2}[:.]\d{2}.*$/, '').replace(/partit[oa]/i, 'decollato').replace(/arrivat[oa]/i, 'atterrato'), nature) : null, statusCode: st || null,
+        type: c[3], city: titleCase(c[1]), airline: (/alt="([^"]*)"/.exec(m[4]) || [])[1] }, nature));
+    }
+    return out;
+  };
+  if (!/row-volo|non &egrave; programmato|non è programmato/.test(oggi)) throw new Error('Rimini: pagina voli inattesa');
+  const list = [...parse(oggi, true), ...parse(sett, false)];
+  return list.length ? finish(list, tz, 'Rimini') : [];
 }

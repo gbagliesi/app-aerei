@@ -154,7 +154,7 @@ export const OFFICIAL_AIRPORTS = {
   MAN: 'Europe/London', EDI: 'Europe/London', DUB: 'Europe/Dublin', HAM: 'Europe/Berlin', BER: 'Europe/Berlin', CGN: 'Europe/Berlin',
   ARN: 'Europe/Stockholm', VIE: 'Europe/Vienna', PRG: 'Europe/Prague', BUD: 'Europe/Budapest', WAW: 'Europe/Warsaw', KRK: 'Europe/Warsaw',
   SKG: 'Europe/Athens', CHQ: 'Europe/Athens', LCA: 'Asia/Nicosia', PFO: 'Asia/Nicosia', MLA: 'Europe/Malta', ZAG: 'Europe/Zagreb', DBV: 'Europe/Zagreb', SXB: 'Europe/Paris', BSL: 'Europe/Paris', STR: 'Europe/Berlin',
-  CIY: 'Europe/Rome', TPS: 'Europe/Rome', AOI: 'Europe/Rome', TRS: 'Europe/Rome', VRN: 'Europe/Rome', TSF: 'Europe/Rome', SUF: 'Europe/Rome', REG: 'Europe/Rome', CRV: 'Europe/Rome',
+  CIY: 'Europe/Rome', TPS: 'Europe/Rome', AOI: 'Europe/Rome', TRS: 'Europe/Rome', VRN: 'Europe/Rome', TSF: 'Europe/Rome', SUF: 'Europe/Rome', REG: 'Europe/Rome', CRV: 'Europe/Rome', RMI: 'Europe/Rome',
 };
 // Da dove arriva il tabellone ufficiale di ogni aeroporto (mostrato nella pagina come fonte)
 export const OFFICIAL_SOURCES = {
@@ -174,7 +174,7 @@ export const OFFICIAL_SOURCES = {
   ZAG: 'zagreb-airport.hr', DBV: 'dbv.hr', SXB: 'strasbourg.aeroport.fr', BSL: 'euroairport.com', STR: 'stuttgart-airport.com',
   CIY: 'aeroportodicomiso.eu (SAC, come Catania)', TPS: 'airgest.it', AOI: 'ancona-airport.com', TRS: 'triesteairport.it',
   VRN: 'aeroportoverona.it (SAVE)', TSF: 'trevisoairport.it (SAVE)',
-  SUF: 'sacal.it', REG: 'sacal.it', CRV: 'sacal.it',
+  SUF: 'sacal.it', REG: 'sacal.it', CRV: 'sacal.it', RMI: 'riminiairport.com',
 };
 
 export async function getOfficial(iata, nature, workerUrl = getSettings().workerUrl) {

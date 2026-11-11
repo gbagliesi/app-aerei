@@ -29,7 +29,6 @@ function boardCounts(list) {
 }
 // Aeroporti senza tabellone ufficiale leggibile dal Worker (siti protetti): link alla pagina ufficiale
 const SITE_BOARDS = {
-  RMI: { dep: 'https://www.riminiairport.com/', name: 'riminiairport.com' },
   QSR: { dep: 'https://www.aeroportodisalerno.it/', name: 'aeroportodisalerno.it' },
   PSR: { dep: 'https://www.abruzzoairport.eu/index.php/voli-in-tempo-reale/', name: 'abruzzoairport.eu' },
   PNL: { dep: 'https://www.aeroportodipantelleria.it/info-voli/arrivi-partenze/', name: 'aeroportodipantelleria.it' },
@@ -61,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.6 · marche sicure o ipotizzate; copia giornaliera dei tabelloni dal Worker';
+const APP_VERSION = '4.6.1 · Rimini con tabellone ufficiale';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
