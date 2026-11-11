@@ -264,7 +264,7 @@ label.check input { margin-top: .2rem; }
 .tlinks a, .tlinks span { padding: .15rem .45rem; border-radius: 6px; }
 .tlinks a { color: var(--blue); background: rgba(122,162,255,.08); }
 .tlinks a:hover { background: rgba(122,162,255,.18); }
-.tiles.sorting .tile { flex-direction: row; align-items: center; gap: .3rem; padding-left: .5rem; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; border-style: dashed; }
+.tiles.sorting .tile { -webkit-touch-callout: none; flex-direction: row; align-items: center; gap: .3rem; padding-left: .5rem; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; border-style: dashed; }
 .tiles.sorting .tile .tmain { padding: .7rem .3rem; }
 .tiles.sorting .tile.dragging { cursor: grabbing; opacity: .75; border-color: var(--amber); box-shadow: 0 6px 18px rgba(0,0,0,.4); }
 .tiles.sorting .mvs { display: flex; gap: .25rem; padding-right: .5rem; }

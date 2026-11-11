@@ -61,7 +61,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.3 · pagina principale riordinata';
+const APP_VERSION = '4.3.1 · trascinamento dei preferiti anche su iPhone';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -165,28 +165,44 @@ function bindReorder() {
     if (b.dataset.mv === '-1') c.previousElementSibling?.before(c); else c.nextElementSibling?.after(c);
     save(); viewHome();
   });
-  // trascinamento con mouse, dito o penna (Pointer Events)
-  box.querySelectorAll('.sortable').forEach(c => c.addEventListener('pointerdown', e => {
-    if (e.target.closest('.mv') || e.button > 0) return;
-    e.preventDefault();
-    c.classList.add('dragging');
-    let moved = false;
-    const move = ev => {
-      const t = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.sortable');
-      if (!t || t === c || t.parentNode !== box) return;
-      const r = t.getBoundingClientRect();
-      const after = ev.clientY > r.bottom ? true : ev.clientY < r.top ? false : ev.clientX > r.left + r.width / 2;
-      after ? t.after(c) : t.before(c);
-      moved = true;
-    };
-    const up = () => {
-      removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
-      c.classList.remove('dragging');
-      if (moved) { save(); viewHome(); }
-    };
-    // ascolto su window: spostare l'elemento nel DOM farebbe perdere il pointer capture
-    addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
-  }));
+  // trascinamento: mouse/penna con Pointer Events, dito con Touch Events (su Safari iOS i pointer
+  // vengono annullati appena la pagina prova a scorrere, i touch con preventDefault no)
+  const place = (c, x, y) => {
+    const t = document.elementFromPoint(x, y)?.closest('.sortable');
+    if (!t || t === c || t.parentNode !== box) return false;
+    const r = t.getBoundingClientRect();
+    // in colonna singola (telefono) conta la metà alta/bassa, in griglia la metà sinistra/destra
+    const after = y > r.bottom ? true : y < r.top ? false : r.width > box.clientWidth * 0.7 ? y > r.top + r.height / 2 : x > r.left + r.width / 2;
+    after ? t.after(c) : t.before(c);
+    return true;
+  };
+  const finish = (c, moved) => { c.classList.remove('dragging'); if (moved) { save(); viewHome(); } };
+  box.querySelectorAll('.sortable').forEach(c => {
+    c.addEventListener('touchstart', e => {
+      if (e.target.closest('.mv') || e.touches.length !== 1) return;
+      c.classList.add('dragging');
+      let moved = false;
+      const move = ev => { ev.preventDefault(); const p = ev.touches[0]; if (place(c, p.clientX, p.clientY)) moved = true; };
+      const end = () => {
+        removeEventListener('touchmove', move); removeEventListener('touchend', end); removeEventListener('touchcancel', end);
+        finish(c, moved);
+      };
+      // ascolto su window: il nodo viene spostato nel DOM durante il trascinamento
+      addEventListener('touchmove', move, { passive: false }); addEventListener('touchend', end); addEventListener('touchcancel', end);
+    }, { passive: true });
+    c.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'touch' || e.target.closest('.mv') || e.button > 0) return;
+      e.preventDefault();
+      c.classList.add('dragging');
+      let moved = false;
+      const move = ev => { if (place(c, ev.clientX, ev.clientY)) moved = true; };
+      const up = () => {
+        removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+        finish(c, moved);
+      };
+      addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+    });
+  });
 }
 
 const POPULAR = {
@@ -215,7 +231,7 @@ function viewHome() {
     return `<div class="favgroup" style="--n:${Math.min(items.length, 4)}">
       <h3><span class="gicon" aria-hidden="true">${icon}</span>${title} <small>${items.length}</small>${btn}</h3>
       ${on ? '<p class="hint">Trascina i riquadri (o usa le frecce) per cambiare l’ordine, poi tocca <b>Fatto</b>.</p>' : ''}
-      <div class="tiles${on ? ' sorting' : ''}" data-type="${type}">${items.map(card).join('')}</div></div>`;
+      <div class="tiles${on ? ' sorting noswipe' : ''}" data-type="${type}">${items.map(card).join('')}</div></div>`;
   };
   const favCount = fav.airports.length + fav.routes.length + fav.flights.length + (fav.aircraft?.length || 0);
   const ntabs = openTabsCount();
