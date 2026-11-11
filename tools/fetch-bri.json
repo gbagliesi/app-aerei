@@ -1,0 +1,8 @@
+[
+{"id":"W_BRI_D","url":"https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=BRI&nature=D"},
+{"id":"W_BRI_A","url":"https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=BRI&nature=A"},
+{"id":"W_BRI_D_dbg","url":"https://tabelloni-voli.giuseppe-bagliesi.workers.dev/debug?airport=BRI&nature=D"},
+{"id":"W_BDS_D","url":"https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=BDS&nature=D"},
+{"id":"P_BRI_0","url":"https://info.aeroportidipuglia.it/getVoliApp/","body":"aeroporto=BRI&lingua=IT&bound=0","headers":{"Content-Type":"application/x-www-form-urlencoded"}},
+{"id":"P_BRI_1","url":"https://info.aeroportidipuglia.it/getVoliApp/","body":"aeroporto=BRI&lingua=IT&bound=1","headers":{"Content-Type":"application/x-www-form-urlencoded"}}
+]
