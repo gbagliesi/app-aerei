@@ -61,7 +61,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.4.1 · tabellone ufficiale abbinato al volo del giorno giusto';
+const APP_VERSION = '4.4.2 · niente ritardo previsto se l’aereo in arrivo è solo stimato';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -423,7 +423,8 @@ function fmtLocalLike(ms, ref) {
   return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
 }
 function predictionHtml(f, inbound, etaMs, etaSource) {
-  if (!inbound || ['Departed', 'EnRoute', 'Approaching', 'Arrived', 'Canceled'].includes(f.status)) return '';
+  // niente previsione se l'aereo in arrivo è solo una stima dell'app: darebbe ritardi inesistenti
+  if (!inbound || inboundIsGuess(inbound) || ['Departed', 'EnRoute', 'Approaching', 'Arrived', 'Canceled'].includes(f.status)) return '';
   const arrMs = etaMs ?? tms(inbound.arr.actual || inbound.arr.revised || inbound.arr.sched);
   const schedMs = tms(f.dep.sched), declMs = tms(f.dep.revised) || schedMs;
   if (!arrMs || !schedMs) return '';
@@ -436,6 +437,9 @@ function predictionHtml(f, inbound, etaMs, etaSource) {
     <p><b class="late">circa ${delay} min</b>: partenza stimata non prima delle <b>${fmtLocalLike(predMs, f.dep.sched)}</b>${tms(f.dep.revised) && tms(f.dep.revised) !== schedMs ? ` (la compagnia indica ${hhmm(f.dep.revised)})` : ' (la compagnia indica ancora in orario)'}.</p>
     <p class="hint">L'aereo ${esc(inbound.aircraft?.reg || '')} ${landed ? 'è atterrato' : 'atterra'} a ${esc(f.dep.iata)} alle ${fmtLocalLike(arrMs, f.dep.sched)}${etaSource ? ` (stima da ${esc(etaSource)})` : ''} e per una rotazione servono almeno ${minTurn} minuti.</p></div>`;
 }
+
+const guessed = new WeakSet();
+const inboundIsGuess = x => guessed.has(x);
 
 // ---------- Dettaglio volo ----------
 const planeIcon = track => L.divIcon({ className: 'plane', html: `<div style="transform:rotate(${(track || 0) - 45}deg)">✈︎</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
@@ -590,6 +594,7 @@ async function viewFlight(number, date, depHint) {
     const hadReg = !!f.aircraft?.reg;
     const r = await getInbound(f);
     inbound = r.inbound; inboundGuess = r.method === 'guess';
+    if (inbound && inboundGuess) guessed.add(inbound);
     refreshWatch(f, inbound, inboundGuess).catch(() => {});
     let html = `<div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="hint">${esc(r.reason)}</p></div>`;
     if (inbound) {
