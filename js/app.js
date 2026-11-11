@@ -61,7 +61,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.3.2 · trascinamento dei preferiti anche su Android';
+const APP_VERSION = '4.3.3 · animazione nel riordino dei preferiti';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -167,41 +167,71 @@ function bindReorder() {
   });
   // trascinamento: mouse/penna con Pointer Events, dito con Touch Events (su Safari iOS i pointer
   // vengono annullati appena la pagina prova a scorrere, i touch con preventDefault no)
-  const place = (c, x, y) => {
-    const t = document.elementFromPoint(x, y)?.closest('.sortable');
-    if (!t || t === c || t.parentNode !== box) return false;
+  // il tile segue il dito/mouse; gli altri scivolano al nuovo posto (animazione FLIP)
+  let drag = null;
+  const follow = (x, y) => {
+    const c = drag.c;
+    c.style.transform = '';
+    const r = c.getBoundingClientRect();
+    c.style.transform = `translate(${x - drag.gx - r.left}px, ${y - drag.gy - r.top}px) scale(1.03)`;
+  };
+  const place = (x, y) => {
+    const c = drag.c;
+    const t = document.elementFromPoint(x, y)?.closest('.sortable'); // il tile trascinato ha pointer-events: none
+    if (!t || t === c || t.parentNode !== box) return;
     const r = t.getBoundingClientRect();
     // in colonna singola (telefono) conta la metà alta/bassa, in griglia la metà sinistra/destra
-    const after = y > r.bottom ? true : y < r.top ? false : r.width > box.clientWidth * 0.7 ? y > r.top + r.height / 2 : x > r.left + r.width / 2;
+    const after = r.width > box.clientWidth * 0.7 ? y > r.top + r.height / 2 : x > r.left + r.width / 2;
+    if (after ? t.nextElementSibling === c : t.previousElementSibling === c) return;
+    const others = [...box.querySelectorAll('.sortable')].filter(o => o !== c);
+    const before = new Map(others.map(o => [o, o.getBoundingClientRect()]));
     after ? t.after(c) : t.before(c);
-    return true;
+    drag.moved = true;
+    others.forEach(o => {
+      const p = before.get(o), q = o.getBoundingClientRect();
+      const dx = p.left - q.left, dy = p.top - q.top;
+      if (!dx && !dy) return;
+      o.style.transition = 'none'; o.style.transform = `translate(${dx}px, ${dy}px)`;
+      o.getBoundingClientRect();
+      o.style.transition = 'transform .18s ease'; o.style.transform = '';
+    });
   };
-  const finish = (c, moved) => { c.classList.remove('dragging'); if (moved) { save(); viewHome(); } };
+  const start = (c, x, y) => {
+    const r = c.getBoundingClientRect();
+    drag = { c, gx: x - r.left, gy: y - r.top, moved: false };
+    c.classList.add('dragging');
+    navigator.vibrate?.(10);
+  };
+  const moveTo = (x, y) => { if (!drag) return; place(x, y); follow(x, y); };
+  const drop = () => {
+    if (!drag) return;
+    const { c, moved } = drag; drag = null;
+    c.style.transition = 'transform .15s ease'; c.style.transform = '';
+    setTimeout(() => { c.classList.remove('dragging'); c.style.transition = ''; if (moved) { save(); viewHome(); } }, 160);
+  };
   box.querySelectorAll('.sortable').forEach(c => {
     // la pressione lunga di Android (vibrazione, menu, selezione) annullerebbe il trascinamento
     c.addEventListener('contextmenu', e => e.preventDefault());
     c.addEventListener('touchstart', e => {
-      if (e.target.closest('.mv') || e.touches.length !== 1) return;
+      if (e.target.closest('.mv') || e.touches.length !== 1 || drag) return;
       e.preventDefault(); // niente pressione lunga, scorrimento o click simulati: il tile resta "in mano"
-      c.classList.add('dragging');
-      let moved = false;
-      const move = ev => { ev.preventDefault(); const p = ev.touches[0]; if (place(c, p.clientX, p.clientY)) moved = true; };
+      start(c, e.touches[0].clientX, e.touches[0].clientY);
+      const move = ev => { ev.preventDefault(); moveTo(ev.touches[0].clientX, ev.touches[0].clientY); };
       const end = () => {
         removeEventListener('touchmove', move); removeEventListener('touchend', end); removeEventListener('touchcancel', end);
-        finish(c, moved);
+        drop();
       };
       // ascolto su window: il nodo viene spostato nel DOM durante il trascinamento
       addEventListener('touchmove', move, { passive: false }); addEventListener('touchend', end); addEventListener('touchcancel', end);
     }, { passive: false });
     c.addEventListener('pointerdown', e => {
-      if (e.pointerType === 'touch' || e.target.closest('.mv') || e.button > 0) return;
+      if (e.pointerType === 'touch' || e.target.closest('.mv') || e.button > 0 || drag) return;
       e.preventDefault();
-      c.classList.add('dragging');
-      let moved = false;
-      const move = ev => { if (place(c, ev.clientX, ev.clientY)) moved = true; };
+      start(c, e.clientX, e.clientY);
+      const move = ev => moveTo(ev.clientX, ev.clientY);
       const up = () => {
         removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
-        finish(c, moved);
+        drop();
       };
       addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
     });
