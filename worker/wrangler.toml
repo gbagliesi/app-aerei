@@ -17,3 +17,7 @@ new_sqlite_classes = ["Watcher"]
 [[services]]
 binding = "SELF"
 service = "tabelloni-voli"
+
+# Copia oraria dei tabelloni ufficiali degli aeroporti consultati di recente (snapshots.js)
+[triggers]
+crons = ["17 * * * *"]

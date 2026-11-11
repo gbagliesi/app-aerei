@@ -19,6 +19,7 @@ export const EVENTS = ['inboundDep', 'inbound', 'gate', 'boarding', 'delay', 'de
 const ADB_HOST = 'aerodatabox.p.rapidapi.com';
 // lettura diretta dei tabelloni, se manca il collegamento SELF al Worker stesso (impostata da worker.js)
 import { faMeter } from './aeroapi.js';
+import { snapDo } from './snapshots.js';
 let boardFn = null;
 export const setBoardFn = f => { boardFn = f; };
 
@@ -149,6 +150,7 @@ export class Watcher {
     const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
     try {
       if (url.pathname.startsWith('/fa/')) return json(await faMeter(this.storage, url, request));
+      if (url.pathname.startsWith('/snap/')) return json(await snapDo(this.storage, url, request));
       if (url.pathname === '/push/key') return json({ key: (await this.vapid()).publicKey });
       if (request.method !== 'POST') return json({ error: 'usa POST' }, 405);
       const b = await request.json();

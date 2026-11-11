@@ -7,11 +7,13 @@
 //
 //   /push/...  notifiche sui voli seguiti (Web Push): vedi notify.js
 //   /fa?...    FlightAware AeroAPI (riserva di AeroDataBox, aereo in arrivo): vedi aeroapi.js
+//   /snap?...  copia giornaliera dei tabelloni ufficiali (anche dei giorni precedenti): vedi snapshots.js
 //
 // Uso personale: le risposte restano in cache 90 secondi, così l'aeroporto riceve poche richieste.
 
 import { Watcher, setBoardFn } from './notify.js';
 import { handleFa } from './aeroapi.js';
+import { saveSnap, handleSnap, cronSnap } from './snapshots.js';
 export { Watcher };
 export const _readBoard = (a, n, env, log) => readBoard(a, n, env, log); // per i test locali
 
@@ -57,6 +59,9 @@ async function readBoard(airport, nature, env, log = []) {
 setBoardFn((a, n, env) => (isSupported(a) ? readBoard(a, n, env) : null));
 
 export default {
+  // ogni ora: aggiorna la copia dei tabelloni degli aeroporti consultati negli ultimi giorni (snapshots.js)
+  async scheduled(event, env, ctx) { ctx.waitUntil(cronSnap(env, readBoard)); },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin') || '';
@@ -80,6 +85,7 @@ export default {
       return new Response(r.body, { status: r.status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors } });
     }
     if (url.pathname === '/fa' || url.pathname === '/fa/usage') return handleFa(url, env, ctx, json);
+    if (url.pathname === '/snap') return handleSnap(url, env, json);
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA', ...Object.keys(OTHER)] });
     // Prova diagnostica: una richiesta normale (nessun aggiramento) verso i siti degli aeroporti non ancora supportati
     if (url.pathname === '/probe') {
@@ -146,6 +152,7 @@ export default {
         caches.default.put(cacheKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${CACHE_SECONDS}` } })),
         // copia di riserva per 3 ore: si usa solo se il sito dell'aeroporto non risponde
         caches.default.put(staleKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': 'max-age=10800' } })),
+        saveSnap(env, airport, nature, flights).catch(() => {}),
       ]));
       return json(body);
     } catch (e) {

@@ -3,7 +3,7 @@
 import { getSettings } from './store.js';
 import { airportByIata, AIRPORTS, iataByCityName } from './airports.js';
 import * as demo from './demo.js';
-import { simulateRotation, arrTime } from './rotation.js';
+import { simulateRotation, arrTime, depTime } from './rotation.js';
 
 const ADB_HOST = 'aerodatabox.p.rapidapi.com';
 const cache = new Map();
@@ -133,7 +133,7 @@ function normFlight(f, dir, own) {
     status: f.status || 'Unknown',
     isCargo: f.isCargo,
     codeshareStatus: f.codeshareStatus,
-    aircraft: { reg: f.aircraft?.reg, hex: f.aircraft?.modeS?.toLowerCase(), model: f.aircraft?.model },
+    aircraft: { reg: f.aircraft?.reg, hex: f.aircraft?.modeS?.toLowerCase(), model: f.aircraft?.model, ...(f.aircraft?.reg ? { regSrc: 'AeroDataBox' } : {}) },
     dep, arr,
     location: normLocation(f.location),
     _adb: true,
@@ -265,7 +265,7 @@ function mergeOfficial(flights, official, sideKey, iata, used = null) {
     const st = mapStatus(o.status);
     if (st && !(st === 'Delayed' && ['Departed', 'EnRoute', 'Approaching', 'Arrived'].includes(f.status))) f.status = st;
     if (sideKey === 'arr' && o.actual && f.status !== 'Canceled') f.status = 'Arrived';
-    if (o.reg && o.reg.replace(/-/g, '') !== (f.aircraft?.reg || '').replace(/-/g, '')) f.aircraft = { ...f.aircraft, reg: o.reg, hex: f.aircraft?.reg ? undefined : f.aircraft?.hex, model: f.aircraft?.model || o.type };
+    if (o.reg && o.reg.replace(/-/g, '') !== (f.aircraft?.reg || '').replace(/-/g, '')) f.aircraft = { ...f.aircraft, reg: o.reg, regSrc: `tabellone ufficiale di ${iata}`, hex: f.aircraft?.reg ? undefined : f.aircraft?.hex, model: f.aircraft?.model || o.type };
     else if (o.type && !f.aircraft?.model) f.aircraft = { ...f.aircraft, model: o.type };
     side.officialStatus = o.status || null;
     side._off = iata;
@@ -412,7 +412,7 @@ function officialFlights(off, iata, nature) {
     const ap = cityCode ? airportByIata(cityCode) : null;
     const other = { iata: cityCode || null, name: ap?.name || (o.city ? o.city.toLowerCase().replace(/(^|[\s-])\S/g, c => c.toUpperCase()) : null) };
     return {
-      number: o.number, airline: { name: o.airline || null, iata: o.number.slice(0, 2) }, status: 'Expected', aircraft: { reg: o.reg || null, model: o.type || null },
+      number: o.number, airline: { name: o.airline || null, iata: o.number.slice(0, 2) }, status: 'Expected', aircraft: { reg: o.reg || null, model: o.type || null, ...(o.reg ? { regSrc: `tabellone ufficiale di ${iata}` } : {}) },
       dep: nature === 'D' ? mine : other, arr: nature === 'D' ? other : mine, _officialOnly: true,
       // Aeroporti di Roma: una riga per sigla, "Operato da" indica il vettore; gli altri: la riga del vettore elenca le altre sigle
       ...(['FCO', 'CIA'].includes(iata) ? { _opBy: o.codeshare?.[0] } : { _mkt: o.codeshare || [] }),
@@ -678,7 +678,7 @@ export async function getInbound(flight) {
   const fa = await faFlight(flight.number, (depSide.sched?.local || '').slice(0, 10) || isoDate(depUtc), true).catch(() => null);
   if (fa?.inbound?.number && fa.flights.some(l => !depSide.iata || l.dep?.iata === depSide.iata)) {
     const me = fa.flights.find(l => l.dep?.iata === depSide.iata);
-    if (me?.aircraft?.reg && !flight.aircraft?.reg) flight.aircraft = { ...flight.aircraft, reg: me.aircraft.reg, model: flight.aircraft?.model || me.aircraft.model };
+    if (me?.aircraft?.reg && !flight.aircraft?.reg) flight.aircraft = { ...flight.aircraft, reg: me.aircraft.reg, regSrc: 'FlightAware', model: flight.aircraft?.model || me.aircraft.model };
     return { inbound: fa.inbound, method: 'reg', source: 'FlightAware' };
   }
 
@@ -711,7 +711,7 @@ export async function getInbound(flight) {
         const day = await getFlightsByReg(r, d0).catch(() => []);
         const mine = day.find(f => f.number === flight.number && (!f.dep?.iata || f.dep.iata === depSide.iata));
         if (mine) {
-          flight.aircraft = { ...flight.aircraft, reg: r, hex: mine.aircraft?.hex || a.aircraft?.hex, model: flight.aircraft?.model || mine.aircraft?.model };
+          flight.aircraft = { ...flight.aircraft, reg: r, regSrc: `giornata dell'aereo ${r}`, hex: mine.aircraft?.hex || a.aircraft?.hex, model: flight.aircraft?.model || mine.aircraft?.model };
           return { inbound: a, method: 'reg' };
         }
       }
@@ -816,6 +816,11 @@ async function dayMovements(iata, depUtc, board, flight) {
         pput(`day:${iata}:${nature}:${today}`, off); // copia per domani (molti tabelloni non mostrano il giorno prima)
         add(list, mergeOfficial(officialFlights(off, iata, nature), off, side, iata), side);
       }
+      // copia del Worker (tabellone salvato durante la giornata, anche di ieri), poi quella di questo dispositivo
+      for (const d of [today, yesterday]) {
+        const snap = await getSnap(iata, nature, d);
+        if (snap.length) { add(list, mergeOfficial(officialFlights(snap, iata, nature), snap, side, iata), side); dayFrom = Math.min(dayFrom, Date.parse(`${d}T00:00:00${tzOffset(tz, d)}`)); }
+      }
       const prev = pget(`day:${iata}:${nature}:${yesterday}`, 3 * 86400e3);
       if (prev?.length) { add(list, mergeOfficial(officialFlights(prev, iata, nature), prev, side, iata), side); dayFrom = Math.min(dayFrom, Date.parse(`${yesterday}T00:00:00${tzOffset(tz, yesterday)}`)); }
       else if (off?.length) dayFrom = Math.min(dayFrom, Date.parse(`${today}T00:00:00${tzOffset(tz, today)}`));
@@ -841,6 +846,49 @@ async function dayMovements(iata, depUtc, board, flight) {
     }
   }
   return { arrivals, departures, from };
+}
+
+/** Copia del tabellone ufficiale salvata dal Worker per un giorno (locale) "YYYY-MM-DD"; [] se non c'è. */
+async function getSnap(iata, nature, day) {
+  const base = (getSettings().workerUrl || '').trim().replace(/\/+$/, '');
+  if (!base) return [];
+  const k = `snap:${iata}:${nature}:${day}`;
+  const hit = pget(k, day < localDay(Date.now(), OFFICIAL_AIRPORTS[iata]) ? 6 * 3600e3 : 10 * 60e3);
+  if (hit !== undefined) return hit;
+  return cached(k, 60e3, async () => {
+    try {
+      const r = await fetch(`${base}/snap?airport=${iata}&nature=${nature}&day=${day}`);
+      const v = r.ok ? ((await r.json()).flights || []) : [];
+      pput(k, v);
+      return v;
+    } catch { return []; }
+  });
+}
+
+/**
+ * Marche "ipotizzate" per le partenze del tabellone senza aereo indicato: ricostruisce la giornata di ogni
+ * compagnia (js/rotation.js) e, quando l'aereo abbinato ha marche note, le mette in aircraft.regGuess
+ * ({ reg, via, from, basis }). Non usa AeroDataBox. Restituisce il numero di voli con un'ipotesi.
+ */
+export async function guessBoardRegs(iata, data) {
+  if (isDemo() || !data?.departures?.length) return 0;
+  const day = await dayMovements(iata, Date.now(), data, null);
+  const now = Date.now(), n0 = data.departures.filter(d => d.aircraft?.regGuess).length;
+  const airlines = [...new Set(data.departures.filter(d => !d.aircraft?.reg).map(al))];
+  for (const code of airlines) {
+    if (!day.arrivals.some(a => al(a) === code && a.aircraft?.reg)) continue;
+    const mine = data.departures.filter(d => al(d) === code && d.status !== 'Canceled' && !isNaN(depTime(d))).sort((a, b) => depTime(a) - depTime(b));
+    const last = mine[mine.length - 1];
+    if (!last) continue;
+    const sim = simulateRotation({ flight: last, arrivals: day.arrivals, departures: day.departures, now, coverageFrom: day.from });
+    for (const c of sim?.chain || []) {
+      const reg = c.pick?.aircraft?.reg;
+      // sul tabellone solo i giri veloci (più affidabili); gli aerei fermi da ore si verificano con la rete ADS-B nella pagina del volo
+      if (!reg || c.dep.aircraft?.reg || !['rotation', 'return'].includes(c.basis)) continue;
+      c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis } };
+    }
+  }
+  return data.departures.filter(d => d.aircraft?.regGuess).length - n0;
 }
 
 /** Rete ADS-B: true se l'aereo (marche) ha volato lontano dall'aeroporto dopo l'istante indicato, false se risulta
@@ -909,7 +957,7 @@ export async function getLivePosition(flight) {
     }
     if (!AIRBORNE.includes(flight.status) || !flight.callSign) return null;
     const a = await adsbByCallsign(flight.callSign);
-    if (a?.reg && !flight.aircraft?.reg) flight.aircraft = { ...flight.aircraft, reg: a.reg, hex: a.hex };
+    if (a?.reg && !flight.aircraft?.reg) flight.aircraft = { ...flight.aircraft, reg: a.reg, hex: a.hex, regSrc: 'rete ADS-B (adsb.lol)' };
     return a?.pos || null;
   }
   return cached(`live:${hex}`, 10e3, async () => {

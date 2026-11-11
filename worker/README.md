@@ -66,3 +66,12 @@ Di default il Worker risponde solo all'app su `https://gbagliesi.github.io` e a 
 Per cambiarlo aggiungi in **Settings → Variables** una variabile `ALLOWED_ORIGINS` con gli indirizzi separati da virgola.
 
 Le risposte restano in cache 90 secondi: l'aeroporto riceve al massimo poche richieste al minuto.
+
+## Copia giornaliera dei tabelloni (dalla v4.6)
+
+Molti siti mostrano solo i voli di oggi o poche ore attorno a adesso. Il Worker salva una copia di ogni tabellone ufficiale letto
+(al massimo ogni 15 minuti per aeroporto) nel Durable Object, istanza `snapshots` (file [`snapshots.js`](snapshots.js)), e ogni ora
+(cron `17 * * * *` in `wrangler.toml`) rilegge i tabelloni degli aeroporti consultati negli ultimi 3 giorni. Si tengono 4 giorni.
+- `GET /snap?airport=PSA&nature=A&day=2026-11-10` → `{ flights: [...] }` (stesso formato di `/board`, giorno locale dell'aeroporto).
+- L'app la usa per sapere quali aerei sono arrivati la sera prima e sono rimasti a terra la notte, e per ricostruire la giornata delle
+  compagnie (aereo in arrivo e marche ipotizzate).

@@ -1,4 +1,4 @@
-import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getTrace, hexOfReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
+import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getTrace, hexOfReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
 import { searchAirports, airportByIata, AIRPORTS, norm, airportSearchText } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites, reorderFavorites, favKey } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
@@ -61,7 +61,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.5 · aereo in arrivo stimato ricostruendo la giornata della compagnia (aerei rimasti a terra la notte)';
+const APP_VERSION = '4.6 · marche sicure o ipotizzate; copia giornaliera dei tabelloni dal Worker';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -87,9 +87,17 @@ const flightDate = f => f.dep?.sched?.local?.slice(0, 10) || isoDate(new Date())
 const flightLink = f => `#/flight/${encodeURIComponent(f.number)}/${flightDate(f)}${f.dep?.iata ? `?dep=${f.dep.iata}` : ''}`;
 const apName = iata => airportByIata(iata)?.city || iata;
 const regHref = (reg, date, ap) => `#/aircraft/${encodeURIComponent(reg)}/${date || isoDate(new Date())}${ap ? `?ap=${ap}` : ''}`;
+// marche ipotizzate (ricostruzione delle rotazioni): segno ≈ e spiegazione al passaggio del mouse
+const regGuessLink = (x, dir) => {
+  const g = x.aircraft.regGuess;
+  const why = g.basis === 'overnight' ? `rimasto a terra la notte dopo ${g.via}` : g.basis === 'idle' ? `fermo dopo ${g.via}` : `in arrivo con ${g.via}${g.from ? ` da ${g.from}` : ''}`;
+  return `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), (dir === 'dep' ? x.dep : x.arr)?.iata)}" title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello ${esc(why)}">≈ ${esc(g.reg)}</a>`;
+};
 const regLink = (reg, date, ap) => `<a class="reglink" href="${regHref(reg, date, ap)}" title="Percorso di oggi dell'aereo (si apre in un nuovo tab)">✈︎ ${esc(reg)}</a>`;
 function aircraftCard(ac, date, note = '', probable = false) {
-  return `<span class="eyebrow">Aeromobile${probable ? ' (probabile)' : ''}</span>
+  const tag = !ac?.reg ? '' : probable ? ' · <span class="regtag guess">❔ marche ipotizzate</span>' : ' · <span class="regtag sure">✅ marche sicure</span>';
+  if (ac?.reg && !probable && !note && ac.regSrc) note = `Indicate da: ${esc(ac.regSrc)}.`;
+  return `<span class="eyebrow">Aeromobile${tag}</span>
     <p>${ac?.reg ? `${regLink(ac.reg, date)} · <a href="${regHref(ac.reg, date)}">segui l'aereo e i suoi voli del giorno</a>` : '<b>Non ancora assegnato</b>'}${ac?.model ? ` · ${esc(ac.model)}` : ''}${ac?.hex ? ` · ICAO24 <code>${esc(ac.hex)}</code>` : ''}</p>
     ${note ? `<p class="hint">${note}</p>` : ''}`;
 }
@@ -340,7 +348,7 @@ function boardTable(list, dir, filter = '', key = '') {
       if (!marked && side?.sched?.utc && new Date(side.sched.utc) > now) { marked = true; nowLine = '<div class="nowline"><span>adesso</span></div>'; }
       return `${nowLine}<div class="row ${x.status === 'Canceled' ? 'cancel' : ''}" role="row" tabindex="0" data-href="${flightLink(x)}">
         <span class="t">${timeCell(side?.sched, side?.revised, side?.actual)}</span>
-        <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x), (dir === 'dep' ? x.dep : x.arr)?.iata) : esc(x.airline?.name || '')}</small></span>
+        <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x), (dir === 'dep' ? x.dep : x.arr)?.iata) : x.aircraft?.regGuess ? regGuessLink(x, dir) : esc(x.airline?.name || '')}</small></span>
         <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <button class="csbtn" type="button" title="Anche: ${esc(x.codeshares.join(' '))}">+${x.codeshares.length} code sharing</button>` : ''}</small>${x.codeshares?.length ? `<small class="cslist" hidden>anche ${x.codeshares.map(esc).join(' ')}</small>` : ''}</span>
         <span class="gate">${esc((dir === 'dep' ? side?.gate : side?.belt) || '—')}</span>
         <span>${statusBadge(x.status)}${srcTag(x)}</span>
@@ -367,6 +375,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
       'sotto lo stato di ogni volo: <b>uff.</b> = solo tabellone ufficiale, <b>uff. + ADB</b> = tabellone ufficiale completato da AeroDataBox, <b>ADB</b> = solo AeroDataBox',
       'orari nell’ora locale dell’aeroporto; in arancione l’orario stimato o effettivo se diverso di almeno 5 minuti',
       list?.some(x => x.aircraft?.reg) ? 'marche degli aerei (✈︎): tabellone ufficiale o AeroDataBox' : '',
+      list?.some(x => x.aircraft?.regGuess && !x.aircraft?.reg) ? 'marche con ≈: <b>ipotesi</b> dell’app, ricostruendo i giri degli aerei della compagnia in questo aeroporto (la compagnia non le ha ancora indicate)' : '',
     ]);
   };
   const render = () => {
@@ -400,6 +409,9 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
   const load = async () => {
     try {
       data = await getBoard(iata);
+      const mine = data;
+      // marche ipotizzate per le partenze senza aereo (in sottofondo, poi ridisegno il tabellone)
+      guessBoardRegs(iata, data).then(n => { if (n && data === mine && document.getElementById('board')) render(); }).catch(() => {});
       const keep = document.getElementById('filter') === document.activeElement;
       render();
       if (keep) { const fi = document.getElementById('filter'); fi.focus(); fi.setSelectionRange(fi.value.length, fi.value.length); }
@@ -626,9 +638,9 @@ async function viewFlight(number, date, depHint) {
     document.getElementById('predict').innerHTML = predictionHtml(f, inbound);
     const card = document.getElementById('aircraft');
     if (inbound && r.method === 'guess' && !f.aircraft?.reg && inbound.aircraft?.reg) {
-      card.innerHTML = aircraftCard(inbound.aircraft, date, `Stima basata sul volo precedente ${esc(inbound.number)}: la compagnia non ha ancora confermato l'aereo.`, true);
+      card.innerHTML = aircraftCard(inbound.aircraft, date, `Ipotesi: è l'aereo del probabile volo precedente ${esc(inbound.number)} (ricostruzione della giornata della compagnia). La compagnia non ha ancora indicato l'aereo: diventa sicuro quando lo indica.`, true);
     } else if (inbound && r.method === 'reg' && f.aircraft?.reg && !hadReg) {
-      card.innerHTML = aircraftCard(f.aircraft, date, r.source === 'FlightAware' ? `Aereo indicato da FlightAware (arriva con ${esc(inbound.number)}).` : `La compagnia non lo indica sul volo, ma la giornata di questo aereo (arrivato con ${esc(inbound.number)}) prevede proprio ${esc(f.number)}.`);
+      card.innerHTML = aircraftCard(f.aircraft, date, r.source === 'FlightAware' ? `Indicate da FlightAware (l'aereo arriva con ${esc(inbound.number)}).` : `La compagnia non lo indica su questo volo, ma la giornata di questo aereo (arrivato con ${esc(inbound.number)}) prevede proprio ${esc(f.number)}.`);
     }
   } catch (e) { document.getElementById('inbound').innerHTML = errorBox(e); }
 
