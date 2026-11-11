@@ -61,7 +61,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.2 · preferiti riordinabili';
+const APP_VERSION = '4.3 · pagina principale riordinata';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -121,7 +121,7 @@ const favAttrs = (type, item) => `data-fav="${type}" data-item='${esc(JSON.strin
 // ---------- ricerca ----------
 function searchBox() {
   return `<form class="search" id="search" autocomplete="off">
-    <input id="q" type="search" placeholder="Aeroporto (FCO, Milano…), volo (FR1234) o aereo (EI-DCL)" aria-label="Cerca aeroporto o volo">
+    <input id="q" type="search" placeholder="FCO, Milano, FR1234, EI-DCL…" aria-label="Cerca aeroporto o volo">
     <button>Cerca</button>
     <ul id="suggest" class="suggest" hidden></ul>
   </form>`;
@@ -155,7 +155,7 @@ function bindReorder() {
   $app.querySelectorAll('[data-reorder]').forEach(b => b.onclick = () => {
     reorderType = reorderType === b.dataset.reorder ? null : b.dataset.reorder; viewHome();
   });
-  const box = $app.querySelector('.chips.sorting');
+  const box = $app.querySelector('.sorting');
   if (!box) return;
   const type = box.dataset.type;
   const save = () => reorderFavorites(type, [...box.querySelectorAll('.sortable')].map(c => c.dataset.key));
@@ -189,39 +189,71 @@ function bindReorder() {
   }));
 }
 
+const POPULAR = {
+  Italia: ['FCO', 'MXP', 'LIN', 'BGY', 'VCE', 'BLQ', 'PSA', 'NAP', 'CTA', 'PMO', 'TRN', 'CAG'],
+  Europa: ['LHR', 'CDG', 'AMS', 'FRA', 'MUC', 'ZRH', 'MAD', 'BCN', 'LIS', 'VIE'],
+};
 function viewHome() {
   const fav = getFavorites();
-  const popular = ['FCO', 'MXP', 'LIN', 'BGY', 'VCE', 'BLQ', 'NAP', 'CTA', 'PMO', 'TRN', 'LHR', 'CDG', 'AMS', 'FRA', 'MUC', 'ZRH', 'MAD', 'BCN'];
   const hasWorker = !isDemo() && !!(getSettings().workerUrl || '').trim();
   const offDot = c => hasWorker && OFFICIAL_AIRPORTS[c] ? '<i class="dot go" title="Tabellone ufficiale dell’aeroporto collegato"></i>' : '';
-  const section = (title, items, html, type) => {
+  const today = isoDate(new Date());
+  // un gruppo di preferiti: titolo con icona, pulsante Riordina e griglia di riquadri.
+  // tile(item) → { href, code, name, links, item } (item = oggetto per la stella)
+  const group = (type, icon, title, items, tile) => {
     if (!items?.length) return '';
     const on = reorderType === type;
     const btn = items.length > 1 ? `<button type="button" class="ghost reorder-btn" data-reorder="${type}">${on ? 'Fatto' : '⇅ Riordina'}</button>` : '';
-    const chip = (it, i) => {
-      const h = html(it);
-      if (!on) return h;
-      // in modalità riordino: niente link, maniglia per trascinare e frecce
-      const inner = h.replace(/^<a class="chip"[^>]*>/, '').replace(/<\/a>$/, '').replace(/<button class="star[\s\S]*?<\/button>/, '');
-      return `<div class="chip sortable" data-key="${esc(favKey(type, it))}"><span class="grip" aria-hidden="true">⠿</span>${inner}
-        <button type="button" class="mv" data-mv="-1" ${i === 0 ? 'disabled' : ''} title="Sposta prima" aria-label="Sposta prima">◀</button><button type="button" class="mv" data-mv="1" ${i === items.length - 1 ? 'disabled' : ''} title="Sposta dopo" aria-label="Sposta dopo">▶</button></div>`;
+    const card = (it, i) => {
+      const t = tile(it);
+      const head = `<b class="code">${t.code}</b><span class="name">${t.name}</span>`;
+      if (on) return `<div class="tile sortable" data-key="${esc(favKey(type, it))}"><span class="grip" aria-hidden="true">⠿</span><div class="tmain">${head}</div>
+        <div class="mvs"><button type="button" class="mv" data-mv="-1" ${i === 0 ? 'disabled' : ''} title="Sposta prima" aria-label="Sposta prima">◀</button><button type="button" class="mv" data-mv="1" ${i === items.length - 1 ? 'disabled' : ''} title="Sposta dopo" aria-label="Sposta dopo">▶</button></div></div>`;
+      return `<div class="tile"><a class="tmain" href="${t.href}"${t.title ? ` title="${t.title}"` : ''}>${head}</a>${star(true, favAttrs(type, t.item))}
+        ${t.links ? `<div class="tlinks">${t.links}</div>` : ''}</div>`;
     };
-    return `<section><h2>${title} ${btn}</h2>${on ? '<p class="hint">Trascina i preferiti (o usa le frecce) per cambiare l’ordine, poi tocca <b>Fatto</b>.</p>' : ''}<div class="chips${on ? ' sorting' : ''}" data-type="${type}">${items.map(chip).join('')}</div></section>`;
+    return `<div class="favgroup" style="--n:${Math.min(items.length, 4)}">
+      <h3><span class="gicon" aria-hidden="true">${icon}</span>${title} <small>${items.length}</small>${btn}</h3>
+      ${on ? '<p class="hint">Trascina i riquadri (o usa le frecce) per cambiare l’ordine, poi tocca <b>Fatto</b>.</p>' : ''}
+      <div class="tiles${on ? ' sorting' : ''}" data-type="${type}">${items.map(card).join('')}</div></div>`;
   };
-  const none = !fav.airports.length && !fav.routes.length && !fav.flights.length && !fav.aircraft?.length;
+  const favCount = fav.airports.length + fav.routes.length + fav.flights.length + (fav.aircraft?.length || 0);
+  const ntabs = openTabsCount();
   $app.innerHTML = `
-    <section class="hero">${searchBox()}</section>
-    ${none ? `<div class="card"><span class="eyebrow">Come si usa</span>
-      <p class="hint">Cerca un aeroporto, un volo o un aereo. Ogni pagina che apri resta in un <b>tab</b> in alto, così passi in un attimo dal tabellone ai voli che segui${matchMedia('(pointer: coarse)').matches ? ' (anche scorrendo col dito a destra e a sinistra)' : ''}. Tocca ☆ per salvare aeroporti, tratte, voli e aerei qui tra i preferiti.</p></div>` : ''}
-    ${openTabsCount() ? `<p class="hint opentabs">${openTabsCount()} ${openTabsCount() === 1 ? 'pagina aperta' : 'pagine aperte'} nei tab in alto <button class="ghost" type="button" id="closetabs">Chiudi tutti i tab</button></p>` : ''}
-    ${section('Aeroporti preferiti', fav.airports, a => `<a class="chip" href="#/airport/${a.iata}/dep">${offDot(a.iata)}<b>${a.iata}</b> ${esc(a.name || apName(a.iata))}${star(true, favAttrs('airports', { iata: a.iata }))}</a>`, 'airports')}
-    ${section('Voli preferiti', fav.flights, f => `<a class="chip" href="#/flight/${encodeURIComponent(f.number)}/${isoDate(new Date())}${f.dep ? `?dep=${f.dep}` : ''}"><b>${esc(f.number)}</b> ${f.dep && f.arr ? `${f.dep} → ${f.arr}` : ''}${star(true, favAttrs('flights', { number: f.number, dep: f.dep, arr: f.arr }))}</a>`, 'flights')}
-    ${section('Tratte preferite', fav.routes, r => `<a class="chip" href="#/route/${r.from}/${r.to}"><b>${r.from} → ${r.to}</b> ${esc(apName(r.from))} – ${esc(apName(r.to))}${star(true, favAttrs('routes', { from: r.from, to: r.to }))}</a>`, 'routes')}
-    ${section('Aerei preferiti', fav.aircraft, a => `<a class="chip" href="${regHref(a.reg)}"><b>${esc(a.reg)}</b> ${esc(a.model || '')}${star(true, favAttrs('aircraft', { reg: a.reg }))}</a>`, 'aircraft')}
-    ${!none && fav.flights.length ? '<p class="hint">I voli preferiti aprono sempre il volo di oggi con quel numero.</p>' : ''}
-    <section><h2>Aeroporti principali</h2>
-      <div class="chips">${popular.map(c => `<a class="chip small" href="#/airport/${c}/dep">${offDot(c)}<b>${c}</b> ${esc(apName(c))}</a>`).join('')}</div>
+    <section class="homehero">
+      <h1>Voli e tabelloni in tempo reale</h1>
+      <p class="sub">Cerca un aeroporto per il tabellone, un volo per seguirlo, la marca di un aereo per il suo percorso di oggi.</p>
+      ${searchBox()}
     </section>
+    ${favCount ? `<section class="homesec">
+      <h2>I tuoi preferiti</h2><div class="favgroups">
+      ${group('airports', '🛫', 'Aeroporti', fav.airports, a => ({ item: { iata: a.iata }, href: `#/airport/${a.iata}/dep`,
+        code: `${offDot(a.iata)}${a.iata}`, name: esc(a.name || apName(a.iata)),
+        links: `<a href="#/airport/${a.iata}/dep">Partenze</a><a href="#/airport/${a.iata}/arr">Arrivi</a>` }))}
+      ${group('flights', '✈️', 'Voli', fav.flights, f => ({ item: { number: f.number, dep: f.dep, arr: f.arr },
+        href: `#/flight/${encodeURIComponent(f.number)}/${today}${f.dep ? `?dep=${f.dep}` : ''}`, title: 'Apre sempre il volo di oggi con questo numero',
+        code: esc(f.number), name: f.dep && f.arr ? `${esc(apName(f.dep))} → ${esc(apName(f.arr))}` : 'volo',
+        links: `<span>${f.dep && f.arr ? `${f.dep} → ${f.arr} · ` : ''}oggi</span>` }))}
+      ${group('routes', '🔁', 'Tratte', fav.routes, r => ({ item: { from: r.from, to: r.to }, href: `#/route/${r.from}/${r.to}`,
+        code: `${r.from} → ${r.to}`, name: `${esc(apName(r.from))} – ${esc(apName(r.to))}`,
+        links: `<a href="#/route/${r.from}/${r.to}">Andata</a><a href="#/route/${r.to}/${r.from}">Ritorno</a>` }))}
+      ${group('aircraft', '🛩️', 'Aerei', fav.aircraft, a => ({ item: { reg: a.reg }, href: regHref(a.reg),
+        code: esc(a.reg), name: esc(a.model || 'aeromobile'), links: '<span>percorso di oggi</span>', title: 'Percorso di oggi dell’aereo' }))}
+    </div></section>` : `<section class="homesec">
+      <h2>Come si usa</h2>
+      <ol class="steps">
+        <li><b>Cerca</b><span>un aeroporto (FCO, Milano…), un volo (FR1234) o un aereo (EI-DCL).</span></li>
+        <li><b>Apri</b><span>ogni pagina resta in un tab in alto, così passi al volo dal tabellone ai voli che segui${matchMedia('(pointer: coarse)').matches ? ' (anche scorrendo col dito)' : ''}.</span></li>
+        <li><b>Salva</b><span>tocca ☆ per ritrovare qui aeroporti, tratte, voli e aerei.</span></li>
+      </ol>
+    </section>`}
+    <section class="homesec">
+      <h2>Aeroporti principali</h2>
+      ${Object.entries(POPULAR).map(([area, codes]) => `<div class="favgroup"><h3>${area}</h3>
+        <div class="apgrid">${codes.map(c => `<a class="aptile" href="#/airport/${c}/dep"><b>${offDot(c)}${c}</b><span>${esc(apName(c))}</span></a>`).join('')}</div></div>`).join('')}
+      ${hasWorker ? '<p class="hint"><i class="dot go"></i> tabellone ufficiale dell’aeroporto collegato</p>' : ''}
+    </section>
+    ${ntabs ? `<p class="hint opentabs">${ntabs} ${ntabs === 1 ? 'pagina aperta' : 'pagine aperte'} nei tab in alto · <button class="linkbtn" type="button" id="closetabs">chiudi tutti</button></p>` : ''}
     ${pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
       `tabelloni: per ${Object.keys(OFFICIAL_AIRPORTS).length} aeroporti il <b>tabellone ufficiale</b> dell’aeroporto${hasWorker ? ' (pallino verde)' : ' (si attiva con il Worker in Impostazioni)'}, che ha la priorità ed è sempre completato con <b>AeroDataBox</b>; per gli altri aeroporti solo AeroDataBox. L’elenco completo è in <a href="#/settings">Impostazioni</a>`,
       POS_SRC, MAP_SRC, 'preferiti e tab aperti: salvati solo in questo browser'])}`;
