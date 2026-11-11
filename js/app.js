@@ -61,7 +61,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.3.1 · trascinamento dei preferiti anche su iPhone';
+const APP_VERSION = '4.3.2 · trascinamento dei preferiti anche su Android';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -178,8 +178,11 @@ function bindReorder() {
   };
   const finish = (c, moved) => { c.classList.remove('dragging'); if (moved) { save(); viewHome(); } };
   box.querySelectorAll('.sortable').forEach(c => {
+    // la pressione lunga di Android (vibrazione, menu, selezione) annullerebbe il trascinamento
+    c.addEventListener('contextmenu', e => e.preventDefault());
     c.addEventListener('touchstart', e => {
       if (e.target.closest('.mv') || e.touches.length !== 1) return;
+      e.preventDefault(); // niente pressione lunga, scorrimento o click simulati: il tile resta "in mano"
       c.classList.add('dragging');
       let moved = false;
       const move = ev => { ev.preventDefault(); const p = ev.touches[0]; if (place(c, p.clientX, p.clientY)) moved = true; };
@@ -189,7 +192,7 @@ function bindReorder() {
       };
       // ascolto su window: il nodo viene spostato nel DOM durante il trascinamento
       addEventListener('touchmove', move, { passive: false }); addEventListener('touchend', end); addEventListener('touchcancel', end);
-    }, { passive: true });
+    }, { passive: false });
     c.addEventListener('pointerdown', e => {
       if (e.pointerType === 'touch' || e.target.closest('.mv') || e.button > 0) return;
       e.preventDefault();
