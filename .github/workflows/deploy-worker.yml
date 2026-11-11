@@ -28,6 +28,8 @@ jobs:
           for a in MXP AMS ZRH; do
             curl -s -w " -> $a %{http_code} %{time_total}s\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=$a&nature=D" | tail -c 300
           done
+          echo "== FlightAware"; curl -s -w " -> /fa/usage %{http_code}\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/fa/usage"
+          curl -s -w " -> /fa %{http_code}\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/fa?ident=AZ1&date=$(date -u +%F)" | head -c 600; echo
           echo "== notifiche"; curl -s -w " -> /push/key %{http_code}\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/push/key" | head -c 200
           for a in MXP HKG; do
             echo "== $a"; curl -s "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/debug?airport=$a&nature=D" | grep -o '"count":[0-9]*\|"log":.*' | head -c 1200; echo
