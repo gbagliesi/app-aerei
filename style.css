@@ -230,3 +230,11 @@ label.check { display: flex; gap: .5rem; align-items: flex-start; font-size: .95
 label.check input { margin-top: .2rem; }
 .ghost.small { padding: .2rem .5rem; font-size: .8rem; }
 .nlog { margin: .3rem 0 .6rem 1rem; padding: 0; font-size: .85rem; color: var(--muted); }
+
+/* riordino dei preferiti */
+.reorder-btn { text-transform: none; letter-spacing: 0; font-size: .8rem; padding: .15rem .55rem; margin-left: .4rem; vertical-align: middle; font-weight: normal; }
+.chips.sorting .sortable { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; padding-right: .35rem; border-style: dashed; }
+.chips.sorting .sortable.dragging { cursor: grabbing; opacity: .7; border-color: var(--amber); box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+.sortable .grip { color: var(--muted, #888); font-size: 1.1rem; line-height: 1; }
+.sortable .mv { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 999px; width: 2rem; height: 2rem; padding: 0; font-size: .75rem; cursor: pointer; }
+.sortable .mv:disabled { opacity: .3; cursor: default; }

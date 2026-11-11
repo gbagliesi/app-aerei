@@ -28,6 +28,15 @@ export function toggleFavorite(type, item) {
   return i < 0;
 }
 
+// nuovo ordine di una categoria di preferiti: keys = chiavi nell'ordine voluto
+export const favKey = keyOf;
+export function reorderFavorites(type, keys) {
+  const f = getFavorites();
+  const pos = new Map(keys.map((k, i) => [k, i]));
+  f[type] = [...f[type]].sort((a, b) => (pos.get(keyOf(type, a)) ?? 1e9) - (pos.get(keyOf(type, b)) ?? 1e9));
+  saveFav(f);
+}
+
 export function exportFavorites() { return JSON.stringify(getFavorites(), null, 2); }
 export function importFavorites(json) {
   const f = JSON.parse(json);

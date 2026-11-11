@@ -1,6 +1,6 @@
 import { getBoard, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getTrace, hexOfReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
 import { searchAirports, airportByIata, AIRPORTS, norm, airportSearchText } from './airports.js';
-import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites } from './store.js';
+import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites, reorderFavorites, favKey } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
 import { pushProblem, watchFlight, refreshWatch, unwatch, getWatch, listWatches, testPush, EVENT_LABELS, DEFAULT_EVENTS } from './notify.js';
 import { initTabs, enterTab, setTabInfo, playEnterAnim, closeAllTabs, openTabsCount } from './tabs.js';
@@ -61,7 +61,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.1.7 · Lamezia, Reggio Calabria e Crotone con tabellone ufficiale';
+const APP_VERSION = '4.2 · preferiti riordinabili';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -149,22 +149,75 @@ function bindSearch() {
 }
 
 // ---------- Home / preferiti ----------
+let reorderType = null; // categoria di preferiti in modalità riordino
+
+function bindReorder() {
+  $app.querySelectorAll('[data-reorder]').forEach(b => b.onclick = () => {
+    reorderType = reorderType === b.dataset.reorder ? null : b.dataset.reorder; viewHome();
+  });
+  const box = $app.querySelector('.chips.sorting');
+  if (!box) return;
+  const type = box.dataset.type;
+  const save = () => reorderFavorites(type, [...box.querySelectorAll('.sortable')].map(c => c.dataset.key));
+  box.querySelectorAll('.mv').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const c = b.closest('.sortable');
+    if (b.dataset.mv === '-1') c.previousElementSibling?.before(c); else c.nextElementSibling?.after(c);
+    save(); viewHome();
+  });
+  // trascinamento con mouse, dito o penna (Pointer Events)
+  box.querySelectorAll('.sortable').forEach(c => c.addEventListener('pointerdown', e => {
+    if (e.target.closest('.mv') || e.button > 0) return;
+    e.preventDefault();
+    c.classList.add('dragging');
+    let moved = false;
+    const move = ev => {
+      const t = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.sortable');
+      if (!t || t === c || t.parentNode !== box) return;
+      const r = t.getBoundingClientRect();
+      const after = ev.clientY > r.bottom ? true : ev.clientY < r.top ? false : ev.clientX > r.left + r.width / 2;
+      after ? t.after(c) : t.before(c);
+      moved = true;
+    };
+    const up = () => {
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      c.classList.remove('dragging');
+      if (moved) { save(); viewHome(); }
+    };
+    // ascolto su window: spostare l'elemento nel DOM farebbe perdere il pointer capture
+    addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  }));
+}
+
 function viewHome() {
   const fav = getFavorites();
   const popular = ['FCO', 'MXP', 'LIN', 'BGY', 'VCE', 'BLQ', 'NAP', 'CTA', 'PMO', 'TRN', 'LHR', 'CDG', 'AMS', 'FRA', 'MUC', 'ZRH', 'MAD', 'BCN'];
   const hasWorker = !isDemo() && !!(getSettings().workerUrl || '').trim();
   const offDot = c => hasWorker && OFFICIAL_AIRPORTS[c] ? '<i class="dot go" title="Tabellone ufficiale dell’aeroporto collegato"></i>' : '';
-  const section = (title, items, html) => items?.length ? `<section><h2>${title}</h2><div class="chips">${items.map(html).join('')}</div></section>` : '';
+  const section = (title, items, html, type) => {
+    if (!items?.length) return '';
+    const on = reorderType === type;
+    const btn = items.length > 1 ? `<button type="button" class="ghost reorder-btn" data-reorder="${type}">${on ? 'Fatto' : '⇅ Riordina'}</button>` : '';
+    const chip = (it, i) => {
+      const h = html(it);
+      if (!on) return h;
+      // in modalità riordino: niente link, maniglia per trascinare e frecce
+      const inner = h.replace(/^<a class="chip"[^>]*>/, '').replace(/<\/a>$/, '').replace(/<button class="star[\s\S]*?<\/button>/, '');
+      return `<div class="chip sortable" data-key="${esc(favKey(type, it))}"><span class="grip" aria-hidden="true">⠿</span>${inner}
+        <button type="button" class="mv" data-mv="-1" ${i === 0 ? 'disabled' : ''} title="Sposta prima" aria-label="Sposta prima">◀</button><button type="button" class="mv" data-mv="1" ${i === items.length - 1 ? 'disabled' : ''} title="Sposta dopo" aria-label="Sposta dopo">▶</button></div>`;
+    };
+    return `<section><h2>${title} ${btn}</h2>${on ? '<p class="hint">Trascina i preferiti (o usa le frecce) per cambiare l’ordine, poi tocca <b>Fatto</b>.</p>' : ''}<div class="chips${on ? ' sorting' : ''}" data-type="${type}">${items.map(chip).join('')}</div></section>`;
+  };
   const none = !fav.airports.length && !fav.routes.length && !fav.flights.length && !fav.aircraft?.length;
   $app.innerHTML = `
     <section class="hero">${searchBox()}</section>
     ${none ? `<div class="card"><span class="eyebrow">Come si usa</span>
       <p class="hint">Cerca un aeroporto, un volo o un aereo. Ogni pagina che apri resta in un <b>tab</b> in alto, così passi in un attimo dal tabellone ai voli che segui${matchMedia('(pointer: coarse)').matches ? ' (anche scorrendo col dito a destra e a sinistra)' : ''}. Tocca ☆ per salvare aeroporti, tratte, voli e aerei qui tra i preferiti.</p></div>` : ''}
     ${openTabsCount() ? `<p class="hint opentabs">${openTabsCount()} ${openTabsCount() === 1 ? 'pagina aperta' : 'pagine aperte'} nei tab in alto <button class="ghost" type="button" id="closetabs">Chiudi tutti i tab</button></p>` : ''}
-    ${section('Aeroporti preferiti', fav.airports, a => `<a class="chip" href="#/airport/${a.iata}/dep">${offDot(a.iata)}<b>${a.iata}</b> ${esc(a.name || apName(a.iata))}${star(true, favAttrs('airports', { iata: a.iata }))}</a>`)}
-    ${section('Voli preferiti', fav.flights, f => `<a class="chip" href="#/flight/${encodeURIComponent(f.number)}/${isoDate(new Date())}${f.dep ? `?dep=${f.dep}` : ''}"><b>${esc(f.number)}</b> ${f.dep && f.arr ? `${f.dep} → ${f.arr}` : ''}${star(true, favAttrs('flights', { number: f.number, dep: f.dep, arr: f.arr }))}</a>`)}
-    ${section('Tratte preferite', fav.routes, r => `<a class="chip" href="#/route/${r.from}/${r.to}"><b>${r.from} → ${r.to}</b> ${esc(apName(r.from))} – ${esc(apName(r.to))}${star(true, favAttrs('routes', { from: r.from, to: r.to }))}</a>`)}
-    ${section('Aerei preferiti', fav.aircraft, a => `<a class="chip" href="${regHref(a.reg)}"><b>${esc(a.reg)}</b> ${esc(a.model || '')}${star(true, favAttrs('aircraft', { reg: a.reg }))}</a>`)}
+    ${section('Aeroporti preferiti', fav.airports, a => `<a class="chip" href="#/airport/${a.iata}/dep">${offDot(a.iata)}<b>${a.iata}</b> ${esc(a.name || apName(a.iata))}${star(true, favAttrs('airports', { iata: a.iata }))}</a>`, 'airports')}
+    ${section('Voli preferiti', fav.flights, f => `<a class="chip" href="#/flight/${encodeURIComponent(f.number)}/${isoDate(new Date())}${f.dep ? `?dep=${f.dep}` : ''}"><b>${esc(f.number)}</b> ${f.dep && f.arr ? `${f.dep} → ${f.arr}` : ''}${star(true, favAttrs('flights', { number: f.number, dep: f.dep, arr: f.arr }))}</a>`, 'flights')}
+    ${section('Tratte preferite', fav.routes, r => `<a class="chip" href="#/route/${r.from}/${r.to}"><b>${r.from} → ${r.to}</b> ${esc(apName(r.from))} – ${esc(apName(r.to))}${star(true, favAttrs('routes', { from: r.from, to: r.to }))}</a>`, 'routes')}
+    ${section('Aerei preferiti', fav.aircraft, a => `<a class="chip" href="${regHref(a.reg)}"><b>${esc(a.reg)}</b> ${esc(a.model || '')}${star(true, favAttrs('aircraft', { reg: a.reg }))}</a>`, 'aircraft')}
     ${!none && fav.flights.length ? '<p class="hint">I voli preferiti aprono sempre il volo di oggi con quel numero.</p>' : ''}
     <section><h2>Aeroporti principali</h2>
       <div class="chips">${popular.map(c => `<a class="chip small" href="#/airport/${c}/dep">${offDot(c)}<b>${c}</b> ${esc(apName(c))}</a>`).join('')}</div>
@@ -174,6 +227,7 @@ function viewHome() {
       POS_SRC, MAP_SRC, 'preferiti e tab aperti: salvati solo in questo browser'])}`;
   bindSearch();
   bindStars($app, viewHome);
+  bindReorder();
   const ct = document.getElementById('closetabs');
   if (ct) ct.onclick = () => { closeAllTabs(); viewHome(); };
 }
