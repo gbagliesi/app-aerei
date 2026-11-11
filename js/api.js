@@ -419,6 +419,37 @@ async function officialOnly(iata, nature, window = true) {
   return flights.sort((a, b) => Date.parse((a.dep.sched || a.arr.sched).utc) - Date.parse((b.dep.sched || b.arr.sched).utc));
 }
 
+// ---------- FlightAware AeroAPI via Worker (riserva quando AeroDataBox non risponde) ----------
+// La chiave FlightAware è un segreto del Worker. Il Worker tiene le risposte in cache 10 minuti e ha un limite
+// mensile di richieste; qui tengo le risposte per 10 minuti anche nel browser.
+async function faGet(params) {
+  const base = (getSettings().workerUrl || '').trim().replace(/\/+$/, '');
+  if (!base) return null;
+  const q = new URLSearchParams(params).toString();
+  const hit = pget(`fa:${q}`, 10 * 60e3);
+  if (hit !== undefined) return hit;
+  const r = await fetch(`${base}/fa?${q}`).catch(() => null);
+  if (!r?.ok) return null; // 501 = FlightAware non configurato, 429 = limite mensile
+  const j = await r.json().catch(() => null);
+  if (j) pput(`fa:${q}`, j);
+  return j;
+}
+const withCoords = legs => {
+  for (const l of legs) for (const s of [l.dep, l.arr]) {
+    const ap = s?.iata && airportByIata(s.iata);
+    if (ap) Object.assign(s, { name: s.name || ap.name, lat: ap.lat, lon: ap.lon });
+  }
+  return legs;
+};
+export async function faFlight(number, date, inbound = false) {
+  const j = await faGet({ ident: number, date, ...(inbound ? { inbound: 1 } : {}) });
+  return j && { flights: withCoords(j.flights || []), inbound: j.inbound ? withCoords([j.inbound])[0] : null };
+}
+async function faByReg(reg, date) {
+  const j = await faGet({ reg, date });
+  return j ? withCoords(j.flights || []) : null;
+}
+
 /** Tutte le tratte di un volo in una data (YYYY-MM-DD). */
 export async function getFlight(number, date, depHint) {
   number = number.toUpperCase().replace(/\s+/g, '');
@@ -429,7 +460,13 @@ export async function getFlight(number, date, depHint) {
       return enrichLegs((data || []).map(f => normFlight(f)));
     });
   } catch (e) {
-    // AeroDataBox non disponibile: cerco il volo nei tabelloni ufficiali
+    // AeroDataBox non disponibile: provo FlightAware, poi i tabelloni ufficiali
+    const fa = await faFlight(number, date).catch(() => null);
+    if (fa?.flights.length) {
+      const legs = await enrichLegs(fa.flights).catch(() => fa.flights);
+      legs.forEach(l => { l._degraded = e.message || String(e); });
+      return legs;
+    }
     const legs = await officialFlight(number, date, depHint).catch(() => []);
     if (!legs.length) throw e;
     legs.forEach(l => { l._degraded = e.message || String(e); });
@@ -470,8 +507,15 @@ async function officialFlight(number, date, depHint) {
 export async function getFlightsByReg(reg, date) {
   if (isDemo()) return demo.byReg(reg, date);
   return cached(`reg:${reg}:${date}`, 60e3, async () => {
-    const data = await adbCached(`/flights/reg/${encodeURIComponent(reg)}/${date}?withAircraftImage=false&withLocation=true`, 15 * 60e3);
-    return (data || []).map(f => normFlight(f));
+    try {
+      const data = await adbCached(`/flights/reg/${encodeURIComponent(reg)}/${date}?withAircraftImage=false&withLocation=true`, 15 * 60e3);
+      return (data || []).map(f => normFlight(f));
+    } catch (e) {
+      // AeroDataBox non disponibile: voli dell'aereo da FlightAware
+      const legs = await faByReg(reg, date).catch(() => null);
+      if (legs?.length) return legs;
+      throw e;
+    }
   });
 }
 
@@ -614,6 +658,15 @@ export async function getInbound(flight) {
         .sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc))[0];
       if (arr) return { inbound: arr, method: 'reg' };
     }
+  }
+
+  // 1b) FlightAware indica l'aereo assegnato e la tratta precedente (anche per le low cost): due richieste,
+  //     solo se le marche non hanno già dato la risposta
+  const fa = await faFlight(flight.number, (depSide.sched?.local || '').slice(0, 10) || isoDate(depUtc), true).catch(() => null);
+  if (fa?.inbound?.number && fa.flights.some(l => !depSide.iata || l.dep?.iata === depSide.iata)) {
+    const me = fa.flights.find(l => l.dep?.iata === depSide.iata);
+    if (me?.aircraft?.reg && !flight.aircraft?.reg) flight.aircraft = { ...flight.aircraft, reg: me.aircraft.reg, model: flight.aircraft?.model || me.aircraft.model };
+    return { inbound: fa.inbound, method: 'reg', source: 'FlightAware' };
   }
 
   // 2) stima dal tabellone arrivi

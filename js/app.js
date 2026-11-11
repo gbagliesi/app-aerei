@@ -61,7 +61,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.3.3 · animazione nel riordino dei preferiti';
+const APP_VERSION = '4.4 · FlightAware come riserva di AeroDataBox e per l’aereo in arrivo';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -453,8 +453,9 @@ function progress(f) {
 function legSources(f) {
   if (getSettings().provider !== 'aerodatabox') return 'Fonte: dati dimostrativi.';
   const sites = [...new Set([f.dep, f.arr].filter(s => s?._off).map(s => OFFICIAL_SOURCES[s._off] || s._off))].map(esc);
-  if (!sites.length) return f._adb ? 'Fonte: AeroDataBox.' : 'Fonte: tabellone ufficiale dell’aeroporto.';
-  return `Fonti: ${sites.join(', ')}${f._adb ? ' + AeroDataBox' : ''}.`;
+  const api = f._adb ? 'AeroDataBox' : f._fa ? 'FlightAware' : '';
+  if (!sites.length) return api ? `Fonte: ${api}.` : 'Fonte: tabellone ufficiale dell’aeroporto.';
+  return `Fonti: ${sites.join(', ')}${api ? ` + ${api}` : ''}.`;
 }
 
 // "Parte tra 40 min", "Atterra tra 1 h 05 min", "Atterrato alle 12:06"
@@ -555,7 +556,7 @@ async function viewFlight(number, date, depHint) {
     ${legs.length > 1 ? `<div class="tabs">${legs.map(l => `<a href="#/flight/${encodeURIComponent(number)}/${date}?dep=${l.dep.iata}" class="${l === f ? 'active' : ''}">${l.dep.iata} → ${l.arr.iata}</a>`).join('')}</div>` : ''}
     <p class="links">Tratta <b>${esc(f.dep.iata)} → ${esc(f.arr.iata)}</b> ${star(isFavorite('routes', { from: f.dep.iata, to: f.arr.iata }), favAttrs('routes', { from: f.dep.iata, to: f.arr.iata }))}
       · <a href="#/route/${f.dep.iata}/${f.arr.iata}">altri voli su questa tratta</a> · <a href="#/airport/${f.dep.iata}/dep">tabellone ${esc(f.dep.iata)}</a></p>
-    ${f._degraded ? `<p class="hint" title="${esc(f._degraded)}">⚠ AeroDataBox non disponibile ora: solo dati del tabellone ufficiale.</p>` : ''}
+    ${f._degraded ? `<p class="hint" title="${esc(f._degraded)}">⚠ AeroDataBox non disponibile ora: ${f._fa ? 'dati da FlightAware, completati con il tabellone ufficiale dove c’è' : 'solo dati del tabellone ufficiale'}.</p>` : ''}
     <div id="notify" class="card notify" hidden></div>
     <div id="predict"></div>
     <div id="leg">${legCard(f, 'Questo volo')}</div>
@@ -563,9 +564,9 @@ async function viewFlight(number, date, depHint) {
     <div class="card" id="aircraft">${aircraftCard(f.aircraft, date)}</div>
     <div id="inbound"><div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="loading">Cerco la tratta precedente…</p></div></div>
     ${pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
-      'orari, terminal, gate, check-in, nastro e stato: indicati in fondo a ogni riquadro. Quando c’è il <b>tabellone ufficiale dell’aeroporto</b> (partenza e/o arrivo) ha la priorità per questi dati; il resto viene da <b>AeroDataBox</b>',
+      'orari, terminal, gate, check-in, nastro e stato: indicati in fondo a ogni riquadro. Quando c’è il <b>tabellone ufficiale dell’aeroporto</b> (partenza e/o arrivo) ha la priorità per questi dati; il resto viene da <b>AeroDataBox</b> (se non risponde, da <b>FlightAware</b>)',
       f._degraded ? `⚠ AeroDataBox non disponibile: ${esc(f._degraded)}` : '',
-      'aereo assegnato e volo precedente: <b>AeroDataBox</b>, completato con la rete ADS-B <b>adsb.lol</b>; quando è scritto “probabile” o “stima” è una deduzione dell’app',
+      'aereo assegnato e volo precedente: <b>AeroDataBox</b>, poi <b>FlightAware</b>, completati con la rete ADS-B <b>adsb.lol</b>; quando è scritto “probabile” o “stima” è una deduzione dell’app',
       'ritardo previsto, tempo di rotazione, durata e “parte tra / atterra tra”: calcolati dall’app con gli orari qui sopra',
       NOTIFY_SRC, POS_SRC, MAP_SRC])}`;
   bindStars($app);
@@ -612,7 +613,7 @@ async function viewFlight(number, date, depHint) {
     if (inbound && r.method === 'guess' && !f.aircraft?.reg && inbound.aircraft?.reg) {
       card.innerHTML = aircraftCard(inbound.aircraft, date, `Stima basata sul volo precedente ${esc(inbound.number)}: la compagnia non ha ancora confermato l'aereo.`, true);
     } else if (inbound && r.method === 'reg' && f.aircraft?.reg && !hadReg) {
-      card.innerHTML = aircraftCard(f.aircraft, date, `La compagnia non lo indica sul volo, ma la giornata di questo aereo (arrivato con ${esc(inbound.number)}) prevede proprio ${esc(f.number)}.`);
+      card.innerHTML = aircraftCard(f.aircraft, date, r.source === 'FlightAware' ? `Aereo indicato da FlightAware (arriva con ${esc(inbound.number)}).` : `La compagnia non lo indica sul volo, ma la giornata di questo aereo (arrivato con ${esc(inbound.number)}) prevede proprio ${esc(f.number)}.`);
     }
   } catch (e) { document.getElementById('inbound').innerHTML = errorBox(e); }
 

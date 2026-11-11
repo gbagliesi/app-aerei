@@ -6,10 +6,12 @@
 //   GET /debug?airport=PSA&nature=D                                 →  diagnostica (URL provati, inizio risposta)
 //
 //   /push/...  notifiche sui voli seguiti (Web Push): vedi notify.js
+//   /fa?...    FlightAware AeroAPI (riserva di AeroDataBox, aereo in arrivo): vedi aeroapi.js
 //
 // Uso personale: le risposte restano in cache 90 secondi, così l'aeroporto riceve poche richieste.
 
 import { Watcher, setBoardFn } from './notify.js';
+import { handleFa } from './aeroapi.js';
 export { Watcher };
 export const _readBoard = (a, n, env, log) => readBoard(a, n, env, log); // per i test locali
 
@@ -77,6 +79,7 @@ export default {
       const r = await env.WATCHER.get(env.WATCHER.idFromName('main')).fetch(request);
       return new Response(r.body, { status: r.status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...cors } });
     }
+    if (url.pathname === '/fa' || url.pathname === '/fa/usage') return handleFa(url, env, ctx, json);
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA', ...Object.keys(OTHER)] });
     // Prova diagnostica: una richiesta normale (nessun aggiramento) verso i siti degli aeroporti non ancora supportati
     if (url.pathname === '/probe') {

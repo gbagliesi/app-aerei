@@ -39,6 +39,15 @@ da seguire) e manda le notifiche Web Push al telefono o al computer, anche ad ap
 - Si pubblica con il workflow **Deploy Worker** (usa `wrangler.toml`); a mano: `npx wrangler deploy --config worker/wrangler.toml --keep-vars`.
   Incollare il codice nella dashboard non basta più (servono `notify.js` e il Durable Object).
 
+## FlightAware AeroAPI (dalla v4.4)
+
+File [`aeroapi.js`](aeroapi.js). Serve come riserva quando AeroDataBox non risponde (volo per numero, voli di un aereo
+dalle marche) e per trovare l'aereo in arrivo (`inbound_fa_flight_id`), anche per le low cost.
+- `GET /fa?ident=FR1234&date=YYYY-MM-DD[&inbound=1]`, `GET /fa?reg=EI-ABC&date=YYYY-MM-DD`, `GET /fa/usage`.
+- Segreto del Worker `AEROAPI_KEY` (chiave del portale AeroAPI, piano Personal). Senza segreto `/fa` risponde 501 e l'app lo ignora.
+- Ogni richiesta si paga (piano Personal: primi 5 $ al mese gratis). Cache 10 minuti nel Worker e nel browser; limite
+  `AEROAPI_MAX_MONTH` richieste al mese (variabile facoltativa, predefinito 800), contato nel Durable Object `Watcher`.
+
 ## Pubblicarlo (una volta sola, ~5 minuti)
 
 1. Entra su [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create** → **Create Worker**.
