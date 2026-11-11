@@ -3,6 +3,7 @@
 import { getSettings } from './store.js';
 import { airportByIata, AIRPORTS, iataByCityName } from './airports.js';
 import * as demo from './demo.js';
+import { simulateRotation, arrTime } from './rotation.js';
 
 const ADB_HOST = 'aerodatabox.p.rapidapi.com';
 const cache = new Map();
@@ -681,8 +682,9 @@ export async function getInbound(flight) {
     return { inbound: fa.inbound, method: 'reg', source: 'FlightAware' };
   }
 
-  // 2) stima dal tabellone arrivi
-  if (await loadBoard()) {
+  // 2) stima dal tabellone arrivi (anche solo dai dati ufficiali, se il volo è lontano nel tempo)
+  if ((await loadBoard()) || (OFFICIAL_AIRPORTS[depSide.iata] && (getSettings().workerUrl || '').trim())) {
+    board = board || { arrivals: [], departures: [] };
     const airline = flight.airline?.iata || flight.number.replace(/\d.*$/, '');
     const cands = board.arrivals.filter(a => {
       const t = (a.arr?.revised || a.arr?.sched)?.utc;
@@ -714,46 +716,43 @@ export async function getInbound(flight) {
         }
       }
     }
-    const back = cands.filter(a => a.dep?.iata && a.dep.iata === flight.arr?.iata)
-      .sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc))[0];
-    if (back) {
-      // se il volo precedente è in aria, ricavo marche e ICAO24 reali dalla rete ADS-B
-      if (!back.aircraft?.reg && AIRBORNE.includes(back.status) && back.callSign) {
-        const a = await adsbByCallsign(back.callSign);
-        if (a?.reg) back.aircraft = { ...back.aircraft, reg: a.reg, hex: a.hex, model: back.aircraft?.model || a.model };
-      }
-      return { inbound: back, method: 'guess', basis: 'return' };
-    }
-
-    // 2c) deduzione dalle rotazioni: abbino in ordine di tempo gli aerei della compagnia arrivati
-    //     in questo aeroporto ai suoi voli in partenza senza aereo assegnato (come fanno i tracker)
-    const al = x => x.airline?.iata || x.number.replace(/\d.*$/, '');
-    const tOf = t => (t?.utc ? new Date(t.utc).getTime() : NaN);
-    const arrT = a => tOf(a.arr?.actual || a.arr?.revised || a.arr?.sched);
-    const depT = d => tOf(d.dep?.revised || d.dep?.sched);
-    const turn = (LOWCOST_CODES.includes(airline) ? 25 : 40) * 60e3;
-    const arrivals = board.arrivals.filter(a => al(a) === airline && a.status !== 'Canceled' && arrT(a) <= +depUtc + 30 * 60e3 && arrT(a) >= depUtc - 8 * 3600e3);
-    let enrich = 0;
-    for (const a of arrivals) {
-      if (!a.aircraft?.reg && a.callSign && AIRBORNE.includes(a.status) && enrich++ < 4) {
+    // 2b) ricostruzione della giornata della compagnia in questo aeroporto (stile Flightradar24): giri
+    //     veloci, aerei fermi da ore o rimasti a terra la notte; la rete ADS-B scarta gli aerei già ripartiti
+    const day = await dayMovements(depSide.iata, depUtc, board, flight);
+    for (const a of day.arrivals) {
+      if (!a.aircraft?.reg && a.callSign && AIRBORNE.includes(a.status) && al(a) === airline && Math.abs(depUtc - arrTime(a)) < 3 * 3600e3) {
         const x = await adsbByCallsign(a.callSign);
         if (x?.reg) a.aircraft = { ...a.aircraft, reg: x.reg, hex: x.hex, model: a.aircraft?.model || x.model };
       }
     }
-    // aerei già assegnati a una partenza successiva al loro arrivo: non sono liberi
-    const assigned = board.departures.filter(d => al(d) === airline && d.aircraft?.reg);
-    const free = arrivals.filter(a => !assigned.some(d => d.aircraft.reg === a.aircraft?.reg && depT(d) > arrT(a)))
-      .sort((a, b) => arrT(a) - arrT(b));
-    const deps = board.departures.filter(d => al(d) === airline && !d.aircraft?.reg && d.status !== 'Canceled' && !isNaN(depT(d)));
-    if (!deps.some(d => d.number === flight.number)) deps.push(flight);
-    deps.sort((a, b) => depT(a) - depT(b));
-    const used = new Set();
-    for (const d of deps) {
-      const avail = free.filter(a => !used.has(a));
-      const pick = avail.find(a => arrT(a) + turn <= depT(d)) || avail.find(a => arrT(a) + turn <= depT(d) + 60 * 60e3);
-      if (!pick) continue;
-      used.add(pick);
-      if (d.number === flight.number) return { inbound: pick, method: 'guess', basis: 'rotation' };
+    // aerei della compagnia fermi da ore con marche note: la rete ADS-B dice se sono ripartiti (esclusi)
+    // o se sono ancora qui (allora non possono aver fatto le partenze già decollate)
+    const exclude = new Set(), stayed = new Set();
+    const parked = day.arrivals.filter(a => al(a) === airline && a.aircraft?.reg && arrTime(a) < depUtc - 90 * 60e3 && arrTime(a) > depUtc - 30 * 3600e3)
+      .sort((a, b) => arrTime(b) - arrTime(a)).slice(0, 6);
+    await Promise.all(parked.map(async a => {
+      const left = await leftSince(a.aircraft.reg, arrTime(a), depSide.iata).catch(() => null);
+      if (left === true) exclude.add(a.aircraft.reg); else if (left === false) stayed.add(a.aircraft.reg);
+    }));
+    const sim = simulateRotation({ flight, arrivals: day.arrivals, departures: day.departures, exclude, stayed, now: Date.now(), coverageFrom: day.from });
+    if (sim?.pick) {
+      const p = sim.pick;
+      if (!p.aircraft?.reg && AIRBORNE.includes(p.status) && p.callSign) {
+        const a = await adsbByCallsign(p.callSign);
+        if (a?.reg) p.aircraft = { ...p.aircraft, reg: a.reg, hex: a.hex, model: p.aircraft?.model || a.model };
+      }
+      return { inbound: p, method: 'guess', basis: sim.basis, waitMin: sim.waitMin };
+    }
+    if (sim?.basis === 'ground') {
+      const name = flight.airline?.name ? ` ${flight.airline.name}` : '', ap = airportByIata(depSide.iata)?.city || depSide.iata;
+      const late = day.arrivals.filter(a => al(a) === airline && a.status !== 'Canceled' && arrTime(a) > depUtc - 40 * 60e3 && arrTime(a) < +depUtc + 90 * 60e3)
+        .sort((a, b) => arrTime(a) - arrTime(b))[0];
+      return {
+        inbound: null, method: 'guess', basis: 'ground',
+        reason: `Probabilmente parte con un aereo${name} già fermo a ${ap}${sim.partialData ? '' : ', rimasto lì dalla notte o di riserva nella base'}: ricostruendo la giornata della compagnia, gli aerei arrivati prima della partenza sono già ripartiti con altri voli.`
+          + (late ? ` L'aereo in arrivo con ${late.number} da ${late.dep?.iata || '?'} (alle ${hhmm(late.arr?.actual || late.arr?.revised || late.arr?.sched)}) arriva troppo tardi per fare questo volo.` : '')
+          + ' La compagnia di solito indica l\'aereo poche ore prima della partenza.',
+      };
     }
   }
 
@@ -783,7 +782,82 @@ async function adsbByCallsign(cs) {
   });
 }
 const AIRBORNE = ['Departed', 'EnRoute', 'Approaching'];
-const LOWCOST_CODES = ['FR', 'U2', 'W6', 'VY', 'EW', 'HV', 'DY', 'V7'];
+const al = x => x.airline?.iata || (x.number || '').replace(/\d.*$/, '');
+const hhmm = t => (t?.local || '').slice(11, 16) || (t?.utc ? new Date(t.utc).toTimeString().slice(0, 5) : '?');
+const kmBetween = (a, b) => {
+  const r = Math.PI / 180, x = Math.sin((b.lat - a.lat) * r / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin((b.lon - a.lon) * r / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(x));
+};
+
+/** Data locale "YYYY-MM-DD" di un istante nel fuso dell'aeroporto. */
+const localDay = (ms, tz) => new Intl.DateTimeFormat('en-CA', { timeZone: tz || 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(ms));
+
+/**
+ * Movimenti di un aeroporto per ricostruire la giornata delle compagnie: tabellone (finestra attorno a
+ * adesso) + tabellone ufficiale completo + la copia del tabellone ufficiale di ieri salvata in questo
+ * dispositivo + (se servono e ci sono unità) gli arrivi/partenze della sera prima da AeroDataBox.
+ * Restituisce { arrivals, departures, from } (from = inizio dei dati, in ms).
+ */
+async function dayMovements(iata, depUtc, board, flight) {
+  const arrivals = [...(board?.arrivals || [])], departures = [...(board?.departures || [])];
+  const add = (list, extra, side) => {
+    for (const x of extra) {
+      const t = Date.parse(x[side]?.sched?.utc || '');
+      if (!list.some(f => f.number === x.number && Math.abs(Date.parse(f[side]?.sched?.utc || '') - t) < 12 * 3600e3)) list.push(x);
+    }
+  };
+  const tz = OFFICIAL_AIRPORTS[iata];
+  let dayFrom = Infinity; // i tabelloni ufficiali coprono la giornata intera
+  if (tz && (getSettings().workerUrl || '').trim()) {
+    const today = localDay(Date.now(), tz), yesterday = localDay(Date.now() - 86400e3, tz);
+    for (const [nature, list, side] of [['A', arrivals, 'arr'], ['D', departures, 'dep']]) {
+      const off = await getOfficial(iata, nature).catch(() => null);
+      if (off?.length) {
+        pput(`day:${iata}:${nature}:${today}`, off); // copia per domani (molti tabelloni non mostrano il giorno prima)
+        add(list, mergeOfficial(officialFlights(off, iata, nature), off, side, iata), side);
+      }
+      const prev = pget(`day:${iata}:${nature}:${yesterday}`, 3 * 86400e3);
+      if (prev?.length) { add(list, mergeOfficial(officialFlights(prev, iata, nature), prev, side, iata), side); dayFrom = Math.min(dayFrom, Date.parse(`${yesterday}T00:00:00${tzOffset(tz, yesterday)}`)); }
+      else if (off?.length) dayFrom = Math.min(dayFrom, Date.parse(`${today}T00:00:00${tzOffset(tz, today)}`));
+    }
+  }
+  const times = [...arrivals.map(a => Date.parse(a.arr?.sched?.utc || '')), ...departures.map(d => Date.parse(d.dep?.sched?.utc || ''))].filter(t => !isNaN(t));
+  let from = Math.min(dayFrom, times.length ? Math.min(...times) : Infinity);
+  if (from === Infinity) from = NaN;
+  // dati che non coprono la sera prima: provo AeroDataBox (una richiesta, tenuta in cache un giorno)
+  const offset = ((flight?.dep?.sched?.local || '').match(/([+-]\d\d:\d\d)$/) || [])[1];
+  if (!(from <= depUtc - 14 * 3600e3) && offset && (getSettings().apiKey || '').trim() && !adbBlocked() && !isDemo()) {
+    const loc = ms => new Date(ms + (offset[0] === '-' ? -1 : 1) * (parseInt(offset.slice(1, 3)) * 60 + parseInt(offset.slice(4))) * 60e3).toISOString().slice(0, 16);
+    const a = depUtc - 18 * 3600e3, b = Math.min(a + 12 * 3600e3, isNaN(from) ? Infinity : from + 3600e3);
+    if (b > a + 3600e3) {
+      try {
+        const q = 'withLeg=true&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=false';
+        const data = await adbCached(`/flights/airports/iata/${iata}/${loc(a)}/${loc(b)}?${q}`, 24 * 3600e3);
+        const own = { iata, ...(airportByIata(iata) || {}) };
+        add(arrivals, (data?.arrivals || []).map(f => normFlight(f, 'arr', own)), 'arr');
+        add(departures, (data?.departures || []).map(f => normFlight(f, 'dep', own)), 'dep');
+        from = Math.min(isNaN(from) ? Infinity : from, a);
+      } catch { /* unità finite o errore: si va avanti coi dati che ci sono */ }
+    }
+  }
+  return { arrivals, departures, from };
+}
+
+/** Rete ADS-B: true se l'aereo (marche) ha volato lontano dall'aeroporto dopo l'istante indicato, false se risulta
+ *  ancora fermo lì, null se non si sa. */
+async function leftSince(reg, sinceMs, iata) {
+  const ap = airportByIata(iata);
+  if (!ap?.lat) return null;
+  const live = await liveByReg(reg).catch(() => null);
+  if (live?.pos?.lat != null && kmBetween(live.pos, ap) > 30) return true;
+  const hex = live?.hex || await hexOfReg(reg).catch(() => null);
+  const tr = hex && await getTrace(hex).catch(() => null);
+  if (!tr?.points) return null; // traccia non disponibile: non si sa
+  if (tr.points.some(p => p.t > sinceMs + 20 * 60e3 && !p.ground && p.lat != null && kmBetween(p, ap) > 30)) return true;
+  // l'ultima posizione nota è vicino all'aeroporto (atterrato e fermo): è ancora qui
+  const last = tr.points[tr.points.length - 1];
+  return last && last.t > sinceMs - 3600e3 && kmBetween(last, ap) < 15 ? false : null;
+}
 
 
 /** Aereo cercato per marche sulla rete ADS-B (indipendente dai dati della compagnia). */

@@ -10,7 +10,9 @@ dettaglio del volo con tracking in tempo reale su mappa, l'aereo "in arrivo" che
 - **Volo**: orari, gate, terminal, check-in, nastro, aeromobile (marche, modello, ICAO24), avanzamento,
   mappa con rotta e posizione live.
 - **Da dove arriva l'aereo**: la tratta precedente dello stesso aeromobile, il suo stato, il tempo di rotazione
-  (con avviso se è stretto) e la posizione live dell'aereo mentre vola verso il tuo aeroporto.
+  (con avviso se è stretto) e la posizione live dell'aereo mentre vola verso il tuo aeroporto. Se la compagnia non ha
+  ancora indicato le marche, l'app ricostruisce la giornata della compagnia nell'aeroporto (giri veloci, aerei fermi,
+  aerei rimasti a terra la notte, verificati con la rete ADS-B) e mostra la stima come "probabile" (js/rotation.js).
 - **Tab** in cima: ogni aeroporto, volo, tratta o aereo aperto resta in un tab (salvati nel browser) con stato e orario del volo;
   su computer si clicca il tab, su telefono si scorre col dito a destra/sinistra sul contenuto o sulla barra dei tab.
 - **Fonti** in fondo a ogni pagina: da dove arriva ogni dato (tabellone ufficiale dell'aeroporto, AeroDataBox, ADS-B, calcoli dell'app).

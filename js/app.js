@@ -61,7 +61,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.4.2 · niente ritardo previsto se l’aereo in arrivo è solo stimato';
+const APP_VERSION = '4.5 · aereo in arrivo stimato ricostruendo la giornata della compagnia (aerei rimasti a terra la notte)';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -475,6 +475,18 @@ function etaText(f) {
   return '';
 }
 
+/** Spiegazione della stima dell'aereo in arrivo (ricostruzione della giornata della compagnia). */
+function guessText(f, inbound, r) {
+  const name = esc(f.airline?.name || ''), ap = esc(f.dep.iata), from = esc(inbound.dep.iata || '?');
+  const h = Math.round((r.waitMin || 0) / 60);
+  switch (r.basis) {
+    case 'return': return `Questo è il suo volo in arrivo da ${from} poco prima della partenza: le low cost di solito fanno andata e ritorno con lo stesso aereo.`;
+    case 'overnight': return `Ricostruendo la giornata ${name} a ${ap}, questo aereo è arrivato da ${from} la sera prima, è rimasto a ${ap} per la notte e non risulta ripartito: a questo volo tocca lui.`;
+    case 'idle': return `Ricostruendo la giornata ${name} a ${ap}, l'aereo arrivato da ${from} è fermo da circa ${h} ${h === 1 ? 'ora' : 'ore'} ed è il primo libero per questo volo.`;
+    default: return `Ricostruendo la giornata ${name} a ${ap} (ogni partenza usa un aereo arrivato almeno 25-35 minuti prima), a questo volo tocca quello in arrivo da ${from}.`;
+  }
+}
+
 function legCard(f, title, cls = '') {
   const p = progress(f);
   const dur = minutesBetween(f.dep?.sched, f.arr?.sched), eta = etaText(f);
@@ -601,9 +613,7 @@ async function viewFlight(number, date, depHint) {
       const turn = minutesBetween(inbound.arr.revised || inbound.arr.sched, f.dep.revised || f.dep.sched);
       const guess = r.method === 'guess';
       html = `${legCard(inbound, `Da dove arriva l'aereo · ${guess ? 'probabile volo precedente' : 'volo precedente'} <a href="${flightLink(inbound)}">${esc(inbound.number)}</a>`, 'inbound')}
-        ${guess ? `<p class="note">ℹ️ Stima: ${esc(f.airline?.name || 'la compagnia')} non ha ancora indicato quale aereo farà il volo. ${r.basis === 'rotation'
-          ? `Abbinando in ordine di tempo gli aerei ${esc(f.airline?.name || '')} arrivati a ${esc(f.dep.iata)} con le sue partenze ancora senza aereo, a questo volo tocca quello in arrivo da ${esc(inbound.dep.iata)}.`
-          : `Questo è il suo volo in arrivo da ${esc(inbound.dep.iata)} poco prima della partenza: le low cost di solito fanno andata e ritorno con lo stesso aereo.`}</p>` : ''}
+        ${guess ? `<p class="note">ℹ️ Stima: ${esc(f.airline?.name || 'la compagnia')} non ha ancora indicato quale aereo farà il volo. ${guessText(f, inbound, r)}</p>` : ''}
         <p class="note ${turn < 35 ? 'warn' : ''}">${turn < 35 ? '⚠️ ' : ''}Tempo di rotazione a ${esc(f.dep.iata)}: <b>${turn} min</b> tra l'arrivo dell'aereo e la partenza prevista${turn < 35 ? ': un ritardo del volo precedente si ripercuoterà probabilmente su questo.' : '.'}</p>`;
       const P = inbound.dep.lat != null ? inbound.dep : await getAirportInfo(inbound.dep.iata);
       if (P?.lat != null && A?.lat != null) {
