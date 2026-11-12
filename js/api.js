@@ -444,7 +444,7 @@ async function faGet(params) {
   const r = await fetch(`${base}/fa?${q}`).catch(() => null);
   if (!r?.ok) return null; // 501 = FlightAware non configurato, 429 = limite mensile
   const j = await r.json().catch(() => null);
-  if (j) pput(`fa:${q}`, j);
+  if (j) { pput(`fa:${q}`, j); if (!params.days) learnRegs([...(j.flights || []), ...(j.inbound ? [j.inbound] : [])]); }
   return j;
 }
 const withCoords = legs => {
@@ -995,10 +995,28 @@ async function getSnap(iata, nature, day) {
  * compagnia (js/rotation.js) e, quando l'aereo abbinato ha marche note, le mette in aircraft.regGuess
  * ({ reg, via, from, basis }). Non usa AeroDataBox. Restituisce il numero di voli con un'ipotesi.
  */
-/** Marche note a FlightAware per i voli recenti e prossimi di un aeroporto (via Worker, mezz'ora di cache). */
-async function faAirportRegs(iata) {
-  const j = await faGet({ airport: iata });
-  return j?.flights || [];
+// Marche già scoperte su questo dispositivo aprendo i singoli voli (FlightAware): il tabellone le riusa senza
+// nuove richieste (Giuseppe, 2026-11-12: niente FlightAware per i tabelloni). Tenute 2 giorni.
+const KREG = 'knownRegs';
+function learnRegs(list) {
+  const m = pget(KREG, 2 * 86400e3) || {}, now = Date.now();
+  let ch = false;
+  for (const f of list) {
+    const reg = f?.aircraft?.reg;
+    if (!reg || !f.number) continue;
+    for (const [dir, side] of [['D', f.dep], ['A', f.arr]]) {
+      if (!side?.iata || !side.sched?.utc) continue;
+      m[`${side.iata}|${dir}|${normNum(f.number)}|${side.sched.utc.slice(0, 10)}`] = { reg, sched: side.sched.utc, t: now };
+      ch = true;
+    }
+  }
+  if (!ch) return;
+  for (const k of Object.keys(m)) if (now - m[k].t > 2 * 86400e3) delete m[k];
+  pput(KREG, m);
+}
+function knownRegs(iata) {
+  const m = pget(KREG, 2 * 86400e3) || {};
+  return Object.entries(m).filter(([k]) => k.startsWith(`${iata}|`)).map(([k, v]) => ({ dir: k.split('|')[1], number: k.split('|')[2], reg: v.reg, sched: v.sched }));
 }
 function applyFaRegs(data, fa) {
   let n = 0;
@@ -1010,7 +1028,7 @@ function applyFaRegs(data, fa) {
       const m = fa.find(x => x.dir === dir && x.reg && (nums.includes(normNum(x.number)) || (x.codeshares || []).map(normNum).some(c => nums.includes(c)))
         && (!x.sched || isNaN(t) || Math.abs(Date.parse(x.sched) - t) < 3 * 3600e3));
       if (!m) continue;
-      f.aircraft = { ...f.aircraft, reg: m.reg, regSrc: 'FlightAware (voli dell’aeroporto)' };
+      f.aircraft = { ...f.aircraft, reg: m.reg, regSrc: 'FlightAware (letta aprendo il volo)' };
       n++;
     }
   }
@@ -1020,9 +1038,8 @@ function applyFaRegs(data, fa) {
 export async function guessBoardRegs(iata, data) {
   if (isDemo() || !data?.departures?.length) return 0;
   const r0 = [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length;
-  // aeroporti senza marche sul tabellone ufficiale: chiedo a FlightAware quelle già assegnate (poche richieste, in cache)
-  const rows = [...data.departures, ...data.arrivals];
-  if (!REG_BOARDS.includes(iata) && r0 < rows.length / 2) applyFaRegs(data, await faAirportRegs(iata).catch(() => []));
+  // marche già viste aprendo i voli di questo aeroporto (nessuna richiesta in più)
+  applyFaRegs(data, knownRegs(iata));
   const day = await dayMovements(iata, Date.now(), data, null);
   const now = Date.now(), n0 = data.departures.filter(d => d.aircraft?.regGuess).length;
   const airlines = [...new Set(data.departures.filter(d => !d.aircraft?.reg).map(al))];
