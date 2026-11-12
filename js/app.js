@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.8 · marche incrociate: avvistamenti ADS-B e tabelloni con le marche';
+const APP_VERSION = '4.8.1 · ritorno riconosciuto anche se l\'aereo arriva in ritardo';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];

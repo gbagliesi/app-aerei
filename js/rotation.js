@@ -39,12 +39,20 @@ export function simulateRotation({ flight, arrivals, departures, exclude = new S
   const minTurn = (o.minTurn ?? (lowcost ? 25 : 35)) * 60e3;
   const quickMax = (o.quickMax ?? (lowcost ? 90 : 120)) * 60e3;
   const target = depTime(flight);
+  // un aereo può fare la partenza se arriva almeno minTurn prima; se è in ritardo ma il giro era previsto dagli orari
+  // programmati, la partenza slitta (tipico delle low cost: FR9472 da Madrid in ritardo → FR9471 per Madrid parte dopo)
+  const fits = (a, d, t) => {
+    const at = arrTime(a);
+    if (at + minTurn <= t) return true;
+    if (ms(d.dep?.actual)) return false; // già decollato prima che l'aereo arrivasse
+    return (ms(a.arr?.sched) || at) + minTurn <= (ms(d.dep?.sched) || t) && at <= t + 90 * 60e3;
+  };
   if (isNaN(target)) return null;
   const from = target - 30 * 3600e3;
 
   const seen = new Set();
   const arr = arrivals.filter(a => al(a) === airline && a.status !== 'Canceled' && !isNaN(arrTime(a)))
-    .filter(a => arrTime(a) >= from && arrTime(a) <= target)
+    .filter(a => arrTime(a) >= from && arrTime(a) <= target + 90 * 60e3)
     .filter(a => { const k = `${a.number}|${a.arr?.sched?.utc}`; if (seen.has(k)) return false; seen.add(k); return true; })
     .filter(a => !a.aircraft?.reg || !exclude.has(a.aircraft.reg))
     .sort((a, b) => arrTime(a) - arrTime(b));
@@ -61,7 +69,7 @@ export function simulateRotation({ flight, arrivals, departures, exclude = new S
     for (const d of deps) {
       if (d.aircraft?.reg && d !== flight) continue;
       const t = depTime(d), dest = d.arr?.iata, n = flightNo(d);
-      const c = arr.filter(a => !pairFor.has(a) && dest && a.dep?.iata === dest && arrTime(a) + minTurn <= t && t - arrTime(a) <= o.pairMax * 60e3
+      const c = arr.filter(a => !pairFor.has(a) && dest && a.dep?.iata === dest && fits(a, d, t) && t - arrTime(a) <= o.pairMax * 60e3
         && (o.reservePairs === 'city' || Math.abs(flightNo(a) - n) === 1)).pop();
       if (c) { pairOf.set(d, c); pairFor.set(c, d); }
     }
@@ -73,7 +81,7 @@ export function simulateRotation({ flight, arrivals, departures, exclude = new S
   const used = new Set(), chain = [];
   for (const d of deps) {
     const t = depTime(d);
-    const pool = arr.filter(a => !used.has(a) && arrTime(a) + minTurn <= t && (!pairFor.has(a) || pairFor.get(a) === d));
+    const pool = arr.filter(a => !used.has(a) && fits(a, d, t) && (!pairFor.has(a) || pairFor.get(a) === d));
     let pick = null, basis;
     if (pairOf.has(d) && !used.has(pairOf.get(d))) {
       pick = pairOf.get(d); basis = 'return';
