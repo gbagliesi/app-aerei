@@ -125,11 +125,12 @@ export async function adsbAlarm(self) {
     const r = await env.WATCHER.get(env.WATCHER.idFromName('snapshots')).fetch('https://do/snap/airports');
     airports = ((await r.json()).airports || []).filter(a => !REG_BOARDS.includes(a) && airportByIata(a)).slice(0, MAX_AIRPORTS);
   } catch { /* riprovo al prossimo giro */ }
+  let failed = 0;
   for (const code of airports) {
     const ap = airportByIata(code);
     try {
       let list, source = 'OpenSky';
-      try { list = await osAround(storage, env, ap[4], ap[5], RADIUS_NM); } catch (e) { await storage.put(`adsberr:${code}`, { at: now, error: String(e.message || e) }); continue; }
+      try { list = await osAround(storage, env, ap[4], ap[5], RADIUS_NM); } catch (e) { await storage.put(`adsberr:${code}`, { at: now, error: String(e.message || e) }); failed++; continue; }
       const key = `adsb:${code}:${dayOf(now)}`;
       const cur = (await storage.get(key)) || { ac: {}, polls: 0 };
       for (const a of list) {
@@ -155,7 +156,8 @@ export async function adsbAlarm(self) {
     if (old.length) await storage.delete(old);
     await storage.put('adsbclean', dayOf(now));
   }
-  if (airports.length) await storage.setAlarm(now + POLL_MS);
+  // se OpenSky non risponde a nessun aeroporto (es. 522: non accetta le connessioni dai Worker) riprovo tra un'ora
+  if (airports.length) await storage.setAlarm(now + (failed && failed === airports.length ? 3600e3 : POLL_MS));
 }
 
 // Dai punti di ogni aereo ricava atterraggi e decolli: in discesa vicino all'aeroporto → atterraggio stimato
