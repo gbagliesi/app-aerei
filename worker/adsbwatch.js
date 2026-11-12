@@ -1,12 +1,13 @@
 // Avvistamenti ADS-B attorno agli aeroporti che NON pubblicano le marche sul tabellone (es. Pisa).
-// Ogni 3 minuti il Durable Object (istanza "adsb") chiede alla rete ADS-B pubblica adsb.lol gli aerei entro
+// Ogni 4 minuti il Durable Object (istanza "adsb") chiede alla rete ADS-B OpenSky (account gratuito, segreti del Worker
+// OPENSKY_CLIENT_ID e OPENSKY_CLIENT_SECRET; le reti adsb.lol, airplanes.live e adsb.fi rifiutano i Worker) gli aerei entro
 // ~25 miglia da ognuno degli aeroporti consultati di recente e ne tiene i punti sotto i 10000 piedi. Da questi
 // punti si ricavano atterraggi e decolli con marche e orario: l'app li incrocia con gli orari effettivi del tabellone
 // ufficiale ("atterrato alle 09:24") e così sa quale aereo ha fatto quale volo, anche per le low cost.
 //
 //   GET /seen?airport=PSA&day=YYYY-MM-DD   →  { airport, day, events: [{ hex, reg, type, cs, ev: 'arr'|'dep', t }], polls, lastPoll }
 //
-// day è il giorno UTC. Si tengono 3 giorni. Nessun dato da Flightradar24.
+// day è il giorno UTC. Si tengono 3 giorni. Le marche vengono da hexdb.io (ICAO24 → marche). Nessun dato da Flightradar24.
 
 import { airportByIata } from '../js/airports.js';
 
@@ -14,18 +15,62 @@ import { airportByIata } from '../js/airports.js';
 // oraria (snapshots.js) serve all'app per incrociare le marche dei voli che arrivano o partono da lì
 export const REG_BOARDS = ['MXP', 'LIN', 'GVA', 'ZRH', 'FRA', 'BER', 'ARN', 'AMS', 'LCY', 'DBV'];
 
-const POLL_MS = 3 * 60e3;
+const POLL_MS = 4 * 60e3; // OpenSky: 1 credito per richiesta su un'area piccola, 4000 crediti al giorno con l'account
 const RADIUS_NM = 25;   // la copertura ADS-B vicino a Pisa arriva a ~6000 piedi: si guarda l'avvicinamento, non la pista
 const MAX_ALT = 10000;
 const MAX_AIRPORTS = 6;
 const KEEP_DAYS = 3;
 const MAX_PTS = 30;
 
-const SOURCES = (lat, lon, r) => [
-  ['adsb.lol', `https://api.adsb.lol/v2/point/${lat}/${lon}/${r}`],
-  ['airplanes.live', `https://api.airplanes.live/v2/point/${lat}/${lon}/${r}`],
-  ['adsb.fi', `https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/${r}`],
-];
+const OS_TOKEN = 'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token';
+const OS_STATES = 'https://opensky-network.org/api/states/all';
+const osConfigured = env => !!(env.OPENSKY_CLIENT_ID && env.OPENSKY_CLIENT_SECRET);
+
+async function osToken(storage, env) {
+  const c = await storage.get('ostoken');
+  if (c && c.exp > Date.now() + 60e3) return c.token;
+  const r = await fetch(OS_TOKEN, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: env.OPENSKY_CLIENT_ID, client_secret: env.OPENSKY_CLIENT_SECRET }) });
+  if (!r.ok) throw new Error(`OpenSky token ${r.status}`);
+  const j = await r.json();
+  await storage.put('ostoken', { token: j.access_token, exp: Date.now() + (j.expires_in || 1800) * 1000 });
+  return j.access_token;
+}
+
+// marche dall'ICAO24 (OpenSky non le dà): hexdb.io, tenute in memoria per sempre
+async function regOf(storage, hex, budget) {
+  const k = `hexreg:${hex}`, c = await storage.get(k);
+  if (c !== undefined) return c;
+  if (budget.n-- <= 0) return null;
+  try {
+    const r = await fetch(`https://hexdb.io/api/v1/aircraft/${hex}`, { signal: AbortSignal.timeout(6000) });
+    const j = r.ok ? await r.json() : null;
+    const v = j?.Registration ? { reg: j.Registration, type: j.ICAOTypeCode || null } : { reg: null };
+    await storage.put(k, v);
+    return v;
+  } catch { return null; }
+}
+
+/** Aerei attorno a un punto, nel formato readsb (hex, r, t, flight, alt_baro ft, baro_rate ft/min, gs kt, lat, lon). */
+async function osAround(storage, env, lat, lon, nmR) {
+  const dLat = nmR / 60, dLon = nmR / (60 * Math.cos(lat * Math.PI / 180));
+  const u = `${OS_STATES}?lamin=${(lat - dLat).toFixed(3)}&lomin=${(lon - dLon).toFixed(3)}&lamax=${(lat + dLat).toFixed(3)}&lomax=${(lon + dLon).toFixed(3)}`;
+  const r = await fetch(u, { signal: AbortSignal.timeout(12000), headers: { Authorization: `Bearer ${await osToken(storage, env)}` } });
+  if (!r.ok) throw new Error(`OpenSky ${r.status} ${(await r.text()).slice(0, 100)}`);
+  const j = await r.json(), now = (j.time || Date.now() / 1000);
+  const budget = { n: 12 };
+  const out = [];
+  for (const s of j.states || []) {
+    const [hex, cs, , tPos, , lo, la, altM, onGround, vel, , vrMs] = s;
+    if (la == null) continue;
+    const alt = onGround ? 0 : altM == null ? null : Math.round(altM * 3.281);
+    if (alt == null || alt > MAX_ALT) continue;
+    const info = await regOf(storage, hex, budget);
+    out.push({ hex, r: info?.reg || null, t: info?.type || null, flight: (cs || '').trim(), alt_baro: onGround ? 'ground' : alt,
+      baro_rate: vrMs == null ? null : Math.round(vrMs * 196.85), gs: vel == null ? 0 : vel * 1.944, lat: la, lon: lo, seen_pos: tPos ? Math.max(0, now - tPos) : 0 });
+  }
+  return out;
+}
 const stub = env => env.WATCHER.get(env.WATCHER.idFromName('adsb'));
 const dayOf = ms => new Date(ms).toISOString().slice(0, 10);
 const nm = (a, b) => {
@@ -64,7 +109,7 @@ export async function adsbDo(self, url) {
     await storage.put('role', 'adsb');
     const al = await storage.getAlarm();
     if (!al || al < Date.now() - 60e3) await storage.setAlarm(Date.now() + 5e3);
-    return { airport, day, events: v ? events(v.ac) : [], polls: v?.polls || 0, lastPoll: v?.lastPoll || null, source: v?.source || null,
+    return { airport, day, configured: osConfigured(self.env), events: v ? events(v.ac) : [], polls: v?.polls || 0, lastPoll: v?.lastPoll || null, source: v?.source || null,
       lastError: (await storage.get(`adsberr:${airport}`)) || null, nextPoll: (await storage.getAlarm()) || null };
   }
   return { error: 'not found' };
@@ -75,6 +120,7 @@ export async function adsbAlarm(self) {
   const { storage, env } = self;
   const now = Date.now();
   let airports = [];
+  if (!osConfigured(env)) return; // senza account OpenSky non si chiede nulla (si riprova al cron orario)
   try {
     const r = await env.WATCHER.get(env.WATCHER.idFromName('snapshots')).fetch('https://do/snap/airports');
     airports = ((await r.json()).airports || []).filter(a => !REG_BOARDS.includes(a) && airportByIata(a)).slice(0, MAX_AIRPORTS);
@@ -82,26 +128,15 @@ export async function adsbAlarm(self) {
   for (const code of airports) {
     const ap = airportByIata(code);
     try {
-      // reti ADS-B pubbliche con la stessa interfaccia (readsb): la prima che risponde
-      let list = null, source = null;
-      const errs = [];
-      for (const [name, u] of SOURCES(ap[4], ap[5], RADIUS_NM)) {
-        try {
-          const r = await fetch(u, { signal: AbortSignal.timeout(10000), headers: { 'Accept': 'application/json', 'User-Agent': 'tabelloni-voli (uso personale)' } });
-          if (!r.ok) { errs.push(`${name} ${r.status}`); continue; }
-          const j = await r.json();
-          list = j.ac || j.aircraft || []; source = name; break;
-        } catch (e) { errs.push(`${name} ${String(e.message || e).slice(0, 80)}`); }
-      }
-      if (errs.length) await storage.put(`adsberr:${code}`, { at: now, errors: errs });
-      if (!list) continue;
+      let list, source = 'OpenSky';
+      try { list = await osAround(storage, env, ap[4], ap[5], RADIUS_NM); } catch (e) { await storage.put(`adsberr:${code}`, { at: now, error: String(e.message || e) }); continue; }
       const key = `adsb:${code}:${dayOf(now)}`;
       const cur = (await storage.get(key)) || { ac: {}, polls: 0 };
       for (const a of list) {
         const alt = a.alt_baro === 'ground' ? 0 : typeof a.alt_baro === 'number' ? a.alt_baro : null;
         if (alt == null || alt > MAX_ALT || a.lat == null || !a.hex) continue;
         const hex = a.hex.toLowerCase();
-        const t = Math.round(now - (a.seen_pos || 0) * 1000);
+        const t = Math.round(now - Math.min(a.seen_pos || 0, 120) * 1000);
         const e = cur.ac[hex] || (cur.ac[hex] = { reg: null, type: null, cs: null, pts: [] });
         e.reg = a.r || e.reg; e.type = a.t || e.type;
         const cs = (a.flight || '').trim(); if (cs) e.cs = cs;
