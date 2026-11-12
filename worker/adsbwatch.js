@@ -117,7 +117,7 @@ export async function adsbDo(self, url, request) {
     return { ok: true };
   }
   // elenco degli aeroporti da guardare, per il raccoglitore esterno (Home Assistant): "PSA 43.6839 10.3927" per riga
-  if (url.pathname === '/adsb/targets') return { lines: (await targets(self.env)).map(c => { const ap = airportByIata(c); return `${c} ${ap[4]} ${ap[5]}`; }) };
+  if (url.pathname === '/adsb/targets') return { lines: (await targets(self.env)).map(c => { const ap = airportByIata(c); return `${c} ${ap.lat} ${ap.lon}`; }) };
   if (url.pathname === '/adsb/push' && request?.method === 'POST') {
     const code = (url.searchParams.get('airport') || '').toUpperCase(), ap = airportByIata(code);
     if (!ap) return { error: 'aeroporto sconosciuto' };
@@ -161,7 +161,7 @@ async function ingest(storage, code, ap, list, source, now) {
     e.reg = a.r || e.reg; e.type = a.t || e.type;
     const cs = (a.flight || '').trim(); if (cs) e.cs = cs;
     const vr = typeof a.baro_rate === 'number' ? a.baro_rate : typeof a.geom_rate === 'number' ? a.geom_rate : null;
-    e.pts.push([t, alt, Math.round(nm({ lat: a.lat, lon: a.lon }, { lat: ap[4], lon: ap[5] }) * 10) / 10, vr, Math.round(a.gs || 0), cs || null]);
+    e.pts.push([t, alt, Math.round(nm({ lat: a.lat, lon: a.lon }, { lat: ap.lat, lon: ap.lon }) * 10) / 10, vr, Math.round(a.gs || 0), cs || null]);
     if (e.pts.length > MAX_PTS) e.pts.splice(0, e.pts.length - MAX_PTS);
   }
   cur.polls++; cur.lastPoll = now; cur.source = source;
@@ -182,7 +182,7 @@ export async function adsbAlarm(self) {
     const ap = airportByIata(code);
     try {
       let list, source = 'OpenSky';
-      try { list = await osAround(storage, env, ap[4], ap[5], RADIUS_NM); } catch (e) { await storage.put(`adsberr:${code}`, { at: now, error: String(e.message || e) }); failed++; continue; }
+      try { list = await osAround(storage, env, ap.lat, ap.lon, RADIUS_NM); } catch (e) { await storage.put(`adsberr:${code}`, { at: now, error: String(e.message || e) }); failed++; continue; }
       await ingest(storage, code, ap, list, source, now);
     } catch (e) { await storage.put(`adsberr:${code}`, { at: now, error: String(e.message || e) }); }
   }
