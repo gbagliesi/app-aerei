@@ -1073,7 +1073,6 @@ export async function guessBoardRegs(iata, data) {
   const now = Date.now();
   const airlines = [...new Set(data.departures.filter(d => !d.aircraft?.reg).map(al))];
   for (const code of airlines) {
-    if (!day.arrivals.some(a => al(a) === code && a.aircraft?.reg)) continue;
     const mine = data.departures.filter(d => al(d) === code && d.status !== 'Canceled' && !isNaN(depTime(d))).sort((a, b) => depTime(a) - depTime(b));
     const last = mine[mine.length - 1];
     if (!last) continue;
@@ -1084,8 +1083,10 @@ export async function guessBoardRegs(iata, data) {
       // andata e ritorno (nel test sugli aeroporti con le marche, tools/backtest.mjs, giusta ~9 volte su 10) e giri
       // veloci solo per le low cost (negli hub delle compagnie tradizionali il giro veloce è quasi sempre sbagliato)
       // tutte le ipotesi con marche note; il tabellone le colora per affidabilità (andata e ritorno = affidabile)
-      if (!reg || c.dep.aircraft?.reg || c.dep.aircraft?._pageGuess || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
-      c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis } };
+      // anche senza marche note: il tabellone mostra almeno da quale volo arriva probabilmente l'aereo
+      if (!c.pick?.number || c.dep.aircraft?.reg || c.dep.aircraft?._pageGuess || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
+      const pd = (c.pick.dep?.sched?.local || c.pick.arr?.sched?.local || '').slice(0, 10) || null;
+      c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg: reg || null, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis, viaDate: pd } };
     }
   }
   return data.departures.filter(d => d.aircraft?.regGuess).length - n0 + [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length - r0;

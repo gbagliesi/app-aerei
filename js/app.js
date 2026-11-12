@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.9.5 · il tabellone ricorda le marche viste aprendo i voli';
+const APP_VERSION = '4.9.6 · ipotesi sul tabellone anche senza marche (≈ da volo)';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -90,6 +90,7 @@ const regHref = (reg, date, ap) => `#/aircraft/${encodeURIComponent(reg)}/${date
 const regGuessLink = (x, dir) => {
   const g = x.aircraft.regGuess;
   const why = g.basis === 'overnight' ? `rimasto a terra la notte dopo ${g.via}` : g.basis === 'idle' ? `fermo dopo ${g.via}` : `in arrivo con ${g.via}${g.from ? ` da ${g.from}` : ''}`;
+  if (!g.reg) return `<a class="reglink guess" href="#/flight/${encodeURIComponent(g.via)}/${g.viaDate || flightDate(x)}" title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello ${esc(why)} (marche di quel volo non ancora note)">≈ da ${esc(g.via)}</a>`;
   return `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), (dir === 'dep' ? x.dep : x.arr)?.iata)}" title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello ${esc(why)}">≈ ${esc(g.reg)}</a>`;
 };
 const regLink = (reg, date, ap) => `<a class="reglink" href="${regHref(reg, date, ap)}" title="Percorso di oggi dell'aereo (si apre in un nuovo tab)">✈︎ ${esc(reg)}</a>`;
