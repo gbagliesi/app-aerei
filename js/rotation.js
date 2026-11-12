@@ -35,9 +35,9 @@ const sameFlight = (a, b) => a.number === b.number && Math.abs((ms(a.dep?.sched)
 export function simulateRotation({ flight, arrivals, departures, exclude = new Set(), stayed = new Set(), now = Infinity, coverageFrom = NaN, opts = {} }) {
   const o = { ...DEFAULTS, ...opts };
   const airline = al(flight);
-  const lowcost = LOWCOST_CODES.includes(airline);
-  const minTurn = (lowcost ? 25 : 35) * 60e3;
-  const quickMax = (lowcost ? 90 : 120) * 60e3;
+  const lowcost = LOWCOST_CODES.includes(airline) || LOWCOST_CODES.includes(o.alias?.[airline]);
+  const minTurn = (o.minTurn ?? (lowcost ? 25 : 35)) * 60e3;
+  const quickMax = (o.quickMax ?? (lowcost ? 90 : 120)) * 60e3;
   const target = depTime(flight);
   if (isNaN(target)) return null;
   const from = target - 30 * 3600e3;

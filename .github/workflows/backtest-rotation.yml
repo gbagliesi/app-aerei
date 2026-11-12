@@ -8,7 +8,7 @@ on:
       airports:
         description: 'Codici IATA separati da spazio'
         required: false
-        default: 'BUD BER MXP GVA BSL'
+        default: 'MXP GVA ZRH BER'
       days:
         description: 'Giorni da provare'
         required: false
@@ -30,7 +30,7 @@ jobs:
           node-version: '22'
       - name: Tabelloni (tiene attiva la copia oraria nel Worker)
         env:
-          AIRPORTS: ${{ inputs.airports || 'BUD BER MXP GVA BSL' }}
+          AIRPORTS: ${{ inputs.airports || 'MXP GVA ZRH BER' }}
         run: |
           for a in $AIRPORTS; do for n in D A; do
             curl -s -m 60 -o /dev/null -w "$a $n HTTP%{http_code}\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=$a&nature=$n"
@@ -38,4 +38,4 @@ jobs:
       - name: Backtest
         env:
           SHOW: ${{ inputs.show || 'attuale' }}
-        run: node tools/backtest.mjs "${{ inputs.airports || 'BUD BER MXP GVA BSL' }}" "${{ inputs.days || '3' }}" | tee -a "$GITHUB_STEP_SUMMARY"
+        run: node tools/backtest.mjs "${{ inputs.airports || 'MXP GVA ZRH BER' }}" "${{ inputs.days || '3' }}" | tee -a "$GITHUB_STEP_SUMMARY"

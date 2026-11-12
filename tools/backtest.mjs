@@ -7,7 +7,7 @@ import { simulateRotation, DEFAULTS } from '../js/rotation.js';
 
 const W = process.env.WORKER || 'https://tabelloni-voli.giuseppe-bagliesi.workers.dev';
 const TZ = { BUD: 'Europe/Budapest', BER: 'Europe/Berlin', MXP: 'Europe/Rome', LIN: 'Europe/Rome', GVA: 'Europe/Zurich', BSL: 'Europe/Paris', ZRH: 'Europe/Zurich', FRA: 'Europe/Berlin', AMS: 'Europe/Amsterdam', ARN: 'Europe/Stockholm', DBV: 'Europe/Zagreb', LCY: 'Europe/London' };
-const airports = (process.argv[2] || 'BUD BER MXP GVA BSL').split(/\s+/).filter(Boolean);
+const airports = (process.argv[2] || 'MXP GVA ZRH BER').split(/\s+/).filter(Boolean);
 const nDays = +(process.argv[3] || 3);
 
 const offMin = (tz, ms) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(ms)).map(x => [x.type, x.value]));
@@ -30,15 +30,24 @@ async function snap(a, n, d) {
   try { const r = await fetch(`${W}/snap?airport=${a}&nature=${n}&day=${d}`); return r.ok ? (await r.json()).flights || [] : []; } catch { return []; }
 }
 
-const variants = {
+const V = (process.env.VARIANTS || '').trim();
+const variants = V ? JSON.parse(V) : {
   attuale: {},
   coppie: { reservePairs: 'pair' },
   coppie_citta: { reservePairs: 'city' },
   fifo: { order: 'fifo' },
-  coppie_fifo: { reservePairs: 'pair', order: 'fifo' },
   coppie_citta_fifo: { reservePairs: 'city', order: 'fifo' },
+  cc_turn20: { reservePairs: 'city', minTurn: 20 },
+  cc_turn30: { reservePairs: 'city', minTurn: 30 },
+  cc_quick60: { reservePairs: 'city', quickMax: 60 },
+  cc_quick120: { reservePairs: 'city', quickMax: 120 },
+  cc_pair120: { reservePairs: 'city', pairMax: 120 },
+  cc_pair300: { reservePairs: 'city', pairMax: 300 },
 };
-const tot = Object.fromEntries(Object.keys(variants).map(k => [k, { ok: 0, n: 0, byAl: {}, byBasis: {} }]));
+// codici ICAO-like usati da alcuni tabelloni per le low cost (easyJet Switzerland EZS, easyJet Europe EC…)
+const LC = ['FR', 'RK', 'U2', 'EC', 'EZ', 'DS', 'W6', 'W4', 'W9', 'VY', 'EW', 'HV', 'DY', 'V7', 'LS', 'TO', 'PC'];
+for (const k in variants) variants[k].alias = { EZ: 'U2' };
+const tot = Object.fromEntries(Object.keys(variants).map(k => [k, { ok: 0, n: 0, lok: 0, ln: 0, byAl: {}, byBasis: {} }]));
 const ms = t => (t?.utc ? Date.parse(t.utc) : NaN);
 const arrT = a => ms(a.arr.actual) || ms(a.arr.revised) || ms(a.arr.sched);
 const depT = d => ms(d.dep.actual) || ms(d.dep.revised) || ms(d.dep.sched);
@@ -73,7 +82,7 @@ for (const ap of airports) {
       if (!s) continue;
       const pick = s.pick && idx.get(s.pick);
       const ok = prev ? pick?.reg === d.reg : !pick;
-      const T = tot[k]; T.n++; T.ok += ok; perAp[k].n++; perAp[k].ok += ok;
+      const T = tot[k]; T.n++; T.ok += ok; if (LC.includes(al)) { T.ln++; T.lok += ok; } perAp[k].n++; perAp[k].ok += ok;
       (T.byAl[al] ||= { ok: 0, n: 0 }).n++; T.byAl[al].ok += ok;
       (T.byBasis[s.basis] ||= { ok: 0, n: 0 }).n++; T.byBasis[s.basis].ok += ok;
       if (k === (process.env.SHOW || 'attuale') && !ok && fails.length < 15) fails.push(`${d.number}→${d.arr.iata} ${d.dep.sched.utc.slice(5, 16)} ${d.reg}: vero ${prev ? prev.number + ' da ' + prev.dep.iata : 'nessun arrivo (già a terra)'}, stimato ${pick ? pick.number + ' da ' + pick.dep.iata + ' (' + pick.reg + ')' : s.basis} [${s.basis}]`);
@@ -84,6 +93,6 @@ for (const ap of airports) {
 }
 console.log('\n== TOTALE');
 for (const [k, v] of Object.entries(tot)) {
-  console.log(`${k.padEnd(18)} ${v.ok}/${v.n}  ${v.n ? Math.round(100 * v.ok / v.n) : 0}%   ` + Object.entries(v.byAl).sort((a, b) => b[1].n - a[1].n).slice(0, 6).map(([a, x]) => `${a} ${x.ok}/${x.n}`).join('  '));
+  console.log(`${k.padEnd(18)} ${v.ok}/${v.n}  ${v.n ? Math.round(100 * v.ok / v.n) : 0}%   low cost ${v.lok}/${v.ln} ${v.ln ? Math.round(100 * v.lok / v.ln) : 0}%   ` + Object.entries(v.byAl).sort((a, b) => b[1].n - a[1].n).slice(0, 6).map(([a, x]) => `${a} ${x.ok}/${x.n}`).join('  '));
   console.log('   per tipo: ' + Object.entries(v.byBasis).map(([a, x]) => `${a} ${x.ok}/${x.n}`).join('  '));
 }
