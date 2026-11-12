@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.9.3 · tabellone più robusto se il sito ufficiale non risponde';
+const APP_VERSION = '4.9.4 · storia dell’aereo: ultimi 2 giorni';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -775,11 +775,11 @@ function rotRows(list) {
 async function loadHistory(reg, date) {
   const box = document.getElementById('achist');
   if (!box) return;
-  const h = await getRegHistory(reg, 7).catch(() => null);
+  const h = await getRegHistory(reg, 2).catch(() => null);
   if (!document.body.contains(box)) return;
-  const head = '<div class="leghead"><span class="eyebrow">Storia dei voli · ultimi 7 giorni</span></div>';
+  const head = '<div class="leghead"><span class="eyebrow">Storia dei voli · ultimi 2 giorni</span></div>';
   if (!h) { box.innerHTML = `${head}<p class="hint">Storia non disponibile ora (serve FlightAware nel Worker, o il limite mensile è stato raggiunto).</p>`; return; }
-  if (!h.flights.length) { box.innerHTML = `${head}<p class="hint">FlightAware non ha voli di ${esc(reg)} negli ultimi 7 giorni.</p>`; return; }
+  if (!h.flights.length) { box.innerHTML = `${head}<p class="hint">FlightAware non ha voli di ${esc(reg)} negli ultimi 2 giorni.</p>`; return; }
   const days = new Map();
   for (const f of h.flights) {
     const d = (f.dep?.sched?.local || f.dep?.sched?.utc || f.arr?.sched?.local || '').slice(0, 10);
@@ -885,7 +885,7 @@ async function viewAircraft(reg, date, apHint) {
     <div class="card"><div class="leghead"><span class="eyebrow">Percorso del giorno</span><span id="acpos" class="sub"></span></div><div id="map" class="map tall"></div>
       <p class="maplegend"><span><i class="lg flown"></i>percorso volato (ADS-B)</span><span><i class="lg done"></i>tratta conclusa</span><span><i class="lg air"></i>in volo</span><span><i class="lg next"></i>prevista</span></p></div>
     <div id="rot"></div>
-    <div class="card" id="achist"><div class="leghead"><span class="eyebrow">Storia dei voli · ultimi 7 giorni</span></div><p class="hint">Carico la storia dei voli…</p></div>
+    <div class="card" id="achist"><div class="leghead"><span class="eyebrow">Storia dei voli · ultimi 2 giorni</span></div><p class="hint">Carico la storia dei voli…</p></div>
     <div id="acsrc"></div>`;
   render();
   bindStars($app);
