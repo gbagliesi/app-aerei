@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.9.10 · storia aereo senza il giorno già mostrato';
+const APP_VERSION = '4.9.11 · storia aereo in ordine cronologico';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -799,8 +799,9 @@ async function loadHistory(reg, date) {
   // il giorno aperto è già nella tabella sopra: qui solo gli altri giorni
   days.delete(date);
   if (!days.size) { box.innerHTML = `${head}<p class="hint">Negli altri giorni FlightAware non ha voli di ${esc(reg)}.</p>`; return; }
-  const rows = [...days].sort((a, b) => b[0].localeCompare(a[0])).map(([d, fl]) => {
-    fl.sort((a, b) => legKey(b) - legKey(a));
+  // stesso ordine della tabella del giorno: dal più vecchio al più recente
+  const rows = [...days].sort((a, b) => a[0].localeCompare(b[0])).map(([d, fl]) => {
+    fl.sort((a, b) => legKey(a) - legKey(b));
     return `<div class="histday"><a href="#/aircraft/${encodeURIComponent(reg)}/${d}"${d === date ? ' class="cur"' : ''}>${esc(label(d))}</a><span class="sub">${fl.length} ${fl.length === 1 ? 'volo' : 'voli'}</span></div>
       <div class="board"><div class="row head rot"><span>Partenza</span><span>Volo</span><span>Tratta</span><span>Arrivo</span><span>Stato</span></div>${rotRows(fl)}</div>`;
   }).join('');
