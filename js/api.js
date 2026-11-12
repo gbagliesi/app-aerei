@@ -463,6 +463,25 @@ async function faByReg(reg, date) {
   return j ? withCoords(j.flights || []) : null;
 }
 
+/**
+ * Storia di un aereo: i voli degli ultimi `days` giorni (e quelli già programmati per domani), dal più recente.
+ * Una sola richiesta a FlightAware tramite il Worker, tenuta in cache un'ora. Restituisce { flights, source } o null.
+ */
+export async function getRegHistory(reg, days = 7) {
+  if (isDemo()) {
+    const out = [];
+    for (let d = 0; d < Math.min(days, 3); d++) out.push(...await demo.byReg(reg, isoDate(new Date(Date.now() - d * 86400e3))));
+    return { flights: out.reverse(), source: 'demo' };
+  }
+  const hit = pget(`hist:${reg}:${days}`, 60 * 60e3);
+  if (hit !== undefined) return hit;
+  const j = await faGet({ reg, days });
+  if (!j?.flights) return null;
+  const out = { flights: withCoords(j.flights), source: j.source || 'FlightAware' };
+  pput(`hist:${reg}:${days}`, out);
+  return out;
+}
+
 /** Tutte le tratte di un volo in una data (YYYY-MM-DD). */
 export async function getFlight(number, date, depHint) {
   number = number.toUpperCase().replace(/\s+/g, '');
@@ -993,7 +1012,8 @@ export async function guessBoardRegs(iata, data) {
       // sul tabellone solo i giri veloci (più affidabili); gli aerei fermi da ore si verificano con la rete ADS-B nella pagina del volo
       // andata e ritorno (nel test sugli aeroporti con le marche, tools/backtest.mjs, giusta ~9 volte su 10) e giri
       // veloci solo per le low cost (negli hub delle compagnie tradizionali il giro veloce è quasi sempre sbagliato)
-      if (!reg || c.dep.aircraft?.reg || !(c.basis === 'return' || (c.basis === 'rotation' && LOWCOST_CODES.includes(code)))) continue;
+      // tutte le ipotesi con marche note; il tabellone le colora per affidabilità (andata e ritorno = affidabile)
+      if (!reg || c.dep.aircraft?.reg || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
       c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis } };
     }
   }

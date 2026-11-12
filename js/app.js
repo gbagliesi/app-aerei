@@ -1,4 +1,4 @@
-import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getTrace, hexOfReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
+import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getRegHistory, getTrace, hexOfReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
 import { searchAirports, airportByIata, AIRPORTS, norm, airportSearchText } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites, reorderFavorites, favKey } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.8.2 · marche del volo in arrivo da FlightAware anche mentre è in volo';
+const APP_VERSION = '4.9 · marche colorate per certezza, storia dei voli dell’aereo';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -93,6 +93,27 @@ const regGuessLink = (x, dir) => {
   return `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), (dir === 'dep' ? x.dep : x.arr)?.iata)}" title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello ${esc(why)}">≈ ${esc(g.reg)}</a>`;
 };
 const regLink = (reg, date, ap) => `<a class="reglink" href="${regHref(reg, date, ap)}" title="Percorso di oggi dell'aereo (si apre in un nuovo tab)">✈︎ ${esc(reg)}</a>`;
+// Marche sul tabellone colorate per grado di certezza:
+//  sicure (verde: compagnia, tabellone ufficiale, AeroDataBox, FlightAware), incrociate (azzurro: avvistamento ADS-B
+//  abbinato all'orario del tabellone), dedotte affidabili (giallo: andata e ritorno), dedotte deboli (grigio)
+const REG_LEVELS = {
+  sure: ['sicure', 'indicate dalla compagnia o da un tabellone ufficiale'],
+  cross: ['incrociate', 'aereo visto dalla rete ADS-B atterrare/decollare all’orario del tabellone'],
+  likely: ['dedotte, affidabili', 'andata e ritorno: lo stesso aereo che è arrivato da lì poco prima'],
+  weak: ['dedotte, deboli', 'ricostruzione della giornata della compagnia: spesso giusta per le low cost, meno per le altre'],
+};
+const regLevelOf = x => x.aircraft?.reg ? (/ADS-B/.test(x.aircraft.regSrc || '') ? 'cross' : 'sure') : x.aircraft?.regGuess ? (x.aircraft.regGuess.basis === 'return' ? 'likely' : 'weak') : null;
+function boardReg(x, dir) {
+  const lv = regLevelOf(x);
+  if (!lv) return esc(x.airline?.name || '');
+  const ap = (dir === 'dep' ? x.dep : x.arr)?.iata;
+  if (lv === 'sure' || lv === 'cross') {
+    const src = x.aircraft.regSrc ? ` · fonte: ${x.aircraft.regSrc}` : '';
+    return `<a class="reglink lv-${lv}" href="${regHref(x.aircraft.reg, flightDate(x), ap)}" title="Marche ${REG_LEVELS[lv][0]}${esc(src)}">✈︎ ${esc(x.aircraft.reg)}</a>`;
+  }
+  return regGuessLink(x, dir).replace('class="reglink guess"', `class="reglink guess lv-${lv}"`).replace('title="Ipotesi:', `title="Marche ${REG_LEVELS[lv][0]}. Ipotesi:`);
+}
+const regLegend = () => `<p class="hint reglegend">Marche: ${Object.entries(REG_LEVELS).map(([k, [l, d]]) => `<span class="lv-${k}" title="${esc(d)}">● ${l}</span>`).join(' ')}</p>`;
 function aircraftCard(ac, date, note = '', probable = false) {
   const tag = !ac?.reg ? '' : probable ? ' · <span class="regtag guess">❔ marche ipotizzate</span>' : ' · <span class="regtag sure">✅ marche sicure</span>';
   if (ac?.reg && !probable && !note && ac.regSrc) note = `Indicate da: ${esc(ac.regSrc)}.`;
@@ -339,7 +360,7 @@ function boardTable(list, dir, filter = '', key = '') {
       pastBtn = `<button class="pastbtn" type="button" data-showpast="${esc(key)}">▲ Mostra ${hide.size} voli ${dir === 'dep' ? 'già partiti' : 'già arrivati'} (fino a 2 ore fa)</button>`;
     }
   }
-  return `<div class="board" role="table">${pastBtn}
+  return `${regLegend()}<div class="board" role="table">${pastBtn}
     <div class="row head" role="row"><span>Ora</span><span>Volo</span><span>${dir === 'dep' ? 'Destinazione' : 'Provenienza'}</span><span>${dir === 'dep' ? 'Gate' : 'Nastro'}</span><span>Stato</span></div>
     ${rows.map(x => {
       const side = dir === 'dep' ? x.dep : x.arr, other = dir === 'dep' ? x.arr : x.dep;
@@ -347,7 +368,7 @@ function boardTable(list, dir, filter = '', key = '') {
       if (!marked && side?.sched?.utc && new Date(side.sched.utc) > now) { marked = true; nowLine = '<div class="nowline"><span>adesso</span></div>'; }
       return `${nowLine}<div class="row ${x.status === 'Canceled' ? 'cancel' : ''}" role="row" tabindex="0" data-href="${flightLink(x)}">
         <span class="t">${timeCell(side?.sched, side?.revised, side?.actual)}</span>
-        <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${x.aircraft?.reg ? regLink(x.aircraft.reg, flightDate(x), (dir === 'dep' ? x.dep : x.arr)?.iata) : x.aircraft?.regGuess ? regGuessLink(x, dir) : esc(x.airline?.name || '')}</small></span>
+        <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${boardReg(x, dir)}</small></span>
         <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <button class="csbtn" type="button" title="Anche: ${esc(x.codeshares.join(' '))}">+${x.codeshares.length} code sharing</button>` : ''}</small>${x.codeshares?.length ? `<small class="cslist" hidden>anche ${x.codeshares.map(esc).join(' ')}</small>` : ''}</span>
         <span class="gate">${esc((dir === 'dep' ? side?.gate : side?.belt) || '—')}</span>
         <span>${statusBadge(x.status)}${srcTag(x)}</span>
@@ -745,6 +766,31 @@ function rotRows(list) {
   }).join('');
 }
 
+// storia dei voli di un aereo (come la pagina “history” dei siti di tracciamento): giorni dal più recente
+async function loadHistory(reg, date) {
+  const box = document.getElementById('achist');
+  if (!box) return;
+  const h = await getRegHistory(reg, 7).catch(() => null);
+  if (!document.body.contains(box)) return;
+  const head = '<div class="leghead"><span class="eyebrow">Storia dei voli · ultimi 7 giorni</span></div>';
+  if (!h) { box.innerHTML = `${head}<p class="hint">Storia non disponibile ora (serve FlightAware nel Worker, o il limite mensile è stato raggiunto).</p>`; return; }
+  if (!h.flights.length) { box.innerHTML = `${head}<p class="hint">FlightAware non ha voli di ${esc(reg)} negli ultimi 7 giorni.</p>`; return; }
+  const days = new Map();
+  for (const f of h.flights) {
+    const d = (f.dep?.sched?.local || f.dep?.sched?.utc || f.arr?.sched?.local || '').slice(0, 10);
+    if (!d) continue;
+    if (!days.has(d)) days.set(d, []);
+    days.get(d).push(f);
+  }
+  const label = d => new Date(`${d}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+  const rows = [...days].sort((a, b) => b[0].localeCompare(a[0])).map(([d, fl]) => {
+    fl.sort((a, b) => legKey(b) - legKey(a));
+    return `<div class="histday"><a href="#/aircraft/${encodeURIComponent(reg)}/${d}"${d === date ? ' class="cur"' : ''}>${esc(label(d))}</a><span class="sub">${fl.length} ${fl.length === 1 ? 'volo' : 'voli'}</span></div>
+      <div class="board"><div class="row head rot"><span>Partenza</span><span>Volo</span><span>Tratta</span><span>Arrivo</span><span>Stato</span></div>${rotRows(fl)}</div>`;
+  }).join('');
+  box.innerHTML = `${head}${rows}<p class="hint">Fonte: <b>${esc(h.source)}</b> (voli con queste marche; orari locali di ciascun aeroporto). Tocca un giorno per la mappa di quel giorno, un volo per i dettagli.</p>`;
+}
+
 // unisce alle tratte di AeroDataBox quelle lette dai tabelloni ufficiali che riportano le marche
 const OFF_SIDE = ['gate', 'belt', 'terminal', 'checkIn', 'revised', 'actual', 'officialStatus', '_off'];
 function mergeOfficialLegs(list, off) {
@@ -834,6 +880,7 @@ async function viewAircraft(reg, date, apHint) {
     <div class="card"><div class="leghead"><span class="eyebrow">Percorso del giorno</span><span id="acpos" class="sub"></span></div><div id="map" class="map tall"></div>
       <p class="maplegend"><span><i class="lg flown"></i>percorso volato (ADS-B)</span><span><i class="lg done"></i>tratta conclusa</span><span><i class="lg air"></i>in volo</span><span><i class="lg next"></i>prevista</span></p></div>
     <div id="rot"></div>
+    <div class="card" id="achist"><div class="leghead"><span class="eyebrow">Storia dei voli · ultimi 7 giorni</span></div><p class="hint">Carico la storia dei voli…</p></div>
     <div id="acsrc"></div>`;
   render();
   bindStars($app);
@@ -942,6 +989,7 @@ async function viewAircraft(reg, date, apHint) {
   await drawDay();
   await live();
   findOfficial().then(drawDay).then(drawTrace).then(drawDay).catch(() => {});
+  loadHistory(reg, date);
   every(15, live);
   every(60, () => drawTrace().then(drawDay).catch(() => {}));
   let ticks = 0;

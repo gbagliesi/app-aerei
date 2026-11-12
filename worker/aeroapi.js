@@ -3,6 +3,7 @@
 //
 //   GET /fa?ident=FR1234&date=YYYY-MM-DD[&inbound=1]   voli con quella sigla nel giorno (data locale di partenza)
 //   GET /fa?reg=EI-ABC&date=YYYY-MM-DD                 voli di un aereo (marche) nel giorno
+//   GET /fa?reg=EI-ABC&days=7                          storia dell'aereo: voli degli ultimi N giorni (max 10) e di domani
 //   GET /fa/usage                                       richieste fatte questo mese e limite
 //
 // Risposta: { flights: [...], inbound?: {...}, source: 'FlightAware' } nel formato usato dall'app (come i voli
@@ -66,7 +67,7 @@ export function normFa(f) {
 
 const sameDay = (l, date) => (l.dep.sched?.local || l.dep.sched?.utc || '').slice(0, 10) === date;
 
-async function faGet(path, env, ctx) {
+async function faGet(path, env, ctx, ttl = CACHE_S) {
   const key = new Request(`https://cache.local/fa${path}`);
   const hit = await caches.default.match(key);
   if (hit) return hit.json();
@@ -84,7 +85,7 @@ async function faGet(path, env, ctx) {
     throw Object.assign(new Error(`FlightAware ha risposto ${r.status}${t ? `: ${t}` : ''}`), { status: r.status === 429 ? 429 : 502 });
   }
   const j = await r.json();
-  ctx.waitUntil(caches.default.put(key, new Response(JSON.stringify(j), { headers: { 'Cache-Control': `max-age=${CACHE_S}` } })));
+  ctx.waitUntil(caches.default.put(key, new Response(JSON.stringify(j), { headers: { 'Cache-Control': `max-age=${ttl}` } })));
   return j;
 }
 
@@ -96,6 +97,20 @@ export async function handleFa(url, env, ctx, json) {
     return json({ ...u, max: +env.AEROAPI_MAX_MONTH || DEFAULT_MAX });
   }
   const date = url.searchParams.get('date') || '';
+  const days = Math.min(10, Math.max(1, parseInt(url.searchParams.get('days') || '0', 10) || 0));
+  const hreg = (url.searchParams.get('reg') || '').toUpperCase().replace(/\s+/g, '');
+  if (url.searchParams.get('days') && /^[A-Z0-9-]{3,10}$/.test(hreg)) {
+    // storia: una sola richiesta (fino a 3 pagine da 15 voli), in cache per un'ora arrotondando l'ora d'inizio
+    const h = Math.floor(Date.now() / 3600e3) * 3600e3;
+    const start = new Date(h - days * 86400e3).toISOString().slice(0, 19) + 'Z', end = new Date(h + 36 * 3600e3).toISOString().slice(0, 19) + 'Z';
+    try {
+      const j = await faGet(`/flights/${encodeURIComponent(hreg)}?ident_type=registration&start=${start}&end=${end}&max_pages=3`, env, ctx, 3600);
+      const flights = (j.flights || []).map(normFa).sort((a, b) => (b.dep.sched?.utc || '').localeCompare(a.dep.sched?.utc || ''));
+      return json({ flights, source: 'FlightAware', from: start, to: end });
+    } catch (e) {
+      return json({ error: String(e.message || e) }, e.status || 502);
+    }
+  }
   const ident = (url.searchParams.get('ident') || '').toUpperCase().replace(/\s+/g, '');
   const reg = (url.searchParams.get('reg') || '').toUpperCase().replace(/\s+/g, '');
   if (!/^\d{4}-\d\d-\d\d$/.test(date)) return json({ error: 'data non valida' }, 400);

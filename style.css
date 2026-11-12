@@ -143,6 +143,14 @@ dd.big { font-size: 1.3rem; color: var(--amber); line-height: 1.1; }
 .regtag { font-weight: 600; letter-spacing: 0; text-transform: none; }
 .regtag.sure { color: #3fb950; }
 .regtag.guess { color: #d29922; }
+/* marche per grado di certezza */
+.reglink.lv-sure { color: #3fb950 !important; }
+.reglink.lv-cross { color: #39c5cf !important; }
+.reglink.lv-likely { color: #d29922 !important; opacity: 1; }
+.reglink.lv-weak { color: #8b949e !important; text-decoration: underline dotted; }
+.reglegend { margin: .2rem 0 .4rem; font-size: .78rem; }
+.reglegend span { margin-right: .7rem; white-space: nowrap; cursor: help; }
+.reglegend .lv-sure { color: #3fb950; } .reglegend .lv-cross { color: #39c5cf; } .reglegend .lv-likely { color: #d29922; } .reglegend .lv-weak { color: #8b949e; }
 .board .row.adsb { background: #0d2a22; border-left: 3px solid var(--green); }
 .board .row span small[title] { display: block; color: var(--muted); font-size: .7rem; }
 .card.predict { border-color: #6b4a12; background: linear-gradient(180deg, #2a1f0a, var(--panel)); }
@@ -304,3 +312,6 @@ label.check input { margin-top: .2rem; }
   .tiles.sorting { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) { .tiles.sorting .mv { transform: rotate(90deg); } }
+.histday { display: flex; justify-content: space-between; align-items: baseline; margin: 12px 0 4px; }
+.histday a { font-weight: 600; text-transform: capitalize; }
+.histday a.cur { color: #3fb950; }
