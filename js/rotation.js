@@ -8,6 +8,9 @@
 //    riserva nella base): non si abbina più un arrivo successivo o troppo a ridosso della partenza.
 // Funzione pura (nessuna rete): usata da getInbound in api.js e provabile da sola.
 
+// Varianti dell'algoritmo, scelte col test automatico (tools/backtest.mjs) sugli aeroporti che pubblicano le marche
+export const DEFAULTS = { reservePairs: false, pairMax: 180, order: 'lifo' };
+
 export const LOWCOST_CODES = ['FR', 'RK', 'U2', 'EC', 'DS', 'W6', 'W4', 'W9', 'VY', 'EW', 'HV', 'DY', 'V7', 'LS', 'TO', 'PC'];
 
 const al = x => x.airline?.iata || (x.number || '').replace(/\d.*$/, '');
@@ -29,7 +32,8 @@ const sameFlight = (a, b) => a.number === b.number && Math.abs((ms(a.dep?.sched)
  *  basis: 'return' (andata e ritorno), 'rotation' (giro veloce), 'idle' (aereo fermo da qualche ora),
  *         'overnight' (arrivato la sera prima), 'ground' (nessun arrivo libero: aereo già a terra)
  */
-export function simulateRotation({ flight, arrivals, departures, exclude = new Set(), stayed = new Set(), now = Infinity, coverageFrom = NaN }) {
+export function simulateRotation({ flight, arrivals, departures, exclude = new Set(), stayed = new Set(), now = Infinity, coverageFrom = NaN, opts = {} }) {
+  const o = { ...DEFAULTS, ...opts };
   const airline = al(flight);
   const lowcost = LOWCOST_CODES.includes(airline);
   const minTurn = (lowcost ? 25 : 35) * 60e3;
@@ -49,6 +53,19 @@ export function simulateRotation({ flight, arrivals, departures, exclude = new S
   deps.push(flight);
   deps.sort((a, b) => depTime(a) - depTime(b) || (a === flight ? 1 : -1));
 
+  // andata e ritorno evidenti: un aereo che arriva da X e riparte poco dopo per X con numero di volo
+  // accoppiato (es. FR5021 da Dublino → FR5020 per Dublino) è prenotato per quel ritorno, anche se nel
+  // frattempo parte un altro volo della compagnia
+  const pairOf = new Map(), pairFor = new Map();
+  if (o.reservePairs) {
+    for (const d of deps) {
+      if (d.aircraft?.reg && d !== flight) continue;
+      const t = depTime(d), dest = d.arr?.iata, n = flightNo(d);
+      const c = arr.filter(a => !pairFor.has(a) && dest && a.dep?.iata === dest && arrTime(a) + minTurn <= t && t - arrTime(a) <= o.pairMax * 60e3
+        && (o.reservePairs === 'city' || Math.abs(flightNo(a) - n) === 1)).pop();
+      if (c) { pairOf.set(d, c); pairFor.set(c, d); }
+    }
+  }
   // aerei con le marche già indicate su una partenza: sono riservati a quella partenza
   const reserved = new Map();
   for (const d of deps) if (d !== flight && d.aircraft?.reg) reserved.set(d.aircraft.reg, d);
@@ -56,9 +73,11 @@ export function simulateRotation({ flight, arrivals, departures, exclude = new S
   const used = new Set(), chain = [];
   for (const d of deps) {
     const t = depTime(d);
-    const pool = arr.filter(a => !used.has(a) && arrTime(a) + minTurn <= t);
+    const pool = arr.filter(a => !used.has(a) && arrTime(a) + minTurn <= t && (!pairFor.has(a) || pairFor.get(a) === d));
     let pick = null, basis;
-    if (d.aircraft?.reg && d !== flight) {
+    if (pairOf.has(d) && !used.has(pairOf.get(d))) {
+      pick = pairOf.get(d); basis = 'return';
+    } else if (d.aircraft?.reg && d !== flight) {
       pick = pool.filter(a => a.aircraft?.reg === d.aircraft.reg).pop() || null;
       basis = pick ? 'reg' : 'ground';
     } else {
@@ -70,7 +89,7 @@ export function simulateRotation({ flight, arrivals, departures, exclude = new S
         const dest = d.arr?.iata, n = flightNo(d);
         pick = quick.filter(a => dest && a.dep?.iata === dest).pop()
           || quick.filter(a => Math.abs(flightNo(a) - n) === 1).pop()
-          || quick[quick.length - 1];
+          || (o.order === 'fifo' ? quick[0] : quick[quick.length - 1]);
         basis = dest && pick.dep?.iata === dest ? 'return' : 'rotation';
       } else if (free.length) {
         // l'aereo fermo da più tempo, preferendo quelli che la rete ADS-B conferma ancora qui

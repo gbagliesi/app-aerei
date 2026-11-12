@@ -1,0 +1,41 @@
+# Test dell'aereo stimato sugli aeroporti che pubblicano le marche (avvio manuale e ogni giorno alle 05:40 UTC).
+# Legge prima i tabelloni (così il Worker continua a copiarli ogni ora), poi confronta le varianti dell'algoritmo.
+name: Backtest aereo stimato
+
+on:
+  workflow_dispatch:
+    inputs:
+      airports:
+        description: 'Codici IATA separati da spazio'
+        required: false
+        default: 'BUD BER MXP GVA BSL'
+      days:
+        description: 'Giorni da provare'
+        required: false
+        default: '3'
+      show:
+        description: 'Variante di cui mostrare gli errori'
+        required: false
+        default: 'attuale'
+  schedule:
+    - cron: '40 5 * * *'
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Tabelloni (tiene attiva la copia oraria nel Worker)
+        env:
+          AIRPORTS: ${{ inputs.airports || 'BUD BER MXP GVA BSL' }}
+        run: |
+          for a in $AIRPORTS; do for n in D A; do
+            curl -s -m 60 -o /dev/null -w "$a $n HTTP%{http_code}\n" "https://tabelloni-voli.giuseppe-bagliesi.workers.dev/board?airport=$a&nature=$n"
+          done; done
+      - name: Backtest
+        env:
+          SHOW: ${{ inputs.show || 'attuale' }}
+        run: node tools/backtest.mjs "${{ inputs.airports || 'BUD BER MXP GVA BSL' }}" "${{ inputs.days || '3' }}" | tee -a "$GITHUB_STEP_SUMMARY"
