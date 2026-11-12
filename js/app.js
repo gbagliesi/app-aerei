@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.6.1 · Rimini con tabellone ufficiale';
+const APP_VERSION = '4.7 · aereo stimato più preciso (andata e ritorno), marche da FlightAware';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -486,6 +486,11 @@ function etaText(f) {
   return '';
 }
 
+// Affidabilità misurata col test automatico (tools/backtest.mjs) sugli aeroporti che pubblicano le marche
+const guessReliability = r => r.basis === 'return'
+  ? '<b>Stima affidabile</b>: nel nostro test è giusta circa 9 volte su 10.'
+  : '<b>Stima debole</b>: senza andata e ritorno evidente, nel nostro test è giusta meno di una volta su tre.';
+
 /** Spiegazione della stima dell'aereo in arrivo (ricostruzione della giornata della compagnia). */
 function guessText(f, inbound, r) {
   const name = esc(f.airline?.name || ''), ap = esc(f.dep.iata), from = esc(inbound.dep.iata || '?');
@@ -624,7 +629,7 @@ async function viewFlight(number, date, depHint) {
       const turn = minutesBetween(inbound.arr.revised || inbound.arr.sched, f.dep.revised || f.dep.sched);
       const guess = r.method === 'guess';
       html = `${legCard(inbound, `Da dove arriva l'aereo · ${guess ? 'probabile volo precedente' : 'volo precedente'} <a href="${flightLink(inbound)}">${esc(inbound.number)}</a>`, 'inbound')}
-        ${guess ? `<p class="note">ℹ️ Stima: ${esc(f.airline?.name || 'la compagnia')} non ha ancora indicato quale aereo farà il volo. ${guessText(f, inbound, r)}</p>` : ''}
+        ${guess ? `<p class="note">ℹ️ Stima: ${esc(f.airline?.name || 'la compagnia')} non ha ancora indicato quale aereo farà il volo. ${guessText(f, inbound, r)} ${guessReliability(r)}</p>` : ''}
         <p class="note ${turn < 35 ? 'warn' : ''}">${turn < 35 ? '⚠️ ' : ''}Tempo di rotazione a ${esc(f.dep.iata)}: <b>${turn} min</b> tra l'arrivo dell'aereo e la partenza prevista${turn < 35 ? ': un ritardo del volo precedente si ripercuoterà probabilmente su questo.' : '.'}</p>`;
       const P = inbound.dep.lat != null ? inbound.dep : await getAirportInfo(inbound.dep.iata);
       if (P?.lat != null && A?.lat != null) {
@@ -637,7 +642,7 @@ async function viewFlight(number, date, depHint) {
     document.getElementById('predict').innerHTML = predictionHtml(f, inbound);
     const card = document.getElementById('aircraft');
     if (inbound && r.method === 'guess' && !f.aircraft?.reg && inbound.aircraft?.reg) {
-      card.innerHTML = aircraftCard(inbound.aircraft, date, `Ipotesi: è l'aereo del probabile volo precedente ${esc(inbound.number)} (ricostruzione della giornata della compagnia). La compagnia non ha ancora indicato l'aereo: diventa sicuro quando lo indica.`, true);
+      card.innerHTML = aircraftCard(inbound.aircraft, date, `Ipotesi: è l'aereo del probabile volo precedente ${esc(inbound.number)} (ricostruzione della giornata della compagnia${inbound.aircraft.regSrc ? `; marche di quel volo da ${esc(inbound.aircraft.regSrc)}` : ''}). ${guessReliability(r)} Diventa sicuro quando la compagnia indica l'aereo.`, true);
     } else if (inbound && r.method === 'reg' && f.aircraft?.reg && !hadReg) {
       card.innerHTML = aircraftCard(f.aircraft, date, r.source === 'FlightAware' ? `Indicate da FlightAware (l'aereo arriva con ${esc(inbound.number)}).` : `La compagnia non lo indica su questo volo, ma la giornata di questo aereo (arrivato con ${esc(inbound.number)}) prevede proprio ${esc(f.number)}.`);
     }

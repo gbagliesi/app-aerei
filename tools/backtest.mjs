@@ -33,16 +33,15 @@ async function snap(a, n, d) {
 const V = (process.env.VARIANTS || '').trim();
 const variants = V ? JSON.parse(V) : {
   attuale: {},
-  coppie: { reservePairs: 'pair' },
-  coppie_citta: { reservePairs: 'city' },
-  fifo: { order: 'fifo' },
-  coppie_citta_fifo: { reservePairs: 'city', order: 'fifo' },
-  cc_turn20: { reservePairs: 'city', minTurn: 20 },
-  cc_turn30: { reservePairs: 'city', minTurn: 30 },
-  cc_quick60: { reservePairs: 'city', quickMax: 60 },
-  cc_quick120: { reservePairs: 'city', quickMax: 120 },
-  cc_pair120: { reservePairs: 'city', pairMax: 120 },
-  cc_pair300: { reservePairs: 'city', pairMax: 300 },
+  v4_6: { reservePairs: false, order: 'lifo' },
+  coppie_lifo: { reservePairs: 'city', order: 'lifo' },
+  coppie_numero: { reservePairs: 'pair' },
+  turn20: { reservePairs: 'city', minTurn: 20 },
+  turn30: { reservePairs: 'city', minTurn: 30 },
+  quick60: { reservePairs: 'city', quickMax: 60 },
+  quick120: { reservePairs: 'city', quickMax: 120 },
+  pair120: { reservePairs: 'city', pairMax: 120 },
+  pair300: { reservePairs: 'city', pairMax: 300 },
 };
 // codici ICAO-like usati da alcuni tabelloni per le low cost (easyJet Switzerland EZS, easyJet Europe EC…)
 const LC = ['FR', 'RK', 'U2', 'EC', 'EZ', 'DS', 'W6', 'W4', 'W9', 'VY', 'EW', 'HV', 'DY', 'V7', 'LS', 'TO', 'PC'];

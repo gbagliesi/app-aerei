@@ -9,7 +9,7 @@
 // Funzione pura (nessuna rete): usata da getInbound in api.js e provabile da sola.
 
 // Varianti dell'algoritmo, scelte col test automatico (tools/backtest.mjs) sugli aeroporti che pubblicano le marche
-export const DEFAULTS = { reservePairs: false, pairMax: 180, order: 'lifo' };
+export const DEFAULTS = { reservePairs: 'city', pairMax: 180, order: 'fifo' };
 
 export const LOWCOST_CODES = ['FR', 'RK', 'U2', 'EC', 'DS', 'W6', 'W4', 'W9', 'VY', 'EW', 'HV', 'DY', 'V7', 'LS', 'TO', 'PC'];
 

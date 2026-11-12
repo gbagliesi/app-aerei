@@ -656,7 +656,7 @@ export async function getInbound(flight) {
     if (same?.aircraft?.reg) { reg = same.aircraft.reg; flight.aircraft = { ...flight.aircraft, ...same.aircraft }; }
   }
 
-  if (reg) {
+  const byRegPath = async () => {
     const d0 = isoDate(depUtc), d1 = isoDate(new Date(depUtc - 86400e3));
     const lists = await Promise.all([getFlightsByReg(reg, d0).catch(() => []), d1 !== d0 ? getFlightsByReg(reg, d1).catch(() => []) : []]);
     const byReg = lists.flat()
@@ -671,7 +671,9 @@ export async function getInbound(flight) {
         .sort((a, b) => new Date(b.arr.sched.utc) - new Date(a.arr.sched.utc))[0];
       if (arr) return { inbound: arr, method: 'reg' };
     }
-  }
+    return null;
+  };
+  if (reg) { const r = await byRegPath(); if (r) return r; }
 
   // 1b) FlightAware indica l'aereo assegnato e la tratta precedente (anche per le low cost): due richieste,
   //     solo se le marche non hanno già dato la risposta
@@ -680,6 +682,14 @@ export async function getInbound(flight) {
     const me = fa.flights.find(l => l.dep?.iata === depSide.iata);
     if (me?.aircraft?.reg && !flight.aircraft?.reg) flight.aircraft = { ...flight.aircraft, reg: me.aircraft.reg, regSrc: 'FlightAware', model: flight.aircraft?.model || me.aircraft.model };
     return { inbound: fa.inbound, method: 'reg', source: 'FlightAware' };
+  }
+  // FlightAware conosce l'aereo del volo (di solito da quando è decollato) ma non la tratta precedente:
+  // le marche sono comunque sicure, e con quelle cerco la tratta precedente
+  const faMe = fa?.flights?.find(l => l.dep?.iata === depSide.iata && l.aircraft?.reg);
+  if (!reg && faMe) {
+    reg = faMe.aircraft.reg;
+    flight.aircraft = { ...flight.aircraft, reg, regSrc: 'FlightAware', model: flight.aircraft?.model || faMe.aircraft.model };
+    const r = await byRegPath(); if (r) return r;
   }
 
   // 2) stima dal tabellone arrivi (anche solo dai dati ufficiali, se il volo è lontano nel tempo)
@@ -740,6 +750,12 @@ export async function getInbound(flight) {
       if (!p.aircraft?.reg && AIRBORNE.includes(p.status) && p.callSign) {
         const a = await adsbByCallsign(p.callSign);
         if (a?.reg) p.aircraft = { ...p.aircraft, reg: a.reg, hex: a.hex, model: p.aircraft?.model || a.model };
+      }
+      // volo in arrivo già atterrato ma senza marche sul tabellone: FlightAware di solito le conosce (una richiesta)
+      if (!p.aircraft?.reg && p.number && arrTime(p) < Date.now()) {
+        const pf = await faFlight(p.number, (p.arr?.sched?.local || '').slice(0, 10) || isoDate(new Date(arrTime(p)))).catch(() => null);
+        const leg = pf?.flights?.find(l => l.arr?.iata === depSide.iata && l.aircraft?.reg) || pf?.flights?.find(l => l.aircraft?.reg);
+        if (leg) p.aircraft = { ...p.aircraft, reg: leg.aircraft.reg, model: p.aircraft?.model || leg.aircraft.model, regSrc: 'FlightAware' };
       }
       return { inbound: p, method: 'guess', basis: sim.basis, waitMin: sim.waitMin };
     }
@@ -884,7 +900,9 @@ export async function guessBoardRegs(iata, data) {
     for (const c of sim?.chain || []) {
       const reg = c.pick?.aircraft?.reg;
       // sul tabellone solo i giri veloci (più affidabili); gli aerei fermi da ore si verificano con la rete ADS-B nella pagina del volo
-      if (!reg || c.dep.aircraft?.reg || !['rotation', 'return'].includes(c.basis)) continue;
+      // solo andata e ritorno: nel test sugli aeroporti con le marche (tools/backtest.mjs) è giusta ~9 volte su 10,
+      // gli altri giri veloci solo ~1 su 6
+      if (!reg || c.dep.aircraft?.reg || c.basis !== 'return') continue;
       c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis } };
     }
   }
