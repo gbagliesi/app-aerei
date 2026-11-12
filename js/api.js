@@ -995,9 +995,34 @@ async function getSnap(iata, nature, day) {
  * compagnia (js/rotation.js) e, quando l'aereo abbinato ha marche note, le mette in aircraft.regGuess
  * ({ reg, via, from, basis }). Non usa AeroDataBox. Restituisce il numero di voli con un'ipotesi.
  */
+/** Marche note a FlightAware per i voli recenti e prossimi di un aeroporto (via Worker, mezz'ora di cache). */
+async function faAirportRegs(iata) {
+  const j = await faGet({ airport: iata });
+  return j?.flights || [];
+}
+function applyFaRegs(data, fa) {
+  let n = 0;
+  for (const [list, dir, side] of [[data.arrivals, 'A', 'arr'], [data.departures, 'D', 'dep']]) {
+    for (const f of list) {
+      if (f.aircraft?.reg) continue;
+      const t = Date.parse(f[side]?.sched?.utc || '');
+      const nums = [f.number, ...(f.codeshares || [])].map(normNum);
+      const m = fa.find(x => x.dir === dir && x.reg && (nums.includes(normNum(x.number)) || (x.codeshares || []).map(normNum).some(c => nums.includes(c)))
+        && (!x.sched || isNaN(t) || Math.abs(Date.parse(x.sched) - t) < 3 * 3600e3));
+      if (!m) continue;
+      f.aircraft = { ...f.aircraft, reg: m.reg, regSrc: 'FlightAware (voli dell’aeroporto)' };
+      n++;
+    }
+  }
+  return n;
+}
+
 export async function guessBoardRegs(iata, data) {
   if (isDemo() || !data?.departures?.length) return 0;
   const r0 = [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length;
+  // aeroporti senza marche sul tabellone ufficiale: chiedo a FlightAware quelle già assegnate (poche richieste, in cache)
+  const rows = [...data.departures, ...data.arrivals];
+  if (!REG_BOARDS.includes(iata) && r0 < rows.length / 2) applyFaRegs(data, await faAirportRegs(iata).catch(() => []));
   const day = await dayMovements(iata, Date.now(), data, null);
   const now = Date.now(), n0 = data.departures.filter(d => d.aircraft?.regGuess).length;
   const airlines = [...new Set(data.departures.filter(d => !d.aircraft?.reg).map(al))];

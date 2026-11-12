@@ -1,9 +1,12 @@
+import { airportByIata } from '../js/airports.js';
 // FlightAware AeroAPI (piano Personal): riserva quando AeroDataBox non risponde, e aereo in arrivo.
 // La chiave sta solo nel Worker (segreto AEROAPI_KEY), mai nel browser.
 //
 //   GET /fa?ident=FR1234&date=YYYY-MM-DD[&inbound=1]   voli con quella sigla nel giorno (data locale di partenza)
 //   GET /fa?reg=EI-ABC&date=YYYY-MM-DD                 voli di un aereo (marche) nel giorno
 //   GET /fa?reg=EI-ABC&days=7                          storia dell'aereo: voli degli ultimi N giorni (max 10) e di domani
+//   GET /fa?airport=PSA                                marche dei voli di un aeroporto (arrivati nelle ultime 4 ore, in arrivo e in partenza
+//                                                      nelle prossime): 3 pagine, in cache mezz'ora, solo sotto il 70% del limite mensile
 //   GET /fa/usage                                       richieste fatte questo mese e limite
 //
 // Risposta: { flights: [...], inbound?: {...}, source: 'FlightAware' } nel formato usato dall'app (come i voli
@@ -67,7 +70,7 @@ export function normFa(f) {
 
 const sameDay = (l, date) => (l.dep.sched?.local || l.dep.sched?.utc || '').slice(0, 10) === date;
 
-async function faGet(path, env, ctx, ttl = CACHE_S) {
+async function faGet(path, env, ctx, ttl = CACHE_S, n = 1, cap = 1) {
   const key = new Request(`https://cache.local/fa${path}`);
   const hit = await caches.default.match(key);
   if (hit) return hit.json();
@@ -75,7 +78,7 @@ async function faGet(path, env, ctx, ttl = CACHE_S) {
   const meter = env.WATCHER?.get(env.WATCHER.idFromName('main'));
   const max = +env.AEROAPI_MAX_MONTH || DEFAULT_MAX;
   if (meter) {
-    const u = await (await meter.fetch('https://do/fa/spend', { method: 'POST', body: JSON.stringify({ max }) })).json();
+    const u = await (await meter.fetch('https://do/fa/spend', { method: 'POST', body: JSON.stringify({ max: Math.floor(max * cap), n }) })).json();
     if (!u.ok) throw Object.assign(new Error(`limite mensile FlightAware raggiunto (${u.count}/${max} richieste)`), { status: 429 });
   }
   const r = await fetch(FA_BASE + path, { headers: { 'x-apikey': env.AEROAPI_KEY, Accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
@@ -96,6 +99,31 @@ export async function handleFa(url, env, ctx, json) {
     const u = meter ? await (await meter.fetch('https://do/fa/usage')).json() : {};
     return json({ ...u, max: +env.AEROAPI_MAX_MONTH || DEFAULT_MAX });
   }
+  const apc = (url.searchParams.get('airport') || '').toUpperCase();
+  if (apc) {
+    const ap = airportByIata(apc);
+    if (!ap) return json({ error: 'aeroporto sconosciuto' }, 400);
+    const id = encodeURIComponent(ap.icao || apc);
+    const b = Math.floor(Date.now() / 1800e3) * 1800e3, iso = t => new Date(t).toISOString().slice(0, 19) + 'Z';
+    const parts = [
+      ['A', `arrivals?start=${iso(b - 4 * 3600e3)}&end=${iso(b + 1800e3)}`],
+      ['A', `scheduled_arrivals?start=${iso(b)}&end=${iso(b + 3 * 3600e3)}`],
+      ['D', `scheduled_departures?start=${iso(b)}&end=${iso(b + 4 * 3600e3)}`],
+    ];
+    const flights = [];
+    let err = null;
+    for (const [dir, q] of parts) {
+      try {
+        const j = await faGet(`/airports/${id}/flights/${q}&max_pages=1`, env, ctx, 1800, 1, 0.7);
+        for (const f of j[q.split('?')[0]] || []) {
+          if (!f.registration) continue;
+          const l = normFa(f);
+          flights.push({ dir, number: l.number, codeshares: l.codeshares, reg: f.registration, sched: (dir === 'A' ? l.arr.sched : l.dep.sched)?.utc || null, other: (dir === 'A' ? l.dep.iata : l.arr.iata) || null });
+        }
+      } catch (e) { err = String(e.message || e); if (e.status === 429) break; }
+    }
+    return json({ flights, source: 'FlightAware', ...(err ? { error: err } : {}) }, flights.length || !err ? 200 : 502);
+  }
   const date = url.searchParams.get('date') || '';
   const days = Math.min(10, Math.max(1, parseInt(url.searchParams.get('days') || '0', 10) || 0));
   const hreg = (url.searchParams.get('reg') || '').toUpperCase().replace(/\s+/g, '');
@@ -104,7 +132,7 @@ export async function handleFa(url, env, ctx, json) {
     const h = Math.floor(Date.now() / 3600e3) * 3600e3;
     const start = new Date(h - days * 86400e3).toISOString().slice(0, 19) + 'Z', end = new Date(h + 36 * 3600e3).toISOString().slice(0, 19) + 'Z';
     try {
-      const j = await faGet(`/flights/${encodeURIComponent(hreg)}?ident_type=registration&start=${start}&end=${end}&max_pages=3`, env, ctx, 3600);
+      const j = await faGet(`/flights/${encodeURIComponent(hreg)}?ident_type=registration&start=${start}&end=${end}&max_pages=3`, env, ctx, 3600, 3);
       const flights = (j.flights || []).map(normFa).sort((a, b) => (b.dep.sched?.utc || '').localeCompare(a.dep.sched?.utc || ''));
       return json({ flights, source: 'FlightAware', from: start, to: end });
     } catch (e) {
@@ -142,9 +170,10 @@ export async function faMeter(storage, url, request) {
   const cur = (await storage.get('fa:usage')) || {};
   const u = cur.month === month ? cur : { month, count: 0 };
   if (url.pathname === '/fa/usage') return u;
-  const { max } = await request.json();
-  if (u.count >= max) return { ...u, ok: false };
-  u.count++;
+  const body = await request.json(), { max } = body;
+  const n = Math.max(1, +(body.n) || 1);
+  if (u.count + n > max) return { ...u, ok: false };
+  u.count += n;
   await storage.put('fa:usage', u);
   return { ...u, ok: true };
 }
