@@ -18,7 +18,9 @@ export const REG_BOARDS = ['MXP', 'LIN', 'GVA', 'ZRH', 'FRA', 'BER', 'ARN', 'AMS
 const POLL_MS = 4 * 60e3; // OpenSky: 1 credito per richiesta su un'area piccola, 4000 crediti al giorno con l'account
 const RADIUS_NM = 25;   // la copertura ADS-B vicino a Pisa arriva a ~6000 piedi: si guarda l'avvicinamento, non la pista
 const MAX_ALT = 10000;
-const MAX_AIRPORTS = 6;
+const MAX_AIRPORTS = 8;
+// aeroporti di Giuseppe, guardati sempre anche se non consultati di recente
+const ALWAYS = ['PSA', 'BRI'];
 const KEEP_DAYS = 3;
 const MAX_PTS = 30;
 
@@ -144,8 +146,9 @@ export async function adsbDo(self, url, request) {
 async function targets(env) {
   try {
     const r = await env.WATCHER.get(env.WATCHER.idFromName('snapshots')).fetch('https://do/snap/airports');
-    return ((await r.json()).airports || []).filter(a => !REG_BOARDS.includes(a) && airportByIata(a)).slice(0, MAX_AIRPORTS);
-  } catch { return []; }
+    const recent = ((await r.json()).airports || []).filter(a => !REG_BOARDS.includes(a) && airportByIata(a) && !ALWAYS.includes(a));
+    return [...ALWAYS, ...recent].slice(0, MAX_AIRPORTS);
+  } catch { return [...ALWAYS]; }
 }
 
 /** Aggiunge alla giornata di un aeroporto gli aerei visti (formato readsb: hex, r, t, flight, alt_baro, baro_rate, gs, lat, lon). */
