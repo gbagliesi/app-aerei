@@ -1,4 +1,4 @@
-import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getRegHistory, getTrace, hexOfReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
+import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getRegHistory, getTrace, hexOfReg, rememberFlightReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
 import { searchAirports, airportByIata, AIRPORTS, norm, airportSearchText } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites, reorderFavorites, favKey } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.9.4 · storia dell’aereo: ultimi 2 giorni';
+const APP_VERSION = '4.9.5 · il tabellone ricorda le marche viste aprendo i voli';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -649,6 +649,7 @@ async function viewFlight(number, date, depHint) {
     const r = await getInbound(f);
     inbound = r.inbound; inboundGuess = r.method === 'guess';
     if (inbound && inboundGuess) guessed.add(inbound);
+    rememberFlightReg(f, inbound, r);
     refreshWatch(f, inbound, inboundGuess).catch(() => {});
     let html = `<div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="hint">${esc(r.reason)}</p></div>`;
     if (inbound) {

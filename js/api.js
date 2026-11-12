@@ -1031,9 +1031,20 @@ function learnRegs(list) {
   for (const k of Object.keys(m)) if (now - m[k].t > 2 * 86400e3) delete m[k];
   pput(KREG, m);
 }
+/** La pagina di un volo ha trovato (o ipotizzato) l'aereo: lo ricordo perché il tabellone mostri la stessa cosa. */
+export function rememberFlightReg(f, inbound, r) {
+  try {
+    if (inbound?.aircraft?.reg && !inbound.aircraft.regGuess) learnRegs([inbound]);
+    if (f.aircraft?.reg) return learnRegs([f]);
+    if (r?.method !== 'guess' || !inbound?.aircraft?.reg || !f.dep?.iata || !f.dep.sched?.utc) return;
+    const m = pget(KREG, 2 * 86400e3) || {};
+    m[`${f.dep.iata}|D|${normNum(f.number)}|${f.dep.sched.utc.slice(0, 10)}`] = { guess: { reg: inbound.aircraft.reg, via: inbound.number, from: inbound.dep?.iata || null, basis: r.basis }, sched: f.dep.sched.utc, t: Date.now() };
+    pput(KREG, m);
+  } catch {}
+}
 function knownRegs(iata) {
   const m = pget(KREG, 2 * 86400e3) || {};
-  return Object.entries(m).filter(([k]) => k.startsWith(`${iata}|`)).map(([k, v]) => ({ dir: k.split('|')[1], number: k.split('|')[2], reg: v.reg, sched: v.sched }));
+  return Object.entries(m).filter(([k]) => k.startsWith(`${iata}|`)).map(([k, v]) => ({ dir: k.split('|')[1], number: k.split('|')[2], reg: v.reg, guess: v.guess, sched: v.sched }));
 }
 function applyFaRegs(data, fa) {
   let n = 0;
@@ -1042,9 +1053,10 @@ function applyFaRegs(data, fa) {
       if (f.aircraft?.reg) continue;
       const t = Date.parse(f[side]?.sched?.utc || '');
       const nums = [f.number, ...(f.codeshares || [])].map(normNum);
-      const m = fa.find(x => x.dir === dir && x.reg && (nums.includes(normNum(x.number)) || (x.codeshares || []).map(normNum).some(c => nums.includes(c)))
+      const m = fa.find(x => x.dir === dir && (x.reg || x.guess) && (nums.includes(normNum(x.number)) || (x.codeshares || []).map(normNum).some(c => nums.includes(c)))
         && (!x.sched || isNaN(t) || Math.abs(Date.parse(x.sched) - t) < 3 * 3600e3));
       if (!m) continue;
+      if (!m.reg) { f.aircraft = { ...f.aircraft, regGuess: m.guess, _pageGuess: true }; continue; }
       f.aircraft = { ...f.aircraft, reg: m.reg, regSrc: 'FlightAware (letta aprendo il volo)' };
       n++;
     }
@@ -1054,11 +1066,11 @@ function applyFaRegs(data, fa) {
 
 export async function guessBoardRegs(iata, data) {
   if (isDemo() || !data?.departures?.length) return 0;
-  const r0 = [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length;
+  const r0 = [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length, n0 = data.departures.filter(d => d.aircraft?.regGuess).length;
   // marche già viste aprendo i voli di questo aeroporto (nessuna richiesta in più)
   applyFaRegs(data, knownRegs(iata));
   const day = await dayMovements(iata, Date.now(), data, null);
-  const now = Date.now(), n0 = data.departures.filter(d => d.aircraft?.regGuess).length;
+  const now = Date.now();
   const airlines = [...new Set(data.departures.filter(d => !d.aircraft?.reg).map(al))];
   for (const code of airlines) {
     if (!day.arrivals.some(a => al(a) === code && a.aircraft?.reg)) continue;
@@ -1072,7 +1084,7 @@ export async function guessBoardRegs(iata, data) {
       // andata e ritorno (nel test sugli aeroporti con le marche, tools/backtest.mjs, giusta ~9 volte su 10) e giri
       // veloci solo per le low cost (negli hub delle compagnie tradizionali il giro veloce è quasi sempre sbagliato)
       // tutte le ipotesi con marche note; il tabellone le colora per affidabilità (andata e ritorno = affidabile)
-      if (!reg || c.dep.aircraft?.reg || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
+      if (!reg || c.dep.aircraft?.reg || c.dep.aircraft?._pageGuess || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
       c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis } };
     }
   }
