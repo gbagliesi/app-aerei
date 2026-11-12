@@ -21,6 +21,11 @@ const MAX_AIRPORTS = 6;
 const KEEP_DAYS = 3;
 const MAX_PTS = 30;
 
+const SOURCES = (lat, lon, r) => [
+  ['adsb.lol', `https://api.adsb.lol/v2/point/${lat}/${lon}/${r}`],
+  ['airplanes.live', `https://api.airplanes.live/v2/point/${lat}/${lon}/${r}`],
+  ['adsb.fi', `https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/${r}`],
+];
 const stub = env => env.WATCHER.get(env.WATCHER.idFromName('adsb'));
 const dayOf = ms => new Date(ms).toISOString().slice(0, 10);
 const nm = (a, b) => {
@@ -55,7 +60,12 @@ export async function adsbDo(self, url) {
   if (url.pathname === '/adsb/get') {
     const airport = url.searchParams.get('airport'), day = url.searchParams.get('day');
     const v = await storage.get(`adsb:${airport}:${day}`);
-    return { airport, day, events: v ? events(v.ac) : [], polls: v?.polls || 0, lastPoll: v?.lastPoll || null };
+    // il giro si riavvia anche da qui, se si era fermato (es. subito dopo una pubblicazione del Worker)
+    await storage.put('role', 'adsb');
+    const al = await storage.getAlarm();
+    if (!al || al < Date.now() - 60e3) await storage.setAlarm(Date.now() + 5e3);
+    return { airport, day, events: v ? events(v.ac) : [], polls: v?.polls || 0, lastPoll: v?.lastPoll || null, source: v?.source || null,
+      lastError: (await storage.get(`adsberr:${airport}`)) || null, nextPoll: (await storage.getAlarm()) || null };
   }
   return { error: 'not found' };
 }
@@ -72,9 +82,19 @@ export async function adsbAlarm(self) {
   for (const code of airports) {
     const ap = airportByIata(code);
     try {
-      const r = await fetch(`https://api.adsb.lol/v2/point/${ap[4]}/${ap[5]}/${RADIUS_NM}`, { signal: AbortSignal.timeout(10000), headers: { 'Accept': 'application/json', 'User-Agent': 'tabelloni-voli (uso personale)' } });
-      if (!r.ok) { await storage.put(`adsberr:${code}`, { at: now, status: r.status }); continue; }
-      const list = (await r.json()).ac || [];
+      // reti ADS-B pubbliche con la stessa interfaccia (readsb): la prima che risponde
+      let list = null, source = null;
+      const errs = [];
+      for (const [name, u] of SOURCES(ap[4], ap[5], RADIUS_NM)) {
+        try {
+          const r = await fetch(u, { signal: AbortSignal.timeout(10000), headers: { 'Accept': 'application/json', 'User-Agent': 'tabelloni-voli (uso personale)' } });
+          if (!r.ok) { errs.push(`${name} ${r.status}`); continue; }
+          const j = await r.json();
+          list = j.ac || j.aircraft || []; source = name; break;
+        } catch (e) { errs.push(`${name} ${String(e.message || e).slice(0, 80)}`); }
+      }
+      if (errs.length) await storage.put(`adsberr:${code}`, { at: now, errors: errs });
+      if (!list) continue;
       const key = `adsb:${code}:${dayOf(now)}`;
       const cur = (await storage.get(key)) || { ac: {}, polls: 0 };
       for (const a of list) {
@@ -89,7 +109,7 @@ export async function adsbAlarm(self) {
         e.pts.push([t, alt, Math.round(nm({ lat: a.lat, lon: a.lon }, { lat: ap[4], lon: ap[5] }) * 10) / 10, vr, Math.round(a.gs || 0), cs || null]);
         if (e.pts.length > MAX_PTS) e.pts.splice(0, e.pts.length - MAX_PTS);
       }
-      cur.polls++; cur.lastPoll = now;
+      cur.polls++; cur.lastPoll = now; cur.source = source;
       await storage.put(key, cur);
     } catch (e) { await storage.put(`adsberr:${code}`, { at: now, error: String(e.message || e) }); }
   }
