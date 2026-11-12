@@ -18,6 +18,7 @@ new_sqlite_classes = ["Watcher"]
 binding = "SELF"
 service = "tabelloni-voli"
 
-# Copia oraria dei tabelloni ufficiali degli aeroporti consultati di recente (snapshots.js)
+# Copia oraria dei tabelloni ufficiali: :17 aeroporti consultati di recente (snapshots.js) e avvistamenti ADS-B
+# (adsbwatch.js); :32 e :47 aeroporti che pubblicano le marche
 [triggers]
-crons = ["17 * * * *"]
+crons = ["17 * * * *", "32 * * * *", "47 * * * *"]

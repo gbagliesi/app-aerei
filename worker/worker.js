@@ -13,7 +13,8 @@
 
 import { Watcher, setBoardFn } from './notify.js';
 import { handleFa } from './aeroapi.js';
-import { saveSnap, handleSnap, cronSnap } from './snapshots.js';
+import { saveSnap, handleSnap, cronSnap, cronList } from './snapshots.js';
+import { handleSeen, kickAdsb, REG_BOARDS } from './adsbwatch.js';
 export { Watcher };
 export const _readBoard = (a, n, env, log) => readBoard(a, n, env, log); // per i test locali
 
@@ -60,7 +61,14 @@ setBoardFn((a, n, env) => (isSupported(a) ? readBoard(a, n, env) : null));
 
 export default {
   // ogni ora: aggiorna la copia dei tabelloni degli aeroporti consultati negli ultimi giorni (snapshots.js)
-  async scheduled(event, env, ctx) { ctx.waitUntil(cronSnap(env, readBoard)); },
+  // :17 aeroporti consultati di recente + avvio degli avvistamenti ADS-B; :32 e :47 gli aeroporti che pubblicano le
+  // marche (metà per volta, per restare nel limite di richieste di un cron), per incrociarle sugli altri aeroporti
+  async scheduled(event, env, ctx) {
+    const half = Math.ceil(REG_BOARDS.length / 2);
+    if (event.cron === '32 * * * *') ctx.waitUntil(cronList(env, readBoard, REG_BOARDS.slice(0, half)));
+    else if (event.cron === '47 * * * *') ctx.waitUntil(cronList(env, readBoard, REG_BOARDS.slice(half)));
+    else ctx.waitUntil(Promise.all([cronSnap(env, readBoard), kickAdsb(env).catch(() => {})]));
+  },
 
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -86,6 +94,7 @@ export default {
     }
     if (url.pathname === '/fa' || url.pathname === '/fa/usage') return handleFa(url, env, ctx, json);
     if (url.pathname === '/snap') return handleSnap(url, env, json);
+    if (url.pathname === '/seen') return handleSeen(url, env, json);
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA', ...Object.keys(OTHER)] });
     // Prova diagnostica: una richiesta normale (nessun aggiramento) verso i siti degli aeroporti non ancora supportati
     if (url.pathname === '/probe') {

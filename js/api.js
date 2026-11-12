@@ -729,6 +729,13 @@ export async function getInbound(flight) {
     // 2b) ricostruzione della giornata della compagnia in questo aeroporto (stile Flightradar24): giri
     //     veloci, aerei fermi da ore o rimasti a terra la notte; la rete ADS-B scarta gli aerei già ripartiti
     const day = await dayMovements(depSide.iata, depUtc, board, flight);
+    // marche trovate incrociando ADS-B e gli altri tabelloni: se ora le conosco, la tratta precedente è certa
+    const meDay = day.departures.find(d => d.number === flight.number && Math.abs(depTime(d) - depUtc) < 6 * 3600e3);
+    if (!flight.aircraft?.reg && meDay?.aircraft?.reg) {
+      flight.aircraft = { ...flight.aircraft, reg: meDay.aircraft.reg, regSrc: meDay.aircraft.regSrc, hex: meDay.aircraft.hex || flight.aircraft?.hex };
+      const prev = day.arrivals.filter(a => a.aircraft?.reg === meDay.aircraft.reg && arrTime(a) < depUtc && arrTime(a) > depUtc - 30 * 3600e3).sort((a, b) => arrTime(b) - arrTime(a))[0];
+      if (prev) return { inbound: prev, method: 'reg' };
+    }
     for (const a of day.arrivals) {
       if (!a.aircraft?.reg && a.callSign && AIRBORNE.includes(a.status) && al(a) === airline && Math.abs(depUtc - arrTime(a)) < 3 * 3600e3) {
         const x = await adsbByCallsign(a.callSign);
@@ -861,8 +868,90 @@ async function dayMovements(iata, depUtc, board, flight) {
       } catch { /* unità finite o errore: si va avanti coi dati che ci sono */ }
     }
   }
+  await fillRegs(iata, arrivals, departures).catch(() => 0);
   return { arrivals, departures, from };
 }
+
+// ---------- marche incrociate da altre fonti (per gli aeroporti che non le pubblicano) ----------
+// Aeroporti il cui tabellone ufficiale pubblica le marche (copiati ogni ora dal Worker: worker/adsbwatch.js)
+export const REG_BOARDS = ['MXP', 'LIN', 'GVA', 'ZRH', 'FRA', 'BER', 'ARN', 'AMS', 'LCY', 'DBV'];
+// prefissi del nominativo radio (callsign) per compagnia: servono a non scambiare un Ryanair con un Wizz Air
+const CS_PREFIX = {
+  FR: ['RYR', 'RUK', 'MAY', 'RYS', 'LDM'], RK: ['RUK'], U2: ['EZY', 'EJU', 'EZS'], EC: ['EJU'], DS: ['EZS'], W6: ['WZZ', 'WMT', 'WUK', 'WAZ'], W4: ['WMT', 'WZZ'], W9: ['WUK'],
+  VY: ['VLG'], V7: ['VOE'], AZ: ['ITY'], LH: ['DLH'], LX: ['SWR'], AF: ['AFR'], KL: ['KLM'], BA: ['BAW'], IB: ['IBE'], TP: ['TAP'], SN: ['BEL'], OS: ['AUA'], EW: ['EWG'],
+  DY: ['NOZ', 'NSZ'], D8: ['IBK', 'NSZ'], HV: ['TRA'], TO: ['TVF'], PC: ['PGT'], LS: ['EXS'], EN: ['DLA'], A3: ['AEE'], TK: ['THY'], EI: ['EIN'], BT: ['BTI'], OU: ['CTN'],
+};
+const csOk = (al, cs) => { const p = CS_PREFIX[al]; return !cs || !p || p.some(x => cs.toUpperCase().startsWith(x)); };
+
+async function getSeen(iata, day) {
+  const base = (getSettings().workerUrl || '').trim().replace(/\/+$/, '');
+  if (!base) return [];
+  return cached(`seen:${iata}:${day}`, 120e3, async () => {
+    try { const r = await fetch(`${base}/seen?airport=${iata}&day=${day}`); return r.ok ? ((await r.json()).events || []) : []; } catch { return []; }
+  });
+}
+
+/**
+ * Completa le marche mancanti dei voli di un aeroporto incrociando:
+ *  1) gli avvistamenti ADS-B attorno all'aeroporto (Worker /seen): un aereo atterrato/decollato quasi all'ora
+ *     effettiva del tabellone, con nominativo della stessa compagnia, è quello del volo;
+ *  2) il tabellone ufficiale dell'altro aeroporto, se pubblica le marche (es. un volo da Berlino o Malpensa).
+ * Modifica i voli (aircraft.reg + regSrc) e restituisce quanti ne ha completati.
+ */
+export async function fillRegs(iata, arrivals, departures) {
+  if (isDemo() || !(getSettings().workerUrl || '').trim()) return 0;
+  let n = 0;
+  const set = (f, reg, src, hex) => { f.aircraft = { ...f.aircraft, reg, regSrc: src, ...(hex ? { hex } : {}) }; n++; };
+  // 1) ADS-B, solo per i voli già atterrati/decollati (orario effettivo)
+  if (!REG_BOARDS.includes(iata)) {
+    const want = [...arrivals.map(f => [f, 'arr']), ...departures.map(f => [f, 'dep'])]
+      .filter(([f, side]) => !f.aircraft?.reg && f[side]?.actual?.utc && Date.now() - Date.parse(f[side].actual.utc) < 3 * 86400e3);
+    if (want.length) {
+      const days = [...new Set(want.map(([f, side]) => f[side].actual.utc.slice(0, 10)))];
+      const evs = (await Promise.all(days.map(d => getSeen(iata, d)))).flat().filter(e => e.reg);
+      // il tabellone segna l'atterraggio (o l'arrivo al parcheggio) e il decollo (o l'uscita dal parcheggio):
+      // finestra attorno all'orario effettivo, poi assegnazione per differenza crescente (un aereo, un volo)
+      const pairs = [];
+      for (const [f, side] of want) {
+        const t = Date.parse(f[side].actual.utc), al = f.airline?.iata || (f.number || '').slice(0, 2);
+        for (const e of evs) {
+          if (e.ev !== side || !csOk(al, e.cs)) continue;
+          const d = (e.t - t) / 60e3;
+          if (side === 'arr' ? d < -15 || d > 10 : d < -8 || d > 25) continue;
+          pairs.push({ f, e, side, cost: Math.abs(side === 'arr' ? d + 3 : d - 8) - (CS_PREFIX[al] && e.cs ? 3 : 0) });
+        }
+      }
+      pairs.sort((a, b) => a.cost - b.cost);
+      const doneF = new Set(), doneE = new Set();
+      for (const p of pairs) {
+        if (doneF.has(p.f) || doneE.has(`${p.e.hex}|${p.side}|${p.e.t}`)) continue;
+        // ambiguo: un altro aereo della stessa compagnia quasi alla stessa ora → meglio non dire nulla
+        const rival = pairs.find(q => q.f === p.f && q.e.hex !== p.e.hex && !doneE.has(`${q.e.hex}|${q.side}|${q.e.t}`) && q.cost - p.cost < 4);
+        doneF.add(p.f);
+        if (rival) continue;
+        doneE.add(`${p.e.hex}|${p.side}|${p.e.t}`);
+        set(p.f, p.e.reg, `rete ADS-B (adsb.lol): ${p.side === 'arr' ? 'atterrato' : 'decollato'} a ${iata} verso le ${new Date(p.e.t).toTimeString().slice(0, 5)}${p.e.cs ? `, nominativo ${p.e.cs}` : ''}`, p.e.hex);
+      }
+    }
+  }
+  // 2) tabellone ufficiale dell'altro aeroporto con le marche
+  const remote = [...arrivals.map(f => [f, 'arr', f.dep?.iata]), ...departures.map(f => [f, 'dep', f.arr?.iata])]
+    .filter(([f, , other]) => !f.aircraft?.reg && REG_BOARDS.includes(other) && f.number);
+  const byBoard = new Map();
+  for (const [f, side, other] of remote) {
+    const tz = OFFICIAL_AIRPORTS[other], t = Date.parse(f[side]?.sched?.utc || '');
+    if (!tz || isNaN(t)) continue;
+    const nature = side === 'arr' ? 'D' : 'A';
+    for (const day of new Set([localDay(t, tz), localDay(t - 86400e3, tz), localDay(t + 86400e3, tz)])) {
+      const k = `${other}|${nature}|${day}`;
+      if (!byBoard.has(k)) byBoard.set(k, getSnap(other, nature, day));
+      const row = (await byBoard.get(k)).find(r => r.reg && normNum(r.number) === normNum(f.number) && (!r.cityCode || r.cityCode === iata));
+      if (row) { set(f, row.reg, `tabellone ufficiale di ${other} (${nature === 'D' ? 'partenza' : 'arrivo'} di ${row.schedDate?.slice(11, 16) || row.sched || ''})`); break; }
+    }
+  }
+  return n;
+}
+const normNum = x => (x || '').toUpperCase().replace(/\s+/g, '').replace(/^([A-Z0-9]{2})0+(\d)/, '$1$2');
 
 /** Copia del tabellone ufficiale salvata dal Worker per un giorno (locale) "YYYY-MM-DD"; [] se non c'è. */
 async function getSnap(iata, nature, day) {
@@ -888,6 +977,7 @@ async function getSnap(iata, nature, day) {
  */
 export async function guessBoardRegs(iata, data) {
   if (isDemo() || !data?.departures?.length) return 0;
+  const r0 = [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length;
   const day = await dayMovements(iata, Date.now(), data, null);
   const now = Date.now(), n0 = data.departures.filter(d => d.aircraft?.regGuess).length;
   const airlines = [...new Set(data.departures.filter(d => !d.aircraft?.reg).map(al))];
@@ -906,7 +996,7 @@ export async function guessBoardRegs(iata, data) {
       c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis } };
     }
   }
-  return data.departures.filter(d => d.aircraft?.regGuess).length - n0;
+  return data.departures.filter(d => d.aircraft?.regGuess).length - n0 + [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length - r0;
 }
 
 /** Rete ADS-B: true se l'aereo (marche) ha volato lontano dall'aeroporto dopo l'istante indicato, false se risulta

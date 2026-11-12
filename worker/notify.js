@@ -20,6 +20,7 @@ const ADB_HOST = 'aerodatabox.p.rapidapi.com';
 // lettura diretta dei tabelloni, se manca il collegamento SELF al Worker stesso (impostata da worker.js)
 import { faMeter } from './aeroapi.js';
 import { snapDo } from './snapshots.js';
+import { adsbDo, adsbAlarm } from './adsbwatch.js';
 let boardFn = null;
 export const setBoardFn = f => { boardFn = f; };
 
@@ -151,6 +152,7 @@ export class Watcher {
     try {
       if (url.pathname.startsWith('/fa/')) return json(await faMeter(this.storage, url, request));
       if (url.pathname.startsWith('/snap/')) return json(await snapDo(this.storage, url, request));
+      if (url.pathname.startsWith('/adsb/')) return json(await adsbDo(this, url));
       if (url.pathname === '/push/key') return json({ key: (await this.vapid()).publicKey });
       if (request.method !== 'POST') return json({ error: 'usa POST' }, 405);
       const b = await request.json();
@@ -238,6 +240,7 @@ export class Watcher {
   }
 
   async alarm() {
+    if ((await this.storage.get('role')) === 'adsb') return adsbAlarm(this);
     const now = Date.now();
     const all = await this.storage.list({ prefix: 'watch:' });
     const boards = new Map(), adbCache = new Map();

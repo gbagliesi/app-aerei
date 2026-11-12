@@ -50,6 +50,16 @@ export async function cronSnap(env, readBoard) {
   }
 }
 
+/** Copia di un elenco fisso di aeroporti (quelli che pubblicano le marche), anche se nessuno li consulta. */
+export async function cronList(env, readBoard, list) {
+  if (!env.WATCHER) return;
+  for (const a of list) {
+    for (const n of ['D', 'A']) {
+      try { await saveSnap(env, a, n, await readBoard(a, n, env), true); } catch { /* riprovo al prossimo giro */ }
+    }
+  }
+}
+
 /** Parte eseguita dentro il Durable Object (storage = this.storage). */
 export async function snapDo(storage, url, request) {
   const now = Date.now();
