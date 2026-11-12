@@ -346,8 +346,25 @@ export async function getBoard(iata) {
   const departures = structuredClone(base.departures), arrivals = structuredClone(base.arrivals);
   if (OFFICIAL_AIRPORTS[iata]) {
     if (degraded) {
-      const [d, a] = await Promise.all([officialOnly(iata, 'D'), officialOnly(iata, 'A')]);
-      if (!d.length && !a.length) throw new Error(degraded);
+      let [d, a] = await Promise.all([officialOnly(iata, 'D'), officialOnly(iata, 'A')]);
+      if (!d.length && !a.length) {
+        // il sito ufficiale a volte risponde vuoto o va in errore per qualche secondo: riprovo una volta
+        const base = (getSettings().workerUrl || '').trim().replace(/\/+$/, '');
+        for (const n of ['D', 'A']) cache.delete(`off:${base}:${iata}:${n}`);
+        await new Promise(r => setTimeout(r, 1500));
+        [d, a] = await Promise.all([officialOnly(iata, 'D'), officialOnly(iata, 'A')]);
+      }
+      if (!d.length && !a.length) {
+        // ultima copia salvata dal Worker (istantanee del tabellone ufficiale di oggi)
+        const day = localDay(Date.now(), OFFICIAL_AIRPORTS[iata]);
+        const snap = async n => { const off = await getSnap(iata, n, day); const fl = officialFlights(off, iata, n).filter(inWindow); mergeOfficial(fl, off, n === 'D' ? 'dep' : 'arr', iata); return fl.sort((x, y) => Date.parse((x.dep.sched || x.arr.sched).utc) - Date.parse((y.dep.sched || y.arr.sched).utc)); };
+        [d, a] = await Promise.all([snap('D'), snap('A')]);
+        if (d.length || a.length) degraded += ' · il sito ufficiale non risponde ora: mostro l’ultima copia salvata dal Worker';
+      }
+      if (!d.length && !a.length) {
+        const why = officialInfo[`${iata}:D`]?.error || officialInfo[`${iata}:A`]?.error || 'nessun volo ricevuto';
+        throw new Error(`${degraded} · Il sito ufficiale di questo aeroporto non ha risposto (${why}): riprova fra un minuto.`);
+      }
       return { departures: mergeCodeshares(d, 'dep'), arrivals: mergeCodeshares(a, 'arr'), degraded };
     }
     await Promise.all([withOfficial(departures, iata, 'D'), withOfficial(arrivals, iata, 'A')]);

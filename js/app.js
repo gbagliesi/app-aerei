@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.9.2 · tabellone senza richieste FlightAware';
+const APP_VERSION = '4.9.3 · tabellone più robusto se il sito ufficiale non risponde';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -438,7 +438,12 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
       const u = document.getElementById('updated');
       u.textContent = `agg. ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
       u.title = `Aggiornamento automatico ogni ${getSettings().refreshSec} secondi`;
-    } catch (e) { document.getElementById('board').innerHTML = errorBox(e); }
+    } catch (e) {
+      // aggiornamento fallito: se ho già un tabellone lo lascio e lo segnalo, altrimenti mostro l'errore
+      const u = document.getElementById('updated');
+      if (data?.departures?.length || data?.arrivals?.length) { if (u) { u.textContent = 'aggiornamento non riuscito, riprovo'; u.title = e.message || String(e); } }
+      else document.getElementById('board').innerHTML = errorBox(e);
+    }
   };
   render();
   await load();
