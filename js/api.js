@@ -758,8 +758,9 @@ export async function getInbound(flight) {
         const a = await adsbByCallsign(p.callSign);
         if (a?.reg) p.aircraft = { ...p.aircraft, reg: a.reg, hex: a.hex, model: p.aircraft?.model || a.model };
       }
-      // volo in arrivo già atterrato ma senza marche sul tabellone: FlightAware di solito le conosce (una richiesta)
-      if (!p.aircraft?.reg && p.number && arrTime(p) < Date.now()) {
+      // volo in arrivo senza marche sul tabellone: FlightAware di solito le conosce da quando è decollato, spesso
+      // anche prima (es. AZ1677 Roma→Firenze in volo con EI-IMX → AZ1682 per Roma) (una richiesta)
+      if (!p.aircraft?.reg && p.number && Math.abs(arrTime(p) - Date.now()) < 8 * 3600e3) {
         const pf = await faFlight(p.number, (p.arr?.sched?.local || '').slice(0, 10) || isoDate(new Date(arrTime(p)))).catch(() => null);
         const leg = pf?.flights?.find(l => l.arr?.iata === depSide.iata && l.aircraft?.reg) || pf?.flights?.find(l => l.aircraft?.reg);
         if (leg) p.aircraft = { ...p.aircraft, reg: leg.aircraft.reg, model: p.aircraft?.model || leg.aircraft.model, regSrc: 'FlightAware' };
