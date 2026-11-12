@@ -3,7 +3,7 @@
 import { getSettings } from './store.js';
 import { airportByIata, AIRPORTS, iataByCityName } from './airports.js';
 import * as demo from './demo.js';
-import { simulateRotation, arrTime, depTime } from './rotation.js';
+import { simulateRotation, arrTime, depTime, LOWCOST_CODES } from './rotation.js';
 
 const ADB_HOST = 'aerodatabox.p.rapidapi.com';
 const cache = new Map();
@@ -900,9 +900,9 @@ export async function guessBoardRegs(iata, data) {
     for (const c of sim?.chain || []) {
       const reg = c.pick?.aircraft?.reg;
       // sul tabellone solo i giri veloci (più affidabili); gli aerei fermi da ore si verificano con la rete ADS-B nella pagina del volo
-      // solo andata e ritorno: nel test sugli aeroporti con le marche (tools/backtest.mjs) è giusta ~9 volte su 10,
-      // gli altri giri veloci solo ~1 su 6
-      if (!reg || c.dep.aircraft?.reg || c.basis !== 'return') continue;
+      // andata e ritorno (nel test sugli aeroporti con le marche, tools/backtest.mjs, giusta ~9 volte su 10) e giri
+      // veloci solo per le low cost (negli hub delle compagnie tradizionali il giro veloce è quasi sempre sbagliato)
+      if (!reg || c.dep.aircraft?.reg || !(c.basis === 'return' || (c.basis === 'rotation' && LOWCOST_CODES.includes(code)))) continue;
       c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis } };
     }
   }

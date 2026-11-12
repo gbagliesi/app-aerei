@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.7 · aereo stimato più preciso (andata e ritorno), marche da FlightAware';
+const APP_VERSION = '4.7.1 · aereo stimato più preciso (andata e ritorno), marche da FlightAware';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -489,7 +489,7 @@ function etaText(f) {
 // Affidabilità misurata col test automatico (tools/backtest.mjs) sugli aeroporti che pubblicano le marche
 const guessReliability = r => r.basis === 'return'
   ? '<b>Stima affidabile</b>: nel nostro test è giusta circa 9 volte su 10.'
-  : '<b>Stima debole</b>: senza andata e ritorno evidente, nel nostro test è giusta meno di una volta su tre.';
+  : '<b>Stima meno sicura</b>: senza un andata e ritorno evidente dipende da come la compagnia fa girare gli aerei; per le low cost nelle loro basi è spesso giusta, negli hub delle compagnie tradizionali molto meno.';
 
 /** Spiegazione della stima dell'aereo in arrivo (ricostruzione della giornata della compagnia). */
 function guessText(f, inbound, r) {
