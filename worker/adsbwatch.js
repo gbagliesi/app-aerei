@@ -79,8 +79,22 @@ const nm = (a, b) => {
 };
 
 /** GET /seen dal Worker. */
-export async function handleSeen(url, env, json) {
+export async function handleSeen(url, env, json, request) {
   if (!env.WATCHER) return json({ error: 'avvistamenti non configurati (manca il Durable Object WATCHER)' }, 501);
+  // raccoglitore esterno (Home Assistant a casa): GET /seen/targets e POST /seen/push?airport=PSA, con la chiave SEEN_KEY
+  if (url.pathname === '/seen/targets' || url.pathname === '/seen/push') {
+    const key = url.searchParams.get('key') || '';
+    if (!env.SEEN_KEY || key !== env.SEEN_KEY) return json({ error: 'chiave mancante o sbagliata' }, 403);
+    if (url.pathname === '/seen/targets') {
+      const r = await stub(env).fetch('https://do/adsb/targets');
+      return new Response(((await r.json()).lines || []).join('\n') + '\n', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
+    if (request.method !== 'POST') return json({ error: 'usa POST' }, 405);
+    const body = await request.text();
+    if (body.length > 2e6) return json({ error: 'troppo grande' }, 413);
+    const r = await stub(env).fetch(`https://do/adsb/push?airport=${encodeURIComponent(url.searchParams.get('airport') || '')}`, { method: 'POST', body });
+    return json(await r.json());
+  }
   const airport = (url.searchParams.get('airport') || '').toUpperCase(), day = url.searchParams.get('day') || '';
   if (!/^[A-Z]{3}$/.test(airport) || !/^\d{4}-\d\d-\d\d$/.test(day)) return json({ error: 'parametri non validi (airport, day=YYYY-MM-DD)' }, 400);
   const r = await stub(env).fetch(`https://do/adsb/get?airport=${airport}&day=${day}`);
@@ -94,13 +108,24 @@ export async function kickAdsb(env) {
 }
 
 /** Parte eseguita dentro il Durable Object. self = l'istanza Watcher (storage, env). */
-export async function adsbDo(self, url) {
+export async function adsbDo(self, url, request) {
   const storage = self.storage;
   if (url.pathname === '/adsb/kick') {
     await storage.put('role', 'adsb');
     const a = await storage.getAlarm();
     if (!a || a < Date.now() - 60e3) await storage.setAlarm(Date.now() + 5e3);
     return { ok: true };
+  }
+  // elenco degli aeroporti da guardare, per il raccoglitore esterno (Home Assistant): "PSA 43.6839 10.3927" per riga
+  if (url.pathname === '/adsb/targets') return { lines: (await targets(self.env)).map(c => { const ap = airportByIata(c); return `${c} ${ap[4]} ${ap[5]}`; }) };
+  if (url.pathname === '/adsb/push' && request?.method === 'POST') {
+    const code = (url.searchParams.get('airport') || '').toUpperCase(), ap = airportByIata(code);
+    if (!ap) return { error: 'aeroporto sconosciuto' };
+    let j; try { j = await request.json(); } catch { return { error: 'JSON non valido' }; }
+    const list = (j.ac || j.aircraft || []).slice(0, 400);
+    await ingest(storage, code, ap, list, url.searchParams.get('src') || 'adsb.lol (Home Assistant)', Date.now());
+    await storage.put('lastpush', Date.now());
+    return { ok: true, n: list.length };
   }
   if (url.pathname === '/adsb/get') {
     const airport = url.searchParams.get('airport'), day = url.searchParams.get('day');
@@ -109,10 +134,38 @@ export async function adsbDo(self, url) {
     await storage.put('role', 'adsb');
     const al = await storage.getAlarm();
     if (!al || al < Date.now() - 60e3) await storage.setAlarm(Date.now() + 5e3);
-    return { airport, day, configured: osConfigured(self.env), events: v ? events(v.ac) : [], polls: v?.polls || 0, lastPoll: v?.lastPoll || null, source: v?.source || null,
+    return { airport, day, configured: osConfigured(self.env), lastPush: (await storage.get('lastpush')) || null, events: v ? events(v.ac) : [], polls: v?.polls || 0, lastPoll: v?.lastPoll || null, source: v?.source || null,
       lastError: (await storage.get(`adsberr:${airport}`)) || null, nextPoll: (await storage.getAlarm()) || null };
   }
   return { error: 'not found' };
+}
+
+/** Aeroporti da guardare: consultati negli ultimi 3 giorni, senza marche sul tabellone. */
+async function targets(env) {
+  try {
+    const r = await env.WATCHER.get(env.WATCHER.idFromName('snapshots')).fetch('https://do/snap/airports');
+    return ((await r.json()).airports || []).filter(a => !REG_BOARDS.includes(a) && airportByIata(a)).slice(0, MAX_AIRPORTS);
+  } catch { return []; }
+}
+
+/** Aggiunge alla giornata di un aeroporto gli aerei visti (formato readsb: hex, r, t, flight, alt_baro, baro_rate, gs, lat, lon). */
+async function ingest(storage, code, ap, list, source, now) {
+  const key = `adsb:${code}:${dayOf(now)}`;
+  const cur = (await storage.get(key)) || { ac: {}, polls: 0 };
+  for (const a of list) {
+    const alt = a.alt_baro === 'ground' ? 0 : typeof a.alt_baro === 'number' ? a.alt_baro : null;
+    if (alt == null || alt > MAX_ALT || a.lat == null || !a.hex) continue;
+    const hex = a.hex.toLowerCase();
+    const t = Math.round(now - Math.min(a.seen_pos || 0, 120) * 1000);
+    const e = cur.ac[hex] || (cur.ac[hex] = { reg: null, type: null, cs: null, pts: [] });
+    e.reg = a.r || e.reg; e.type = a.t || e.type;
+    const cs = (a.flight || '').trim(); if (cs) e.cs = cs;
+    const vr = typeof a.baro_rate === 'number' ? a.baro_rate : typeof a.geom_rate === 'number' ? a.geom_rate : null;
+    e.pts.push([t, alt, Math.round(nm({ lat: a.lat, lon: a.lon }, { lat: ap[4], lon: ap[5] }) * 10) / 10, vr, Math.round(a.gs || 0), cs || null]);
+    if (e.pts.length > MAX_PTS) e.pts.splice(0, e.pts.length - MAX_PTS);
+  }
+  cur.polls++; cur.lastPoll = now; cur.source = source;
+  await storage.put(key, cur);
 }
 
 /** Un giro di controllo (alarm del Durable Object "adsb"). */
@@ -121,32 +174,16 @@ export async function adsbAlarm(self) {
   const now = Date.now();
   let airports = [];
   if (!osConfigured(env)) return; // senza account OpenSky non si chiede nulla (si riprova al cron orario)
-  try {
-    const r = await env.WATCHER.get(env.WATCHER.idFromName('snapshots')).fetch('https://do/snap/airports');
-    airports = ((await r.json()).airports || []).filter(a => !REG_BOARDS.includes(a) && airportByIata(a)).slice(0, MAX_AIRPORTS);
-  } catch { /* riprovo al prossimo giro */ }
+  // se arrivano già i dati dal raccoglitore di casa (Home Assistant), OpenSky non serve
+  if (Date.now() - ((await storage.get('lastpush')) || 0) < 15 * 60e3) { await storage.setAlarm(now + 3600e3); return; }
+  airports = await targets(env);
   let failed = 0;
   for (const code of airports) {
     const ap = airportByIata(code);
     try {
       let list, source = 'OpenSky';
       try { list = await osAround(storage, env, ap[4], ap[5], RADIUS_NM); } catch (e) { await storage.put(`adsberr:${code}`, { at: now, error: String(e.message || e) }); failed++; continue; }
-      const key = `adsb:${code}:${dayOf(now)}`;
-      const cur = (await storage.get(key)) || { ac: {}, polls: 0 };
-      for (const a of list) {
-        const alt = a.alt_baro === 'ground' ? 0 : typeof a.alt_baro === 'number' ? a.alt_baro : null;
-        if (alt == null || alt > MAX_ALT || a.lat == null || !a.hex) continue;
-        const hex = a.hex.toLowerCase();
-        const t = Math.round(now - Math.min(a.seen_pos || 0, 120) * 1000);
-        const e = cur.ac[hex] || (cur.ac[hex] = { reg: null, type: null, cs: null, pts: [] });
-        e.reg = a.r || e.reg; e.type = a.t || e.type;
-        const cs = (a.flight || '').trim(); if (cs) e.cs = cs;
-        const vr = typeof a.baro_rate === 'number' ? a.baro_rate : typeof a.geom_rate === 'number' ? a.geom_rate : null;
-        e.pts.push([t, alt, Math.round(nm({ lat: a.lat, lon: a.lon }, { lat: ap[4], lon: ap[5] }) * 10) / 10, vr, Math.round(a.gs || 0), cs || null]);
-        if (e.pts.length > MAX_PTS) e.pts.splice(0, e.pts.length - MAX_PTS);
-      }
-      cur.polls++; cur.lastPoll = now; cur.source = source;
-      await storage.put(key, cur);
+      await ingest(storage, code, ap, list, source, now);
     } catch (e) { await storage.put(`adsberr:${code}`, { at: now, error: String(e.message || e) }); }
   }
   // pulizia dei giorni vecchi

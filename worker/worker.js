@@ -94,7 +94,7 @@ export default {
     }
     if (url.pathname === '/fa' || url.pathname === '/fa/usage') return handleFa(url, env, ctx, json);
     if (url.pathname === '/snap') return handleSnap(url, env, json);
-    if (url.pathname === '/seen') return handleSeen(url, env, json);
+    if (url.pathname === '/seen' || url.pathname.startsWith('/seen/')) return handleSeen(url, env, json, request);
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA', ...Object.keys(OTHER)] });
     // Prova diagnostica: una richiesta normale (nessun aggiramento) verso i siti degli aeroporti non ancora supportati
     if (url.pathname === '/probe') {

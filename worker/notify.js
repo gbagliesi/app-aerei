@@ -152,7 +152,7 @@ export class Watcher {
     try {
       if (url.pathname.startsWith('/fa/')) return json(await faMeter(this.storage, url, request));
       if (url.pathname.startsWith('/snap/')) return json(await snapDo(this.storage, url, request));
-      if (url.pathname.startsWith('/adsb/')) return json(await adsbDo(this, url));
+      if (url.pathname.startsWith('/adsb/')) return json(await adsbDo(this, url, request));
       if (url.pathname === '/push/key') return json({ key: (await this.vapid()).publicKey });
       if (request.method !== 'POST') return json({ error: 'usa POST' }, 405);
       const b = await request.json();
