@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.9.6 · ipotesi sul tabellone anche senza marche (≈ da volo)';
+const APP_VERSION = '4.9.7 · ipotesi anche sugli arrivi (≈ poi volo)';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -89,6 +89,12 @@ const regHref = (reg, date, ap) => `#/aircraft/${encodeURIComponent(reg)}/${date
 // marche ipotizzate (ricostruzione delle rotazioni): segno ≈ e spiegazione al passaggio del mouse
 const regGuessLink = (x, dir) => {
   const g = x.aircraft.regGuess;
+  if (g.next) {
+    // arrivo: aereo che poi riparte con il volo indicato
+    const t = `title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello che poi riparte con ${esc(g.next)}${g.to ? ` per ${esc(g.to)}` : ''}${g.reg ? '' : ' (marche non ancora note)'}"`;
+    return g.reg ? `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), x.arr?.iata)}" ${t}>≈ ${esc(g.reg)}</a>`
+      : `<a class="reglink guess" href="#/flight/${encodeURIComponent(g.next)}/${g.nextDate || flightDate(x)}?dep=${esc(x.arr?.iata || '')}" ${t}>≈ poi ${esc(g.next)}</a>`;
+  }
   const why = g.basis === 'overnight' ? `rimasto a terra la notte dopo ${g.via}` : g.basis === 'idle' ? `fermo dopo ${g.via}` : `in arrivo con ${g.via}${g.from ? ` da ${g.from}` : ''}`;
   if (!g.reg) return `<a class="reglink guess" href="#/flight/${encodeURIComponent(g.via)}/${g.viaDate || flightDate(x)}" title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello ${esc(why)} (marche di quel volo non ancora note)">≈ da ${esc(g.via)}</a>`;
   return `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), (dir === 'dep' ? x.dep : x.arr)?.iata)}" title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello ${esc(why)}">≈ ${esc(g.reg)}</a>`;

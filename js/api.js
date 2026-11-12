@@ -1066,7 +1066,7 @@ function applyFaRegs(data, fa) {
 
 export async function guessBoardRegs(iata, data) {
   if (isDemo() || !data?.departures?.length) return 0;
-  const r0 = [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length, n0 = data.departures.filter(d => d.aircraft?.regGuess).length;
+  const r0 = [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length, n0 = [...data.departures, ...data.arrivals].filter(d => d.aircraft?.regGuess).length;
   // marche già viste aprendo i voli di questo aeroporto (nessuna richiesta in più)
   applyFaRegs(data, knownRegs(iata));
   const day = await dayMovements(iata, Date.now(), data, null);
@@ -1084,12 +1084,19 @@ export async function guessBoardRegs(iata, data) {
       // veloci solo per le low cost (negli hub delle compagnie tradizionali il giro veloce è quasi sempre sbagliato)
       // tutte le ipotesi con marche note; il tabellone le colora per affidabilità (andata e ritorno = affidabile)
       // anche senza marche note: il tabellone mostra almeno da quale volo arriva probabilmente l'aereo
-      if (!c.pick?.number || c.dep.aircraft?.reg || c.dep.aircraft?._pageGuess || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
+      if (!c.pick?.number || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
+      // arrivo: l'aereo che arriva è probabilmente quello che poi riparte con questo volo
+      const arr = data.arrivals.find(a => a === c.pick || (normNum(a.number) === normNum(c.pick.number) && a.arr?.sched?.utc === c.pick.arr?.sched?.utc));
+      if (arr && !arr.aircraft?.reg && !arr.aircraft?.regGuess) {
+        const dreg = c.dep.aircraft?.reg || c.dep.aircraft?.regGuess?.reg || null;
+        arr.aircraft = { ...arr.aircraft, regGuess: { reg: dreg, next: c.dep.number, to: c.dep.arr?.iata || null, basis: c.basis, nextDate: (c.dep.dep?.sched?.local || '').slice(0, 10) || null } };
+      }
+      if (c.dep.aircraft?.reg || c.dep.aircraft?._pageGuess) continue;
       const pd = (c.pick.dep?.sched?.local || c.pick.arr?.sched?.local || '').slice(0, 10) || null;
       c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg: reg || null, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis, viaDate: pd } };
     }
   }
-  return data.departures.filter(d => d.aircraft?.regGuess).length - n0 + [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length - r0;
+  return [...data.departures, ...data.arrivals].filter(d => d.aircraft?.regGuess).length - n0 + [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length - r0;
 }
 
 /** Rete ADS-B: true se l'aereo (marche) ha volato lontano dall'aeroporto dopo l'istante indicato, false se risulta
