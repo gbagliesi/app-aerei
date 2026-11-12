@@ -26,7 +26,8 @@ const find = key => tabs.find(t => t.key === key);
 
 export function tabKey(parts) {
   const [k, a, b] = parts.map(s => String(s || '').toUpperCase());
-  if (parts[0] === 'airport' && a) return `airport:${a}`;
+  // partenze e arrivi dello stesso aeroporto in due tab separati (il tab partenze tiene la chiave di sempre)
+  if (parts[0] === 'airport' && a) return `airport:${a}${b === 'ARR' ? ':ARR' : ''}`;
   if (parts[0] === 'route' && a && b) return `route:${a}-${b}`;
   if (parts[0] === 'flight' && a) return `flight:${a}`;
   if (parts[0] === 'aircraft' && a) return `aircraft:${a}`;
@@ -66,7 +67,8 @@ export function enterTab(parts, hash, isNewEntry) {
     } else {
       t = { key, hash, ...d };
       // voli e aerei si aprono accanto al tab da cui li apri (es. il tabellone), aeroporti e tratte in fondo
-      const i = d.kind === 'flight' || d.kind === 'aircraft' ? tabs.findIndex(x => x.key === prev) : -1;
+      const pair = d.kind === 'airport' ? tabs.findIndex(x => x.key.split(':').slice(0, 2).join(':') === key.split(':').slice(0, 2).join(':')) : -1;
+      const i = d.kind === 'flight' || d.kind === 'aircraft' ? tabs.findIndex(x => x.key === prev) : pair;
       tabs.splice(i >= 0 ? i + 1 : tabs.length, 0, t);
     }
     t.used = Date.now();
