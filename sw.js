@@ -1,5 +1,5 @@
 // Service worker: rende l'app installabile e disponibile offline (solo l'interfaccia; i dati voli richiedono rete).
-const CACHE = 'voli-v66';
+const CACHE = 'voli-v67';
 const SHELL = ['./', 'index.html', 'style.css', 'icon.svg', 'manifest.webmanifest', 'vendor/leaflet.js', 'vendor/leaflet.css',
   'js/app.js', 'js/api.js', 'js/store.js', 'js/demo.js', 'js/airports.js', 'js/tabs.js', 'js/notify.js', 'js/rotation.js'];
 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting())));

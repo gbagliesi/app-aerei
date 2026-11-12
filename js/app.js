@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.9.9 · ipotesi: volo precedente di ieri indicato';
+const APP_VERSION = '4.9.10 · storia aereo senza il giorno già mostrato';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -785,7 +785,7 @@ async function loadHistory(reg, date) {
   if (!box) return;
   const h = await getRegHistory(reg, 2).catch(() => null);
   if (!document.body.contains(box)) return;
-  const head = '<div class="leghead"><span class="eyebrow">Storia dei voli · ultimi 2 giorni</span></div>';
+  const head = '<div class="leghead"><span class="eyebrow">Storia dei voli · altri giorni (ultimi 2)</span></div>';
   if (!h) { box.innerHTML = `${head}<p class="hint">Storia non disponibile ora (serve FlightAware nel Worker, o il limite mensile è stato raggiunto).</p>`; return; }
   if (!h.flights.length) { box.innerHTML = `${head}<p class="hint">FlightAware non ha voli di ${esc(reg)} negli ultimi 2 giorni.</p>`; return; }
   const days = new Map();
@@ -796,6 +796,9 @@ async function loadHistory(reg, date) {
     days.get(d).push(f);
   }
   const label = d => new Date(`${d}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
+  // il giorno aperto è già nella tabella sopra: qui solo gli altri giorni
+  days.delete(date);
+  if (!days.size) { box.innerHTML = `${head}<p class="hint">Negli altri giorni FlightAware non ha voli di ${esc(reg)}.</p>`; return; }
   const rows = [...days].sort((a, b) => b[0].localeCompare(a[0])).map(([d, fl]) => {
     fl.sort((a, b) => legKey(b) - legKey(a));
     return `<div class="histday"><a href="#/aircraft/${encodeURIComponent(reg)}/${d}"${d === date ? ' class="cur"' : ''}>${esc(label(d))}</a><span class="sub">${fl.length} ${fl.length === 1 ? 'volo' : 'voli'}</span></div>
@@ -893,7 +896,7 @@ async function viewAircraft(reg, date, apHint) {
     <div class="card"><div class="leghead"><span class="eyebrow">Percorso del giorno</span><span id="acpos" class="sub"></span></div><div id="map" class="map tall"></div>
       <p class="maplegend"><span><i class="lg flown"></i>percorso volato (ADS-B)</span><span><i class="lg done"></i>tratta conclusa</span><span><i class="lg air"></i>in volo</span><span><i class="lg next"></i>prevista</span></p></div>
     <div id="rot"></div>
-    <div class="card" id="achist"><div class="leghead"><span class="eyebrow">Storia dei voli · ultimi 2 giorni</span></div><p class="hint">Carico la storia dei voli…</p></div>
+    <div class="card" id="achist"><div class="leghead"><span class="eyebrow">Storia dei voli · altri giorni (ultimi 2)</span></div><p class="hint">Carico la storia dei voli…</p></div>
     <div id="acsrc"></div>`;
   render();
   bindStars($app);
