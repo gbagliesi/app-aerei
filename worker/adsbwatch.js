@@ -18,9 +18,9 @@ export const REG_BOARDS = ['MXP', 'LIN', 'GVA', 'ZRH', 'FRA', 'BER', 'ARN', 'AMS
 const POLL_MS = 4 * 60e3; // OpenSky: 1 credito per richiesta su un'area piccola, 4000 crediti al giorno con l'account
 const RADIUS_NM = 25;   // la copertura ADS-B vicino a Pisa arriva a ~6000 piedi: si guarda l'avvicinamento, non la pista
 const MAX_ALT = 10000;
-const MAX_AIRPORTS = 8;
+const MAX_AIRPORTS = 10;
 // aeroporti di Giuseppe, guardati sempre anche se non consultati di recente
-const ALWAYS = ['PSA', 'BRI'];
+const ALWAYS = ['PSA', 'BRI', 'FLR', 'FCO', 'CIA'];
 const KEEP_DAYS = 3;
 const MAX_PTS = 30;
 
