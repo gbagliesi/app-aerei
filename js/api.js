@@ -947,28 +947,66 @@ export async function fillRegs(iata, arrivals, departures) {
       const days = [...new Set(want.map(([f, side]) => f[side].actual.utc.slice(0, 10)))];
       const evs = (await Promise.all(days.map(d => getSeen(iata, d)))).flat().filter(e => e.reg);
       // il tabellone segna l'atterraggio (o l'arrivo al parcheggio) e il decollo (o l'uscita dal parcheggio):
-      // finestra attorno all'orario effettivo, poi assegnazione per differenza crescente (un aereo, un volo)
-      const pairs = [];
-      for (const [f, side] of want) {
-        const t = Date.parse(f[side].actual.utc), al = f.airline?.iata || (f.number || '').slice(0, 2);
-        for (const e of evs) {
-          if (e.ev !== side || !csOk(al, e.cs)) continue;
-          const d = (e.t - t) / 60e3;
-          if (side === 'arr' ? d < -15 || d > 10 : d < -8 || d > 25) continue;
-          pairs.push({ f, e, side, cost: Math.abs(side === 'arr' ? d + 3 : d - 8) - (CS_PREFIX[al] && e.cs ? 3 : 0) });
+      // finestra attorno all'orario effettivo, poi assegnazione per differenza crescente (un aereo, un volo).
+      // Prima gli arrivi; poi le partenze, dove due decolli vicini si distinguono con l'andata e ritorno:
+      // l'aereo arrivato da X poco prima fa di solito il volo per X.
+      const assign = side => {
+        const arrivedFrom = new Map(); // marche → [{ from, t }] degli arrivi di oggi con marche note
+        if (side === 'dep') for (const a of arrivals) {
+          const r = a.aircraft?.reg, t = Date.parse(a.arr?.actual?.utc || a.arr?.sched?.utc || '');
+          if (r && !isNaN(t)) (arrivedFrom.get(r) || arrivedFrom.set(r, []).get(r)).push({ from: a.dep?.iata, t });
         }
-      }
-      pairs.sort((a, b) => a.cost - b.cost);
-      const doneF = new Set(), doneE = new Set();
-      for (const p of pairs) {
-        if (doneF.has(p.f) || doneE.has(`${p.e.hex}|${p.side}|${p.e.t}`)) continue;
-        // ambiguo: un altro aereo della stessa compagnia quasi alla stessa ora → meglio non dire nulla
-        const rival = pairs.find(q => q.f === p.f && q.e.hex !== p.e.hex && !doneE.has(`${q.e.hex}|${q.side}|${q.e.t}`) && q.cost - p.cost < 4);
-        doneF.add(p.f);
-        if (rival) continue;
-        doneE.add(`${p.e.hex}|${p.side}|${p.e.t}`);
-        set(p.f, p.e.reg, `rete ADS-B (adsb.lol): ${p.side === 'arr' ? 'atterrato' : 'decollato'} a ${iata} verso le ${new Date(p.e.t).toTimeString().slice(0, 5)}${p.e.cs ? `, nominativo ${p.e.cs}` : ''}`, p.e.hex);
-      }
+        const pairs = [];
+        for (const [f, sd] of want) {
+          if (sd !== side || f.aircraft?.reg) continue;
+          const t = Date.parse(f[side].actual.utc), al = f.airline?.iata || (f.number || '').slice(0, 2);
+          for (const e of evs) {
+            if (e.ev !== side || !csOk(al, e.cs)) continue;
+            const d = (e.t - t) / 60e3;
+            if (side === 'arr' ? d < -15 || d > 10 : d < -8 || d > 35) continue;
+            let cost = Math.abs(side === 'arr' ? d + 3 : d - 8) - (CS_PREFIX[al] && e.cs ? 3 : 0);
+            if (side === 'dep') {
+              const prev = (arrivedFrom.get(e.reg) || []).filter(x => x.t < t + 10 * 60e3).sort((x, y) => y.t - x.t)[0];
+              if (prev?.from && prev.from === f.arr?.iata) cost -= 12; // torna da dove è venuto
+              else if (prev?.from) cost += 4;
+            }
+            pairs.push({ f, e, side, cost });
+          }
+        }
+        // assegnazione migliore (un aereo, un volo) per gruppi di voli che si contendono gli stessi avvistamenti;
+        // un volo resta senza marche se un'altra assegnazione quasi altrettanto buona gli darebbe un aereo diverso
+        const key = q => `${q.e.hex}|${q.e.t}`, MISS = 20;
+        const flights = [...new Set(pairs.map(q => q.f))];
+        const seenF = new Set();
+        for (const f0 of flights) {
+          if (seenF.has(f0)) continue;
+          const groupF = new Set([f0]), groupE = new Set();
+          for (let grew = true; grew;) {
+            grew = false;
+            for (const q of pairs) if (groupF.has(q.f) && !groupE.has(key(q))) { groupE.add(key(q)); grew = true; }
+            for (const q of pairs) if (groupE.has(key(q)) && !groupF.has(q.f)) { groupF.add(q.f); grew = true; }
+          }
+          groupF.forEach(f => seenF.add(f));
+          const fs = [...groupF].slice(0, 7), opts = fs.map(f => pairs.filter(q => q.f === f).sort((a, b) => a.cost - b.cost).slice(0, 4));
+          const sols = [];
+          const walk = (i, used, cost, pick) => {
+            if (i === fs.length) { sols.push({ cost, pick: [...pick] }); return; }
+            walk(i + 1, used, cost + MISS, [...pick, null]);
+            for (const q of opts[i]) if (!used.has(key(q))) { used.add(key(q)); walk(i + 1, used, cost + q.cost, [...pick, q]); used.delete(key(q)); }
+          };
+          walk(0, new Set(), 0, []);
+          sols.sort((a, b) => a.cost - b.cost);
+          const best = sols[0];
+          if (!best) continue;
+          const near = sols.filter(x => x.cost - best.cost < 4);
+          best.pick.forEach((p, i) => {
+            if (!p || near.some(x => !x.pick[i] || key(x.pick[i]) !== key(p))) return;
+            set(p.f, p.e.reg, `rete ADS-B (adsb.lol): ${p.side === 'arr' ? 'atterrato' : 'decollato'} a ${iata} verso le ${new Date(p.e.t).toTimeString().slice(0, 5)}${p.e.cs ? `, nominativo ${p.e.cs}` : ''}`, p.e.hex);
+          });
+        }
+      };
+      assign('arr');
+      assign('dep');
     }
   }
   // 2) tabellone ufficiale dell'altro aeroporto con le marche
