@@ -67,6 +67,8 @@ h1 .star { font-size: 1.6rem; }
 .board small { display: block; color: var(--muted); font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .board .dest b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 b.late { color: var(--orange) !important; } b.early { color: var(--green) !important; }
+b.verylate { color: var(--red) !important; } .delay, .board .t .delay, .board small.delay { display: block; color: var(--red); font-size: .72rem; font-weight: 600; }
+.src.stale { color: var(--muted); font-style: italic; }
 .nowline { position: relative; height: 0; border-top: 2px solid var(--green); }
 .nowline span { position: absolute; right: .8rem; top: -.65rem; background: var(--green); color: #052; font-size: .65rem; font-weight: 800; padding: 0 .4rem; border-radius: 4px; text-transform: uppercase; }
 

@@ -288,14 +288,16 @@ async function withOfficial(flights, iata, nature, window = true) {
     let added = 0;
     if (window && off?.length) {
       const otherKey = sideKey === 'dep' ? 'arr' : 'dep';
-      const extra = officialFlights(off.filter(o => !used.has(o)), iata, nature).filter(inWindow).filter(x => !flights.some(f => {
+      // unisco prima i dati ufficiali (orario stimato) e poi filtro: un volo molto in ritardo resta nella finestra
+      const cand = officialFlights(off.filter(o => !used.has(o)), iata, nature);
+      mergeOfficial(cand, off, sideKey, iata);
+      const extra = cand.filter(f => inWindow(f)).filter(x => !flights.some(f => {
         if (f[sideKey]?.sched?.utc !== x[sideKey].sched.utc) return false;
         const a = f[otherKey] || {}, b = x[otherKey] || {};
         if (a.iata && b.iata) return a.iata === b.iata;
         const n = v => (v || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 4);
         return !b.name || !a.name || n(a.name) === n(b.name);
       }));
-      mergeOfficial(extra, off, sideKey, iata);
       flights.push(...extra);
       added = extra.length;
       flights.sort((a, b) => Date.parse(a[sideKey]?.sched?.utc || 0) - Date.parse(b[sideKey]?.sched?.utc || 0));
@@ -357,7 +359,7 @@ export async function getBoard(iata) {
       if (!d.length && !a.length) {
         // ultima copia salvata dal Worker (istantanee del tabellone ufficiale di oggi)
         const day = localDay(Date.now(), OFFICIAL_AIRPORTS[iata]);
-        const snap = async n => { const off = await getSnap(iata, n, day); const fl = officialFlights(off, iata, n).filter(inWindow); mergeOfficial(fl, off, n === 'D' ? 'dep' : 'arr', iata); return fl.sort((x, y) => Date.parse((x.dep.sched || x.arr.sched).utc) - Date.parse((y.dep.sched || y.arr.sched).utc)); };
+        const snap = async n => { const off = await getSnap(iata, n, day); let fl = officialFlights(off, iata, n); mergeOfficial(fl, off, n === 'D' ? 'dep' : 'arr', iata); fl = fl.filter(f => inWindow(f)); return fl.sort((x, y) => Date.parse((x.dep.sched || x.arr.sched).utc) - Date.parse((y.dep.sched || y.arr.sched).utc)); };
         [d, a] = await Promise.all([snap('D'), snap('A')]);
         if (d.length || a.length) degraded += ' · il sito ufficiale non risponde ora: mostro l’ultima copia salvata dal Worker';
       }
@@ -365,10 +367,12 @@ export async function getBoard(iata) {
         const why = officialInfo[`${iata}:D`]?.error || officialInfo[`${iata}:A`]?.error || 'nessun volo ricevuto';
         throw new Error(`${degraded} · Il sito ufficiale di questo aeroporto non ha risposto (${why}): riprova fra un minuto.`);
       }
+      keepLate(iata, 'dep', d); keepLate(iata, 'arr', a);
       return { departures: mergeCodeshares(d, 'dep'), arrivals: mergeCodeshares(a, 'arr'), degraded };
     }
     await Promise.all([withOfficial(departures, iata, 'D'), withOfficial(arrivals, iata, 'A')]);
   }
+  keepLate(iata, 'dep', departures); keepLate(iata, 'arr', arrivals);
   return { departures: mergeCodeshares(departures, 'dep'), arrivals: mergeCodeshares(arrivals, 'arr') };
 }
 
@@ -436,15 +440,42 @@ function officialFlights(off, iata, nature) {
     };
   });
 }
-const inWindow = f => { const t = Date.parse((f.dep.sched || f.arr.sched).utc), now = Date.now(); return t > now - 2 * 3600e3 && t < now + 10 * 3600e3; };
+// finestra del tabellone (da 2 ore fa a 10 ore avanti): conta anche l'orario stimato o effettivo, così un volo
+// molto in ritardo non esce dal tabellone finché non è partito/arrivato da più di 2 ore
+const effMs = s => Date.parse(s?.actual?.utc || s?.revised?.utc || s?.sched?.utc || '');
+const inWindow = (f, sideKey) => {
+  const s = sideKey ? f[sideKey] : f.dep?.sched ? f.dep : f.arr, t = Date.parse(s?.sched?.utc || ''), e = effMs(s) || t, now = Date.now();
+  return Math.max(t, e) > now - 2 * 3600e3 && Math.min(t, e) < now + 10 * 3600e3;
+};
+
+/** Voli molto in ritardo: AeroDataBox chiede i voli per orario programmato (da 2 ore fa), quindi un volo
+ *  in forte ritardo sparisce dalla risposta prima di partire. Li ricordo in questo browser e li rimetto nel
+ *  tabellone, con l'ultimo dato ricevuto, finché l'orario stimato o effettivo resta nella finestra. */
+const LATE_KEEP_MIN = 30;
+function keepLate(iata, sideKey, list) {
+  const k = `late:${iata}:${sideKey}`, now = Date.now();
+  const id = f => `${f.number}|${f[sideKey]?.sched?.utc}`;
+  const have = new Set(list.map(id));
+  const back = (pget(k, 24 * 3600e3) || []).filter(f => !have.has(id(f)) && inWindow(f, sideKey));
+  if (back.length) {
+    list.push(...back);
+    list.sort((a, b) => Date.parse(a[sideKey]?.sched?.utc || 0) - Date.parse(b[sideKey]?.sched?.utc || 0));
+  }
+  const late = list.filter(f => {
+    const s = f[sideKey], t = Date.parse(s?.sched?.utc || '');
+    return f.status !== 'Canceled' && (effMs(s) - t) / 60e3 >= LATE_KEEP_MIN;
+  }).map(f => (f._seenAt ? f : { ...f, _seenAt: now }));
+  pput(k, late);
+}
 
 /** Tabellone costruito solo dai dati ufficiali dell'aeroporto (senza AeroDataBox). */
 async function officialOnly(iata, nature, window = true) {
   const k = `${iata}:${nature}`;
   let off;
   try { off = await getOfficial(iata, nature); } catch (e) { officialInfo[k] = { error: String(e.message || e) }; return []; }
-  const flights = officialFlights(off, iata, nature).filter(f => !window || inWindow(f));
+  let flights = officialFlights(off, iata, nature);
   mergeOfficial(flights, off, nature === 'D' ? 'dep' : 'arr', iata);
+  if (window) flights = flights.filter(f => inWindow(f));
   if (window) officialInfo[k] = { count: off.length, matched: 0, added: flights.length, only: true };
   return flights.sort((a, b) => Date.parse((a.dep.sched || a.arr.sched).utc) - Date.parse((b.dep.sched || b.arr.sched).utc));
 }

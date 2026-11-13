@@ -60,7 +60,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.10 · avvistamenti ADS-B: decolli vicini distinti con andata e ritorno';
+const APP_VERSION = '4.11 · i voli molto in ritardo restano nel tabellone, in rosso all’orario stimato';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -137,9 +137,13 @@ const pageSources = items => `<footer class="pagesources"><b>Fonti dei dati di q
 const DEMO_SRC = 'voli <b>dimostrativi</b> generati dall’app (modalità demo): nessun dato è reale. Per i dati veri vai in <a href="#/settings">Impostazioni</a>';
 const fmtDur = m => m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min` : `${m} min`;
 
+// ritardo anomalo: orario in rosso, col ritardo indicato, e riga spostata all'orario stimato nel tabellone
+const LATE_RED_MIN = 60;
+const fmtDelay = m => (m >= 60 ? `+${Math.floor(m / 60)} h${m % 60 ? ` ${String(m % 60).padStart(2, '0')}` : ''}` : `+${m} min`);
 function timeCell(sched, revised, actual) {
   const best = actual || revised;
   const d = minutesBetween(sched, best);
+  if (best && d >= LATE_RED_MIN) return `<s>${hhmm(sched)}</s> <b class="late verylate" title="Ritardo di ${d} minuti">${hhmm(best)}</b><small class="delay">${fmtDelay(d)}</small>`;
   if (best && Math.abs(d) >= 5) return `<s>${hhmm(sched)}</s> <b class="${d > 0 ? 'late' : 'early'}">${hhmm(best)}</b>`;
   return `<b>${hhmm(sched)}</b>`;
 }
@@ -351,8 +355,14 @@ function viewHome() {
 // ---------- Tabellone ----------
 // voli già partiti/arrivati nascosti in cima al tabellone (si mostrano con un tocco); ricordato per tabellone
 const showPast = new Set();
+// posizione nel tabellone: orario programmato, ma per un ritardo anomalo l'orario stimato o effettivo
+function boardMs(x, dir) {
+  const s = dir === 'dep' ? x.dep : x.arr, t = Date.parse(s?.sched?.utc || ''), b = Date.parse((s?.actual || s?.revised)?.utc || '');
+  return b && b - t >= LATE_RED_MIN * 60e3 ? b : t;
+}
 function boardTable(list, dir, filter = '', key = '') {
   const f = norm(filter);
+  list = list.map((x, i) => [x, boardMs(x, dir) || 0, i]).sort((a, b) => a[1] - b[1] || a[2] - b[2]).map(a => a[0]);
   // il filtro trova anche la città in italiano, inglese o lingua locale (es. "Londra" per "London Gatwick")
   let rows = list.filter(x => !f || [x.number, ...(x.codeshares || []), x.airline?.name, x.dep?.iata, x.dep?.name, x.arr?.iata, x.arr?.name, airportSearchText(x.dep?.iata), airportSearchText(x.arr?.iata)].some(v => norm(v).includes(f)));
   if (!rows.length) return `<p class="hint">Nessun volo${f ? ' corrisponde al filtro' : ' nella finestra da 2 ore fa a 10 ore avanti'}.</p>`;
@@ -360,7 +370,7 @@ function boardTable(list, dir, filter = '', key = '') {
   let marked = false, pastBtn = '';
   if (!f && key && !showPast.has(key)) {
     const DONE = dir === 'dep' ? ['Departed', 'EnRoute', 'Approaching', 'Arrived', 'Canceled', 'Diverted'] : ['Arrived', 'Canceled', 'Diverted'];
-    const past = rows.filter(x => { const t = (dir === 'dep' ? x.dep : x.arr)?.sched?.utc; return t && new Date(t) < now && DONE.includes(x.status); });
+    const past = rows.filter(x => { const t = boardMs(x, dir); return t && t < now && DONE.includes(x.status); });
     const hide = new Set(past.slice(0, Math.max(0, past.length - 2)));
     if (hide.size) {
       rows = rows.filter(x => !hide.has(x));
@@ -372,13 +382,13 @@ function boardTable(list, dir, filter = '', key = '') {
     ${rows.map(x => {
       const side = dir === 'dep' ? x.dep : x.arr, other = dir === 'dep' ? x.arr : x.dep;
       let nowLine = '';
-      if (!marked && side?.sched?.utc && new Date(side.sched.utc) > now) { marked = true; nowLine = '<div class="nowline"><span>adesso</span></div>'; }
+      if (!marked && boardMs(x, dir) > now) { marked = true; nowLine = '<div class="nowline"><span>adesso</span></div>'; }
       return `${nowLine}<div class="row ${x.status === 'Canceled' ? 'cancel' : ''}" role="row" tabindex="0" data-href="${flightLink(x)}">
         <span class="t">${timeCell(side?.sched, side?.revised, side?.actual)}</span>
         <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${boardReg(x, dir)}</small></span>
         <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <button class="csbtn" type="button" title="Anche: ${esc(x.codeshares.join(' '))}">+${x.codeshares.length} code sharing</button>` : ''}</small>${x.codeshares?.length ? `<small class="cslist" hidden>anche ${x.codeshares.map(esc).join(' ')}</small>` : ''}</span>
         <span class="gate">${esc((dir === 'dep' ? side?.gate : side?.belt) || '—')}</span>
-        <span>${statusBadge(x.status)}${srcTag(x)}</span>
+        <span>${statusBadge(x.status)}${srcTag(x)}${x._seenAt ? `<small class="src stale" title="Il volo non è più nei dati ricevuti (si chiedono per orario programmato): resta qui per il forte ritardo, con l’ultimo dato">dato di ${Math.max(1, Math.round((now - x._seenAt) / 60e3))} min fa</small>` : ''}</span>
       </div>`;
     }).join('')}
   </div>`;
@@ -400,7 +410,8 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
       (() => { const i = officialInfo[`${iata}:${bdir === 'dep' ? 'D' : 'A'}`] || {}; return i.error ? `⚠ tabellone ufficiale non disponibile: ${esc(i.error)}` : data?.degraded ? `⚠ AeroDataBox non disponibile: ${esc(data.degraded)}` : ''; })(),
       OFFICIAL_AIRPORTS[iata] && list ? boardCounts(list) : '',
       'sotto lo stato di ogni volo: <b>uff.</b> = solo tabellone ufficiale, <b>uff. + ADB</b> = tabellone ufficiale completato da AeroDataBox, <b>ADB</b> = solo AeroDataBox',
-      'orari nell’ora locale dell’aeroporto; in arancione l’orario stimato o effettivo se diverso di almeno 5 minuti',
+      'orari nell’ora locale dell’aeroporto; in arancione l’orario stimato o effettivo se diverso di almeno 5 minuti, in <b>rosso</b> con il ritardo indicato se è di un’ora o più: questi voli sono messi nel tabellone al nuovo orario e restano finché non sono partiti/arrivati da più di 2 ore',
+      list?.some(x => x._seenAt) ? 'voli con “dato di … min fa”: molto in ritardo e non più nei dati ricevuti, tenuti in questo browser con l’ultimo aggiornamento' : '',
       list?.some(x => x.aircraft?.reg) ? 'marche degli aerei (✈︎): tabellone ufficiale o AeroDataBox' : '',
       list?.some(x => x.aircraft?.regGuess && !x.aircraft?.reg) ? 'marche con ≈: <b>ipotesi</b> dell’app, ricostruendo i giri degli aerei della compagnia in questo aeroporto (la compagnia non le ha ancora indicate)' : '',
     ]);
