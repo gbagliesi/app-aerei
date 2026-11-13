@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.13 · ipotesi sulle marche con probabilità propagate lungo la giornata';
+const APP_VERSION = '4.13.1 · aerei arrivati insieme: probabilità divisa e alternativa mostrata';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -131,7 +131,8 @@ const regGuessLink = (x, dir) => {
     return g.reg ? `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), x.arr?.iata)}" ${t}>≈ ${esc(g.reg)}</a>`
       : `<a class="reglink guess" href="#/flight/${encodeURIComponent(g.next)}/${g.nextDate || flightDate(x)}?dep=${esc(x.arr?.iata || '')}" ${t}>≈ poi ${esc(g.next)}</a>`;
   }
-  const why = g.basis === 'overnight' ? `rimasto a terra la notte dopo ${g.via}` : g.basis === 'idle' ? `fermo dopo ${g.via}` : `in arrivo con ${g.via}${g.from ? ` da ${g.from}` : ''}`;
+  const alt = g.alts?.length ? `; oppure ${g.alts.map(a => `quello in arrivo con ${a.via}${a.from ? ` da ${a.from}` : ''}${a.reg ? ` (${a.reg})` : ''}`).join(', ')}, arrivato quasi alla stessa ora` : '';
+  const why = (g.basis === 'overnight' ? `rimasto a terra la notte dopo ${g.via}` : g.basis === 'idle' ? `fermo dopo ${g.via}` : `in arrivo con ${g.via}${g.from ? ` da ${g.from}` : ''}`) + alt;
   if (!g.reg) return `<a class="reglink guess" href="#/flight/${encodeURIComponent(g.via)}/${g.viaDate || flightDate(x)}" title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello ${esc(why)} (marche di quel volo non ancora note)">≈ da ${esc(g.via)}${g.viaDate && g.viaDate < flightDate(x) ? ' di ieri' : ''}</a>`;
   return `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), (dir === 'dep' ? x.dep : x.arr)?.iata)}" title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello ${esc(why)}">≈ ${esc(g.reg)}</a>`;
 };
@@ -161,7 +162,8 @@ function boardReg(x, dir) {
   if (!link) return esc(x.airline?.name || '');
   const pct = Math.round(guessP(x.aircraft.regGuess) * 100);
   return link.replace('class="reglink guess"', `class="reglink guess lv-${lv}"`).replace('title="', `title="Marche ${REG_LEVELS[lv][0]} (probabilità circa ${pct}%). `)
-    .replace(/<\/a>$/, ` <i class="pct">${pct}%</i></a>`);
+    .replace(/<\/a>$/, ` <i class="pct">${pct}%</i></a>`)
+    + (x.aircraft.regGuess.alts?.some(a => a.reg && a.reg !== x.aircraft.regGuess.reg) ? ` <span class="altreg" title="Altro aereo possibile, arrivato quasi alla stessa ora">o ${x.aircraft.regGuess.alts.filter(a => a.reg && a.reg !== x.aircraft.regGuess.reg).map(a => esc(a.reg)).join(' / ')}</span>` : '');
 }
 const regLegend = () => `<p class="hint reglegend">Marche: ${Object.entries(REG_LEVELS).map(([k, [l, d]]) => `<span class="lv-${k}" title="${esc(d)}">● ${l}</span>`).join(' ')}</p>`;
 function aircraftCard(ac, date, note = '', probable = false) {

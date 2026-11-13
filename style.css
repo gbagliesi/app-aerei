@@ -323,3 +323,4 @@ label.check input { margin-top: .2rem; }
 .reglink.lv-faint { color: #6e7681 !important; text-decoration: underline dashed; opacity: .85; }
 .reglegend .lv-faint { color: #6e7681; }
 .reglink .pct { font-style: normal; font-size: .72em; opacity: .8; margin-left: .15em; }
+.altreg { font-size: .72em; color: #8b949e; font-family: var(--mono); }

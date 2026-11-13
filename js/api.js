@@ -1253,15 +1253,24 @@ export async function guessBoardRegs(iata, data) {
       const last = mine[mine.length - 1];
       if (!last) continue;
       const sim = simulateRotation({ flight: last, arrivals: day.arrivals, departures: day.departures, now, coverageFrom: day.from });
-      for (const c of sim?.chain || []) {
+      const chainList = sim?.chain || [];
+      const returnPicks = new Set(chainList.filter(c => c.basis === 'return').map(c => c.pick));
+      for (const c of chainList) {
         if (!c.pick?.number || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
         const pk = onBoard(c.pick), dep = onBoard(c.dep);
+        // altri aerei della compagnia arrivati quasi alla stessa ora e liberi per questa partenza: la scelta fra loro
+        // è a caso, quindi la probabilità si divide (es. FR8868 da Marrakech e FR8232 da Praga a 5 minuti per Bari)
+        const td = depTime(c.dep), tp = arrTime(c.pick);
+        const alts = c.basis === 'return' ? [] : day.arrivals.filter(a => a !== c.pick && al(a) === code && a.status !== 'Canceled' && !returnPicks.has(a)
+          && Math.abs(arrTime(a) - tp) <= 25 * 60e3 && arrTime(a) + 25 * 60e3 <= td
+          && !chainList.some(o => o.pick === a && depTime(o.dep) < td));
         // l'arrivo eredita solo da monte (ipotesi "stesso aereo di…"), mai dalla partenza che lui stesso alimenta
         const upstream = pk.aircraft?.reg ? 1 : pk.aircraft?.regGuess?.sameAs || pk.aircraft?.regGuess?.saved ? regP(pk) : 0;
         const reg = pk.aircraft?.reg || (upstream ? pk.aircraft.regGuess.reg : null);
         const bp = basisP(c.basis, code);
         const pd = (c.pick.dep?.sched?.local || c.pick.arr?.sched?.local || '').slice(0, 10) || null;
-        if (!dep.aircraft?.reg) changed = put(dep, { reg: reg || null, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis, viaDate: pd, p: +(bp * (reg ? upstream : 1)).toFixed(3) }) || changed;
+        const altInfo = alts.map(a => { const b = onBoard(a); return { via: a.number, from: a.dep?.iata || null, reg: b.aircraft?.reg || ((b.aircraft?.regGuess?.sameAs || b.aircraft?.regGuess?.saved) ? b.aircraft.regGuess.reg : null) || null }; });
+        if (!dep.aircraft?.reg) changed = put(dep, { reg: reg || null, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis, viaDate: pd, alts: altInfo, p: +(bp / (1 + alts.length) * (reg ? upstream : 1)).toFixed(3) }) || changed;
         // arrivo senza ipotesi da monte: mostro almeno con che volo riparte (non entra nei calcoli)
         if (!pk.aircraft?.reg && !pk.aircraft?.regGuess?.sameAs && !pk.aircraft?.regGuess?.saved && data.arrivals.includes(pk)) {
           const dreg = dep.aircraft?.reg || dep.aircraft?.regGuess?.reg || null;
