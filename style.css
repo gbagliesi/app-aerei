@@ -317,3 +317,6 @@ label.check input { margin-top: .2rem; }
 .histday { display: flex; justify-content: space-between; align-items: baseline; margin: 12px 0 4px; }
 .histday a { font-weight: 600; text-transform: capitalize; }
 .histday a.cur { color: #3fb950; }
+/* età dei dati ("aggiornato 3 min fa"): arancione quando il dato è più vecchio del solito per quella fonte */
+.age { color: inherit; font-weight: 600; white-space: nowrap; }
+.age.old { color: var(--orange); }

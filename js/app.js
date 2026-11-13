@@ -1,22 +1,57 @@
-import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getRegHistory, getTrace, hexOfReg, rememberFlightReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo } from './api.js';
+import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getRegHistory, getTrace, hexOfReg, rememberFlightReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo, boardAge } from './api.js';
 import { searchAirports, airportByIata, AIRPORTS, norm, airportSearchText } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites, reorderFavorites, favKey } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
 import { pushProblem, watchFlight, refreshWatch, unwatch, getWatch, listWatches, testPush, EVENT_LABELS, DEFAULT_EVENTS } from './notify.js';
 import { initTabs, enterTab, setTabInfo, playEnterAnim, closeAllTabs, openTabsCount } from './tabs.js';
 
-// Riga "Fonti" sotto il tabellone: da dove arrivano i dati mostrati
+// ---------- età dei dati: "aggiornato 3 min fa" (si aggiorna da solo ogni 5 secondi) ----------
+function ago(at) {
+  const s = Math.round((Date.now() - at) / 1000);
+  if (s < 10) return 'adesso';
+  if (s < 60) return `${s} s fa`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min fa`;
+  const h = Math.floor(m / 60), mm = m % 60;
+  if (h < 24) return `${h} h${mm ? ` ${mm} min` : ''} fa`;
+  return `il ${new Date(at).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
+}
+// warnMin: oltre questi minuti il dato è vecchio per quella fonte e l'età diventa arancione
+const ageTag = (at, warnMin = 20) => {
+  if (!at) return '';
+  const old = Date.now() - at > warnMin * 60e3;
+  const when = new Date(at).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return `<span class="age${old ? ' old' : ''}" data-at="${at}" data-warn="${warnMin}" title="Dati letti alla fonte il ${when}">${ago(at)}</span>`;
+};
+setInterval(() => {
+  if (document.hidden) return;
+  for (const e of document.querySelectorAll('.age[data-at]')) {
+    const at = +e.dataset.at;
+    e.textContent = ago(at);
+    e.classList.toggle('old', Date.now() - at > +e.dataset.warn * 60e3);
+  }
+}, 5000);
+// soglie: il Worker rilegge i tabelloni ufficiali ogni 90 s; AeroDataBox l'app lo richiede al massimo ogni 15 min
+const OFF_WARN = 6, ADB_WARN = 20;
+// età di un tabellone ufficiale, con l'avviso se è una copia di riserva
+const offAgeText = a => !a ? '' : a.snap || a.stale ? `<span title="Il sito ufficiale non risponde ora: il Worker mostra la sua ultima lettura riuscita">⚠ copia di riserva, ${ageTag(a.at, 0)}</span>` : `aggiornato ${ageTag(a.at, OFF_WARN)}`;
+const offAgeSide = s => s?._offAt ? offAgeText({ at: s._offAt, stale: s._offStale }) : '';
+
+// Riga "Fonti" sotto il tabellone: da dove arrivano i dati mostrati e quanto sono recenti
 // Avviso breve sopra il tabellone (i dettagli sono nel riquadro "Fonti" in fondo alla pagina)
-function sourcesNote(iata, dir, list, degraded) {
+function sourcesNote(iata, dir, list, degraded, adbAt) {
   const s = getSettings();
   const note = (txt, cls = '') => `<p class="hint sources ${cls}">${txt}</p>`;
   if (s.provider !== 'aerodatabox') return note('Fonte: dati dimostrativi.');
   const site = OFFICIAL_SOURCES[iata];
-  if (!OFFICIAL_AIRPORTS[iata] || !(s.workerUrl || '').trim()) return note('Fonte: AeroDataBox.');
+  const adb = adbAt ? ` (aggiornato ${ageTag(adbAt, ADB_WARN)})` : '';
+  if (!OFFICIAL_AIRPORTS[iata] || !(s.workerUrl || '').trim()) return note(`Fonte: AeroDataBox${adb}.`);
   const i = officialInfo[`${iata}:${dir === 'dep' ? 'D' : 'A'}`] || {};
-  if (i.error) return note(`Fonte: AeroDataBox · ⚠ tabellone ufficiale non disponibile ora.`);
-  if (degraded) return note(`Fonte: ${esc(site)} · ⚠ AeroDataBox non disponibile ora.`, 'official');
-  return note(`Fonti: ${esc(site)} + AeroDataBox.`, 'official');
+  if (i.error) return note(`Fonte: AeroDataBox${adb} · ⚠ tabellone ufficiale non disponibile ora.`);
+  const oa = boardAge[`${iata}:${dir === 'dep' ? 'D' : 'A'}`];
+  const off = oa ? ` (${offAgeText(oa)})` : '';
+  if (degraded) return note(`Fonte: ${esc(site)}${off} · ⚠ AeroDataBox non disponibile ora.`, 'official');
+  return note(`Fonti: ${esc(site)}${off} + AeroDataBox${adb}.`, 'official');
 }
 // riepilogo per il riquadro "Fonti": quanti voli da quale fonte
 function boardCounts(list) {
@@ -60,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.11 · i voli molto in ritardo restano nel tabellone, in rosso all’orario stimato';
+const APP_VERSION = '4.12 · “aggiornato X min fa” per ogni fonte su tabelloni, voli e aerei';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -388,7 +423,7 @@ function boardTable(list, dir, filter = '', key = '') {
         <span class="num"><a href="${flightLink(x)}"><b>${esc(x.number)}</b></a><small>${boardReg(x, dir)}</small></span>
         <span class="dest"><b>${esc(other?.name || other?.iata || '—')}</b><small>${esc(other?.iata || '')}${side?.terminal ? ` · T${esc(side.terminal)}` : ''}${x.codeshares?.length ? ` <button class="csbtn" type="button" title="Anche: ${esc(x.codeshares.join(' '))}">+${x.codeshares.length} code sharing</button>` : ''}</small>${x.codeshares?.length ? `<small class="cslist" hidden>anche ${x.codeshares.map(esc).join(' ')}</small>` : ''}</span>
         <span class="gate">${esc((dir === 'dep' ? side?.gate : side?.belt) || '—')}</span>
-        <span>${statusBadge(x.status)}${srcTag(x)}${x._seenAt ? `<small class="src stale" title="Il volo non è più nei dati ricevuti (si chiedono per orario programmato): resta qui per il forte ritardo, con l’ultimo dato">dato di ${Math.max(1, Math.round((now - x._seenAt) / 60e3))} min fa</small>` : ''}</span>
+        <span>${statusBadge(x.status)}${srcTag(x)}${x._seenAt ? `<small class="src stale" title="Il volo non è più nei dati ricevuti (si chiedono per orario programmato): resta qui per il forte ritardo, con l’ultimo dato">dato di ${ageTag(x._seenAt, 0)}</small>` : ''}</span>
       </div>`;
     }).join('')}
   </div>`;
@@ -397,7 +432,7 @@ function boardTable(list, dir, filter = '', key = '') {
 async function viewAirport(iata, dir = 'dep', onlyTo = null) {
   iata = iata.toUpperCase();
   const info = airportByIata(iata) || await getAirportInfo(iata) || { iata, name: iata };
-  let data = null, filter = '';
+  let data = null, filter = '', updatedHtml = '', updatedTitle = '';
   const isRoute = !!onlyTo;
   const bdir = isRoute ? 'dep' : dir;
   const bkey = isRoute ? `route:${iata}-${onlyTo}` : `${iata}:${dir}`;
@@ -409,6 +444,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
       OFFICIAL_AIRPORTS[iata] ? `tabellone: <b>tabellone ufficiale dell’aeroporto</b> (${esc(site)}), che ha la priorità per orari, gate, check-in, nastro e stato, completato con <b>AeroDataBox</b>${(getSettings().workerUrl || '').trim() ? '' : ' (si attiva impostando il Worker in Impostazioni; ora si usa solo AeroDataBox)'}` : `tabellone: <b>AeroDataBox</b>${SITE_BOARDS[iata] ? ` (il sito ufficiale ${esc(SITE_BOARDS[iata].name)} non è leggibile in automatico: c’è il link sopra)` : ' (per questo aeroporto non c’è un tabellone ufficiale collegato)'}`,
       (() => { const i = officialInfo[`${iata}:${bdir === 'dep' ? 'D' : 'A'}`] || {}; return i.error ? `⚠ tabellone ufficiale non disponibile: ${esc(i.error)}` : data?.degraded ? `⚠ AeroDataBox non disponibile: ${esc(data.degraded)}` : ''; })(),
       OFFICIAL_AIRPORTS[iata] && list ? boardCounts(list) : '',
+      'aggiornamento (scritto sopra il tabellone): il <b>tabellone ufficiale</b> viene riletto dal Worker al massimo ogni 90 secondi; <b>AeroDataBox</b> l’app lo richiede al massimo ogni 15 minuti per risparmiare le unità del piano, quindi può avere qualche minuto in più. L’età diventa arancione quando il dato è più vecchio del solito; “copia di riserva” = il sito ufficiale non risponde e il Worker mostra l’ultima lettura riuscita',
       'sotto lo stato di ogni volo: <b>uff.</b> = solo tabellone ufficiale, <b>uff. + ADB</b> = tabellone ufficiale completato da AeroDataBox, <b>ADB</b> = solo AeroDataBox',
       'orari nell’ora locale dell’aeroporto; in arancione l’orario stimato o effettivo se diverso di almeno 5 minuti, in <b>rosso</b> con il ritardo indicato se è di un’ora o più: questi voli sono messi nel tabellone al nuovo orario e restano finché non sono partiti/arrivati da più di 2 ore',
       list?.some(x => x._seenAt) ? 'voli con “dato di … min fa”: molto in ritardo e non più nei dati ricevuti, tenuti in questo browser con l’ultimo aggiornamento' : '',
@@ -425,7 +461,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
     $app.innerHTML = `
       <div class="pagehead">
         <div><h1>${esc(title)} ${favBtn}</h1><p class="sub">${esc(isRoute ? `${apName(iata)} – ${apName(onlyTo)} · partenze nelle prossime 10 ore` : info.name)}</p></div>
-        <div class="actions"><button class="ghost" id="refresh" title="Aggiorna adesso" aria-label="Aggiorna adesso">↻</button><span class="updated" id="updated"></span></div>
+        <div class="actions"><button class="ghost" id="refresh" title="Aggiorna adesso" aria-label="Aggiorna adesso">↻</button><span class="updated" id="updated" title="${esc(updatedTitle)}">${updatedHtml}</span></div>
       </div>
       ${isRoute ? `<p class="links"><a href="#/route/${onlyTo}/${iata}">Tratta inversa ${onlyTo} → ${iata}</a> · <a href="#/airport/${iata}/dep">Tabellone ${iata}</a></p>` : `
       <div class="tabs">
@@ -434,7 +470,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
         <input id="filter" type="search" placeholder="Filtra: città, volo, compagnia" value="${esc(filter)}">
       </div>`}
       ${siteLink(iata, bdir)}
-      ${data ? sourcesNote(iata, bdir, list, data.degraded) : ''}
+      ${data ? sourcesNote(iata, bdir, list, data.degraded, data.adbAt) : ''}
       <div id="board">${data ? boardTable(filtered, bdir, filter, bkey) : '<div class="loading">Caricamento tabellone…</div>'}</div>
       ${data ? sources(list) : ''}`;
     bindStars($app, render);
@@ -453,13 +489,17 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
       const keep = document.getElementById('filter') === document.activeElement;
       render();
       if (keep) { const fi = document.getElementById('filter'); fi.focus(); fi.setSelectionRange(fi.value.length, fi.value.length); }
+      // età del dato principale: tabellone ufficiale se usato, altrimenti AeroDataBox
+      const k = `${iata}:${bdir === 'dep' ? 'D' : 'A'}`, oa = !isDemo() && !officialInfo[k]?.error ? boardAge[k] : null;
+      const main = oa?.at || data.adbAt;
+      updatedHtml = isDemo() || !main ? '' : oa && (oa.stale || oa.snap) ? `⚠ copia di riserva di ${ageTag(oa.at, 0)}` : `aggiornato ${ageTag(main, oa ? OFF_WARN : ADB_WARN)}`;
+      updatedTitle = `Ultimo controllo alle ${new Date().toLocaleTimeString('it-IT')}; nuovo controllo automatico ogni ${getSettings().refreshSec} secondi. L’età di ogni fonte è scritta sotto, accanto alle fonti.`;
       const u = document.getElementById('updated');
-      u.textContent = `agg. ${new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
-      u.title = `Aggiornamento automatico ogni ${getSettings().refreshSec} secondi`;
+      if (u) { u.innerHTML = updatedHtml; u.title = updatedTitle; }
     } catch (e) {
       // aggiornamento fallito: se ho già un tabellone lo lascio e lo segnalo, altrimenti mostro l'errore
       const u = document.getElementById('updated');
-      if (data?.departures?.length || data?.arrivals?.length) { if (u) { u.textContent = 'aggiornamento non riuscito, riprovo'; u.title = e.message || String(e); } }
+      if (data?.departures?.length || data?.arrivals?.length) { updatedHtml = `${updatedHtml ? `${updatedHtml} · ` : ''}nuovo controllo non riuscito, riprovo`; if (u) { u.innerHTML = updatedHtml; u.title = e.message || String(e); } }
       else document.getElementById('board').innerHTML = errorBox(e);
     }
   };
@@ -509,10 +549,15 @@ function progress(f) {
   return Math.max(0, Math.min(1, (Date.now() - s) / (e - s)));
 }
 
+// età della posizione: oltre 2 minuti senza segnale l'aereo può essere già altrove
+const posAge = pos => { const t = Date.parse(pos?.at || ''); return t ? ` · posizione di ${ageTag(t, 2)}` : ''; };
 function legSources(f) {
   if (getSettings().provider !== 'aerodatabox') return 'Fonte: dati dimostrativi.';
-  const sites = [...new Set([f.dep, f.arr].filter(s => s?._off).map(s => OFFICIAL_SOURCES[s._off] || s._off))].map(esc);
-  const api = f._adb ? 'AeroDataBox' : f._fa ? 'FlightAware' : '';
+  const bySite = new Map();
+  for (const s of [f.dep, f.arr].filter(s => s?._off)) { const n = OFFICIAL_SOURCES[s._off] || s._off; if (!bySite.has(n) || (s._offAt || 0) > (bySite.get(n)._offAt || 0)) bySite.set(n, s); }
+  const sites = [...bySite].map(([n, s]) => `${esc(n)}${s._offAt ? ` (${offAgeSide(s)})` : ''}`);
+  const at = f._adb ? f._adbAt : f._fa ? f._faAt : null;
+  const api = (f._adb ? 'AeroDataBox' : f._fa ? 'FlightAware' : '') + (at ? ` (aggiornato ${ageTag(at, ADB_WARN)})` : '');
   if (!sites.length) return api ? `Fonte: ${api}.` : 'Fonte: tabellone ufficiale dell’aeroporto.';
   return `Fonti: ${sites.join(', ')}${api ? ` + ${api}` : ''}.`;
 }
@@ -716,7 +761,7 @@ async function viewFlight(number, date, depHint) {
       }
       if (!marker) marker = L.marker([pos.lat, pos.lon], { icon: planeIcon(pos.track), zIndexOffset: 1000 }).addTo(map);
       else marker.setLatLng([pos.lat, pos.lon]).setIcon(planeIcon(pos.track));
-      meta.innerHTML = `Aereo a terra${where ? ` a <b>${esc(where)}</b>` : ''}${groundAtDep ? ' · il volo non è ancora decollato' : ''} · fonte ${esc(pos.source)}`;
+      meta.innerHTML = `Aereo a terra${where ? ` a <b>${esc(where)}</b>` : ''}${groundAtDep ? ' · il volo non è ancora decollato' : ''} · fonte ${esc(pos.source)}${posAge(pos)}`;
       return;
     }
     if (groundAtDep && AIR.includes(f.status)) groundAtDep = false;
@@ -731,7 +776,7 @@ async function viewFlight(number, date, depHint) {
     trailPts.push([pos.lat, pos.lon]);
     if (!marker) { marker = L.marker([pos.lat, pos.lon], { icon: planeIcon(pos.track), zIndexOffset: 1000 }).addTo(map); trail = L.polyline(trailPts, { color: '#38d39f', weight: 3 }).addTo(map); }
     else { marker.setLatLng([pos.lat, pos.lon]).setIcon(planeIcon(pos.track)); trail.setLatLngs(trailPts); }
-    meta.innerHTML = `In volo come <b>${esc(on)}</b> · ${pos.alt != null ? `${Math.round(pos.alt).toLocaleString('it-IT')} ft` : ''}${pos.gs != null ? ` · ${Math.round(pos.gs)} kt` : ''} · fonte ${esc(pos.source)}`;
+    meta.innerHTML = `In volo come <b>${esc(on)}</b> · ${pos.alt != null ? `${Math.round(pos.alt).toLocaleString('it-IT')} ft` : ''}${pos.gs != null ? ` · ${Math.round(pos.gs)} kt` : ''} · fonte ${esc(pos.source)}${posAge(pos)}`;
   };
   await live();
   every(15, live);
@@ -888,6 +933,22 @@ async function viewAircraft(reg, date, apHint) {
     trace?.points?.length ? `percorso realmente volato (linea verde sulla mappa): tracce ADS-B di <b>${esc(trace.source)}</b>, ${trace.points.length} punti${hex ? ` · ICAO24 <code>${esc(hex)}</code>` : ''}` : recent ? 'percorso realmente volato: tracce ADS-B di <b>adsb.lol</b> (non disponibili ora per questo aereo; le tratte sono disegnate come archi)' : '',
     'archi sulla mappa: tratte del giorno in linea d’aria (grigio = concluse, giallo = in volo, azzurro tratteggiato = previste)',
     POS_SRC, MAP_SRC]);
+  // quando sono stati letti i dati di ogni fonte usata in questa pagina
+  const ageLine = () => {
+    if (isDemo()) return '';
+    const parts = [];
+    const newest = k => Math.max(0, ...list.map(f => f[k] || 0));
+    if (newest('_adbAt')) parts.push(`AeroDataBox ${ageTag(newest('_adbAt'), ADB_WARN)}`);
+    if (newest('_faAt')) parts.push(`FlightAware ${ageTag(newest('_faAt'), ADB_WARN)}`);
+    const boards = off.boards.map(c => {
+      const a = [boardAge[`${c}:D`], boardAge[`${c}:A`]].filter(Boolean).sort((x, y) => y.at - x.at)[0];
+      return a ? `${esc(c)} ${a.stale ? `⚠ copia di riserva ${ageTag(a.at, 0)}` : ageTag(a.at, OFF_WARN)}` : '';
+    }).filter(Boolean);
+    if (boards.length) parts.push(`tabelloni ufficiali: ${boards.join(', ')}`);
+    const last = trace?.points?.length ? trace.points[trace.points.length - 1].t : null;
+    if (last) parts.push(`ultimo punto della traccia ADS-B ${ageTag(last, 30)}`);
+    return parts.length ? `Aggiornato: ${parts.join(' · ')}.` : '';
+  };
   const render = () => {
     const sum = summary(legs);
     const head = document.getElementById('acsum');
@@ -896,6 +957,8 @@ async function viewAircraft(reg, date, apHint) {
     if (r) r.innerHTML = boardHtml();
     const f = document.getElementById('acsrc');
     if (f) f.innerHTML = sources();
+    const ag = document.getElementById('acage');
+    if (ag) ag.innerHTML = ageLine();
     const m = document.getElementById('acmodel');
     if (m) m.textContent = [model(), new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })].filter(Boolean).join(' · ');
   };
@@ -908,6 +971,7 @@ async function viewAircraft(reg, date, apHint) {
     <div class="card"><div class="leghead"><span class="eyebrow">Percorso del giorno</span><span id="acpos" class="sub"></span></div><div id="map" class="map tall"></div>
       <p class="maplegend"><span><i class="lg flown"></i>percorso volato (ADS-B)</span><span><i class="lg done"></i>tratta conclusa</span><span><i class="lg air"></i>in volo</span><span><i class="lg next"></i>prevista</span></p></div>
     <div id="rot"></div>
+    <p class="hint sources" id="acage"></p>
     <div class="card" id="achist"><div class="leghead"><span class="eyebrow">Storia dei voli · altri giorni (ultimi 2)</span></div><p class="hint">Carico la storia dei voli…</p></div>
     <div id="acsrc"></div>`;
   render();
@@ -1012,7 +1076,7 @@ async function viewAircraft(reg, date, apHint) {
     if (!marker) { marker = L.marker([pos.lat, pos.lon], { icon: planeIcon(pos.track), zIndexOffset: 1000 }).addTo(map); if (!fitKey) map.setView([pos.lat, pos.lon], 6); }
     else marker.setLatLng([pos.lat, pos.lon]).setIcon(planeIcon(pos.track));
     const label = flying ? (flying._adsb ? `<b>${esc(flying.number)}</b>${flying.dep?.iata ? ` ${esc(flying.dep.iata)} → ${esc(flying.arr.iata)}` : ''}` : `<a href="${flightLink(flying)}"><b>${esc(flying.number)}</b></a> ${esc(flying.dep?.iata || '')} → ${esc(flying.arr?.iata || '')}`) : '';
-    el.innerHTML = `In volo${label ? ` come ${label}` : ''}${pos.alt != null ? ` · ${Math.round(pos.alt).toLocaleString('it-IT')} ft` : ''}${pos.gs != null ? ` · ${Math.round(pos.gs)} kt` : ''} · fonte ${esc(pos.source)}`;
+    el.innerHTML = `In volo${label ? ` come ${label}` : ''}${pos.alt != null ? ` · ${Math.round(pos.alt).toLocaleString('it-IT')} ft` : ''}${pos.gs != null ? ` · ${Math.round(pos.gs)} kt` : ''} · fonte ${esc(pos.source)}${posAge(pos)}`;
   };
   await drawDay();
   await live();

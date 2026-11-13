@@ -47,12 +47,25 @@ export function adbBlocked() {
 export const clearAdbBlock = () => localStorage.removeItem(BKEY);
 const QUOTA_MSG = 'Hai esaurito le unità mensili del tuo piano AeroDataBox su RapidAPI: si azzerano alla data di rinnovo mensile dell’abbonamento. Per Fiumicino, Ciampino, Pisa, Firenze, Bari, Brindisi, Foggia, Taranto, Milano, Bologna, Catania, Palermo, Ginevra, Zurigo, Francoforte, Monaco, Torino, Cagliari, Madrid, Barcellona, Lisbona, Londra (Gatwick, Stansted, Luton, City), Lione, Parigi Beauvais, Amsterdam, Genova, Venezia e Hong Kong il tabellone arriva comunque dai siti ufficiali.';
 
+// ---------- età dei dati ("aggiornato X min fa") ----------
+// adbAt: path AeroDataBox → quando è stato letto (anche se poi riusato dalla cache del browser).
+// listAge: lista di righe di un tabellone ufficiale → { at, stale, snap } (at = ora in cui il Worker ha letto il sito).
+// boardAge: "IATA:D|A" → ultima età nota del tabellone ufficiale.
+const adbAt = new Map();
+const listAge = new WeakMap();
+export const boardAge = {};
+export const adbAge = path => adbAt.get(path) || null;
+function pgetT(k, ttl) {
+  try { const x = JSON.parse(localStorage.getItem(PKEY + k)); return x && Date.now() - x.t < ttl ? x : undefined; } catch { return undefined; }
+}
+
 /** Chiamata AeroDataBox con cache persistente (ttlMs). */
 async function adbCached(path, ttlMs) {
-  const hit = pget(path, ttlMs);
-  if (hit !== undefined) return hit;
+  const hit = pgetT(path, ttlMs);
+  if (hit !== undefined) { adbAt.set(path, hit.t); return hit.v; }
   const v = await adb(path);
   pput(path, v);
+  adbAt.set(path, Date.now());
   return v;
 }
 
@@ -184,7 +197,12 @@ export async function getOfficial(iata, nature, workerUrl = getSettings().worker
     const r = await fetch(`${base}/board?airport=${iata}&nature=${nature}`);
     if (!r.ok) throw new Error(`Worker: errore ${r.status}`);
     const j = await r.json();
-    return j.flights || [];
+    const list = j.flights || [];
+    // fetchedAt resta quello della lettura vera anche quando il Worker risponde dalla sua cache (o dalla copia di riserva di 3 ore)
+    const age = { at: Date.parse(j.fetchedAt) || Date.now(), stale: !!j.stale };
+    listAge.set(list, age);
+    boardAge[`${iata}:${nature}`] = age;
+    return list;
   });
 }
 
@@ -269,6 +287,8 @@ function mergeOfficial(flights, official, sideKey, iata, used = null) {
     else if (o.type && !f.aircraft?.model) f.aircraft = { ...f.aircraft, model: o.type };
     side.officialStatus = o.status || null;
     side._off = iata;
+    const age = listAge.get(official);
+    if (age) { side._offAt = age.at; side._offStale = age.stale || age.snap || false; }
     f._official = true;
   }
   return flights;
@@ -333,10 +353,11 @@ export async function getBoard(iata) {
   iata = iata.toUpperCase();
   if (isDemo()) { const b = await demo.board(iata); return { departures: mergeCodeshares(b.departures, 'dep'), arrivals: mergeCodeshares(b.arrivals, 'arr') }; }
   let base, degraded = null;
+  const q = 'offsetMinutes=-120&durationMinutes=720&withLeg=true&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=false';
+  const adbPath = `/flights/airports/iata/${iata}?${q}`;
   try {
     base = await cached(`board:${iata}`, 60e3, async () => {
-      const q = 'offsetMinutes=-120&durationMinutes=720&withLeg=true&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=false';
-      const data = await adbCached(`/flights/airports/iata/${iata}?${q}`, 15 * 60e3);
+      const data = await adbCached(adbPath, 15 * 60e3);
       const own = { iata, ...(airportByIata(iata) || {}) };
       return { departures: (data?.departures || []).map(f => normFlight(f, 'dep', own)), arrivals: (data?.arrivals || []).map(f => normFlight(f, 'arr', own)) };
     });
@@ -359,7 +380,7 @@ export async function getBoard(iata) {
       if (!d.length && !a.length) {
         // ultima copia salvata dal Worker (istantanee del tabellone ufficiale di oggi)
         const day = localDay(Date.now(), OFFICIAL_AIRPORTS[iata]);
-        const snap = async n => { const off = await getSnap(iata, n, day); let fl = officialFlights(off, iata, n); mergeOfficial(fl, off, n === 'D' ? 'dep' : 'arr', iata); fl = fl.filter(f => inWindow(f)); return fl.sort((x, y) => Date.parse((x.dep.sched || x.arr.sched).utc) - Date.parse((y.dep.sched || y.arr.sched).utc)); };
+        const snap = async n => { const off = await getSnap(iata, n, day); if (listAge.get(off)) boardAge[`${iata}:${n}`] = listAge.get(off); let fl = officialFlights(off, iata, n); mergeOfficial(fl, off, n === 'D' ? 'dep' : 'arr', iata); fl = fl.filter(f => inWindow(f)); return fl.sort((x, y) => Date.parse((x.dep.sched || x.arr.sched).utc) - Date.parse((y.dep.sched || y.arr.sched).utc)); };
         [d, a] = await Promise.all([snap('D'), snap('A')]);
         if (d.length || a.length) degraded += ' · il sito ufficiale non risponde ora: mostro l’ultima copia salvata dal Worker';
       }
@@ -373,7 +394,7 @@ export async function getBoard(iata) {
     await Promise.all([withOfficial(departures, iata, 'D'), withOfficial(arrivals, iata, 'A')]);
   }
   keepLate(iata, 'dep', departures); keepLate(iata, 'arr', arrivals);
-  return { departures: mergeCodeshares(departures, 'dep'), arrivals: mergeCodeshares(arrivals, 'arr') };
+  return { departures: mergeCodeshares(departures, 'dep'), arrivals: mergeCodeshares(arrivals, 'arr'), adbAt: adbAge(adbPath) };
 }
 
 /** Accorpa i voli in code sharing: stesso orario programmato e stessa destinazione/provenienza diventano
@@ -487,13 +508,15 @@ async function faGet(params) {
   const base = (getSettings().workerUrl || '').trim().replace(/\/+$/, '');
   if (!base) return null;
   const q = new URLSearchParams(params).toString();
-  const hit = pget(`fa:${q}`, 10 * 60e3);
-  if (hit !== undefined) return hit;
+  // _faAt: quando il browser ha avuto la risposta (il Worker può averla in cache da qualche minuto in più)
+  const stampFa = (j, t) => { for (const f of [...(j?.flights || []), ...(j?.inbound ? [j.inbound] : [])]) f._faAt = t; return j; };
+  const hit = pgetT(`fa:${q}`, 10 * 60e3);
+  if (hit !== undefined) return stampFa(hit.v, hit.t);
   const r = await fetch(`${base}/fa?${q}`).catch(() => null);
   if (!r?.ok) return null; // 501 = FlightAware non configurato, 429 = limite mensile
   const j = await r.json().catch(() => null);
   if (j) { pput(`fa:${q}`, j); if (!params.days) learnRegs([...(j.flights || []), ...(j.inbound ? [j.inbound] : [])]); }
-  return j;
+  return stampFa(j, Date.now());
 }
 const withCoords = legs => {
   for (const l of legs) for (const s of [l.dep, l.arr]) {
@@ -535,10 +558,13 @@ export async function getFlight(number, date, depHint) {
   number = number.toUpperCase().replace(/\s+/g, '');
   if (isDemo()) return demo.flight(number, date);
   try {
-    return await cached(`flight:${number}:${date}`, 60e3, async () => {
-      const data = await adbCached(`/flights/number/${encodeURIComponent(number)}/${date}?withAircraftImage=false&withLocation=true`, 5 * 60e3);
+    const path = `/flights/number/${encodeURIComponent(number)}/${date}?withAircraftImage=false&withLocation=true`;
+    const legs = await cached(`flight:${number}:${date}`, 60e3, async () => {
+      const data = await adbCached(path, 5 * 60e3);
       return enrichLegs((data || []).map(f => normFlight(f)));
     });
+    legs.forEach(l => { l._adbAt = adbAge(path); });
+    return legs;
   } catch (e) {
     // AeroDataBox non disponibile: provo FlightAware, poi i tabelloni ufficiali
     const fa = await faFlight(number, date).catch(() => null);
@@ -588,8 +614,10 @@ export async function getFlightsByReg(reg, date) {
   if (isDemo()) return demo.byReg(reg, date);
   return cached(`reg:${reg}:${date}`, 60e3, async () => {
     try {
-      const data = await adbCached(`/flights/reg/${encodeURIComponent(reg)}/${date}?withAircraftImage=false&withLocation=true`, 15 * 60e3);
-      return (data || []).map(f => normFlight(f));
+      const path = `/flights/reg/${encodeURIComponent(reg)}/${date}?withAircraftImage=false&withLocation=true`;
+      const data = await adbCached(path, 15 * 60e3);
+      const at = adbAge(path);
+      return (data || []).map(f => ({ ...normFlight(f), _adbAt: at }));
     } catch (e) {
       // AeroDataBox non disponibile: voli dell'aereo da FlightAware
       const legs = await faByReg(reg, date).catch(() => null);
@@ -1063,15 +1091,18 @@ const normNum = x => (x || '').toUpperCase().replace(/\s+/g, '').replace(/^([A-Z
 async function getSnap(iata, nature, day) {
   const base = (getSettings().workerUrl || '').trim().replace(/\/+$/, '');
   if (!base) return [];
-  const k = `snap:${iata}:${nature}:${day}`;
+  const k = `snap2:${iata}:${nature}:${day}`;
+  // copia salvata dal Worker: la sua età è quella dell'ultima istantanea (updatedAt), non della lettura
+  const out = x => { const v = x?.f || []; if (x?.at) listAge.set(v, { at: x.at, snap: true }); return v; };
   const hit = pget(k, day < localDay(Date.now(), OFFICIAL_AIRPORTS[iata]) ? 6 * 3600e3 : 10 * 60e3);
-  if (hit !== undefined) return hit;
+  if (hit !== undefined) return out(hit);
   return cached(k, 60e3, async () => {
     try {
       const r = await fetch(`${base}/snap?airport=${iata}&nature=${nature}&day=${day}`);
-      const v = r.ok ? ((await r.json()).flights || []) : [];
-      pput(k, v);
-      return v;
+      const j = r.ok ? await r.json() : {};
+      const x = { f: j.flights || [], at: Date.parse(j.updatedAt) || null };
+      pput(k, x);
+      return out(x);
     } catch { return []; }
   });
 }
