@@ -732,7 +732,7 @@ export async function getAirportInfo(iata) {
  *                     compagnia che arriva dalla destinazione poco prima (tipico delle low cost,
  *                     che fanno andata e ritorno con lo stesso aereo)
  */
-export async function getInbound(flight) {
+export async function getInbound(flight, depth = 0) {
   const depSide = flight.dep || {};
   const depUtc = (depSide.revised || depSide.sched)?.utc && new Date((depSide.revised || depSide.sched).utc);
   if (!depUtc) return { inbound: null, reason: 'Orario di partenza non disponibile.' };
@@ -855,12 +855,30 @@ export async function getInbound(flight) {
       }
       // volo in arrivo senza marche sul tabellone: FlightAware di solito le conosce da quando è decollato, spesso
       // anche prima (es. AZ1677 Roma→Firenze in volo con EI-IMX → AZ1682 per Roma) (una richiesta)
+      let pf = null;
       if (!p.aircraft?.reg && p.number && Math.abs(arrTime(p) - Date.now()) < 8 * 3600e3) {
-        const pf = await faFlight(p.number, (p.arr?.sched?.local || '').slice(0, 10) || isoDate(new Date(arrTime(p)))).catch(() => null);
+        pf = await faFlight(p.number, (p.arr?.sched?.local || '').slice(0, 10) || isoDate(new Date(arrTime(p)))).catch(() => null);
         const leg = pf?.flights?.find(l => l.arr?.iata === depSide.iata && l.aircraft?.reg) || pf?.flights?.find(l => l.aircraft?.reg);
         if (leg) p.aircraft = { ...p.aircraft, reg: leg.aircraft.reg, model: p.aircraft?.model || leg.aircraft.model, regSrc: 'FlightAware' };
       }
-      return { inbound: p, method: 'guess', basis: sim.basis, waitMin: sim.waitMin };
+      // marche ancora ignote: le ipotizzo anche per il volo precedente (catena di giri della compagnia, un livello),
+      // prima con quanto già scoperto su questo dispositivo, poi ricostruendo la giornata all'aeroporto di partenza
+      if (!p.aircraft?.reg && p.number) {
+        const k = knownRegs(depSide.iata).find(x => x.dir === 'A' && x.number === normNum(p.number) && (!x.sched || Math.abs(Date.parse(x.sched) - arrTime(p)) < 3 * 3600e3));
+        let chain = k?.reg ? { reg: k.reg, sure: true } : k?.guess?.reg ? { reg: k.guess.reg, via: k.guess.via } : null;
+        if (!chain && depth === 0 && p.dep?.iata) {
+          // orario di partenza del volo precedente: dal tabellone o, se manca, da FlightAware (già chiesto sopra)
+          const fl = pf?.flights?.find(l => l.arr?.iata === depSide.iata) || pf?.flights?.[0];
+          const q = p.dep?.sched?.utc ? p : fl?.dep?.sched?.utc ? { ...p, dep: { ...p.dep, ...fl.dep, iata: p.dep.iata } } : null;
+          const r2 = q ? await getInbound(q, 1).catch(() => null) : null;
+          if (q && q !== p && q.aircraft?.reg) p.aircraft = { ...p.aircraft, reg: q.aircraft.reg };
+          if (p.aircraft?.reg) chain = { reg: p.aircraft.reg, sure: true };
+          else if (r2?.inbound?.aircraft?.reg) chain = { reg: r2.inbound.aircraft.reg, via: r2.inbound.number };
+        }
+        if (chain && !chain.sure) p.aircraft = { ...p.aircraft, reg: chain.reg, regSrc: chain.via ? `un'altra ipotesi (l'aereo di ${chain.via}, il volo prima ancora)` : 'un’ipotesi già fatta aprendo quel volo', _chain: true };
+        else if (chain?.sure) p.aircraft = { ...p.aircraft, reg: chain.reg };
+      }
+      return { inbound: p, method: 'guess', basis: p.aircraft?._chain ? 'chain' : sim.basis, waitMin: sim.waitMin };
     }
     if (sim?.basis === 'ground') {
       const name = flight.airline?.name ? ` ${flight.airline.name}` : '', ap = airportByIata(depSide.iata)?.city || depSide.iata;
@@ -1134,11 +1152,14 @@ function learnRegs(list) {
 /** La pagina di un volo ha trovato (o ipotizzato) l'aereo: lo ricordo perché il tabellone mostri la stessa cosa. */
 export function rememberFlightReg(f, inbound, r) {
   try {
-    if (inbound?.aircraft?.reg && !inbound.aircraft.regGuess) learnRegs([inbound]);
+    if (inbound?.aircraft?.reg && !inbound.aircraft.regGuess && !inbound.aircraft._chain) learnRegs([inbound]);
     if (f.aircraft?.reg) return learnRegs([f]);
     if (r?.method !== 'guess' || !inbound?.aircraft?.reg || !f.dep?.iata || !f.dep.sched?.utc) return;
     const m = pget(KREG, 2 * 86400e3) || {};
-    m[`${f.dep.iata}|D|${normNum(f.number)}|${f.dep.sched.utc.slice(0, 10)}`] = { guess: { reg: inbound.aircraft.reg, via: inbound.number, from: inbound.dep?.iata || null, basis: r.basis }, sched: f.dep.sched.utc, t: Date.now() };
+    const g = { reg: inbound.aircraft.reg, via: inbound.number, from: inbound.dep?.iata || null, basis: r.basis };
+    m[`${f.dep.iata}|D|${normNum(f.number)}|${f.dep.sched.utc.slice(0, 10)}`] = { guess: g, sched: f.dep.sched.utc, t: Date.now() };
+    // anche all'arrivo: così il tabellone della destinazione e il volo successivo da lì ereditano l'ipotesi
+    if (f.arr?.iata && f.arr.sched?.utc) m[`${f.arr.iata}|A|${normNum(f.number)}|${f.arr.sched.utc.slice(0, 10)}`] = { guess: { reg: g.reg, sameAs: g.via, basis: r.basis }, sched: f.arr.sched.utc, t: Date.now() };
     pput(KREG, m);
   } catch {}
 }
@@ -1178,7 +1199,7 @@ export async function guessBoardRegs(iata, data) {
     if (!last) continue;
     const sim = simulateRotation({ flight: last, arrivals: day.arrivals, departures: day.departures, now, coverageFrom: day.from });
     for (const c of sim?.chain || []) {
-      const reg = c.pick?.aircraft?.reg;
+      const reg = c.pick?.aircraft?.reg || c.pick?.aircraft?.regGuess?.reg || data.arrivals.find(a => normNum(a.number) === normNum(c.pick?.number) && a.arr?.sched?.utc === c.pick?.arr?.sched?.utc)?.aircraft?.regGuess?.reg;
       // sul tabellone solo i giri veloci (più affidabili); gli aerei fermi da ore si verificano con la rete ADS-B nella pagina del volo
       // andata e ritorno (nel test sugli aeroporti con le marche, tools/backtest.mjs, giusta ~9 volte su 10) e giri
       // veloci solo per le low cost (negli hub delle compagnie tradizionali il giro veloce è quasi sempre sbagliato)

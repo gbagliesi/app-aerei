@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.12.1 · tabellone in ordine di orario stimato: linea “adesso” all’ora attuale';
+const APP_VERSION = '4.12.2 · marche ipotizzate propagate ai voli successivi';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -124,6 +124,7 @@ const regHref = (reg, date, ap) => `#/aircraft/${encodeURIComponent(reg)}/${date
 // marche ipotizzate (ricostruzione delle rotazioni): segno ≈ e spiegazione al passaggio del mouse
 const regGuessLink = (x, dir) => {
   const g = x.aircraft.regGuess;
+  if (g.sameAs) return `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), x.arr?.iata)}" title="Ipotesi fatta aprendo il volo: probabilmente è lo stesso aereo che ha fatto ${esc(g.sameAs)}">≈ ${esc(g.reg)}</a>`;
   if (g.next) {
     // arrivo: aereo che poi riparte con il volo indicato
     const t = `title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello che poi riparte con ${esc(g.next)}${g.to ? ` per ${esc(g.to)}` : ''}${g.reg ? '' : ' (marche non ancora note)'}"`;
