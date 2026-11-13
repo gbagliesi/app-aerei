@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.12.2 · marche ipotizzate propagate ai voli successivi';
+const APP_VERSION = '4.13 · ipotesi sulle marche con probabilità propagate lungo la giornata';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -124,7 +124,7 @@ const regHref = (reg, date, ap) => `#/aircraft/${encodeURIComponent(reg)}/${date
 // marche ipotizzate (ricostruzione delle rotazioni): segno ≈ e spiegazione al passaggio del mouse
 const regGuessLink = (x, dir) => {
   const g = x.aircraft.regGuess;
-  if (g.sameAs) return `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), x.arr?.iata)}" title="Ipotesi fatta aprendo il volo: probabilmente è lo stesso aereo che ha fatto ${esc(g.sameAs)}">≈ ${esc(g.reg)}</a>`;
+  if (g.sameAs) return g.reg ? `<a class="reglink guess" href="${regHref(g.reg, flightDate(x), x.arr?.iata)}" title="Ipotesi: probabilmente è lo stesso aereo di ${esc(g.sameAs)}${g.to ? ` (andata per ${esc(g.to)} e ritorno)` : ''}">≈ ${esc(g.reg)}</a>` : '';
   if (g.next) {
     // arrivo: aereo che poi riparte con il volo indicato
     const t = `title="Ipotesi: la compagnia non ha ancora indicato l'aereo; probabilmente è quello che poi riparte con ${esc(g.next)}${g.to ? ` per ${esc(g.to)}` : ''}${g.reg ? '' : ' (marche non ancora note)'}"`;
@@ -142,10 +142,13 @@ const regLink = (reg, date, ap) => `<a class="reglink" href="${regHref(reg, date
 const REG_LEVELS = {
   sure: ['sicure', 'indicate dalla compagnia o da un tabellone ufficiale'],
   cross: ['incrociate', 'aereo visto dalla rete ADS-B atterrare/decollare all’orario del tabellone'],
-  likely: ['dedotte, affidabili', 'andata e ritorno: lo stesso aereo che è arrivato da lì poco prima'],
-  weak: ['dedotte, deboli', 'ricostruzione della giornata della compagnia: spesso giusta per le low cost, meno per le altre'],
+  likely: ['dedotte, probabili', 'probabilità 70% o più: di solito andata e ritorno con lo stesso aereo'],
+  weak: ['dedotte, incerte', 'probabilità tra 35% e 70%'],
+  faint: ['molto incerte', 'probabilità sotto il 35%: ipotesi costruite su altre ipotesi, o giri della compagnia poco prevedibili'],
 };
-const regLevelOf = x => x.aircraft?.reg ? (/ADS-B/.test(x.aircraft.regSrc || '') ? 'cross' : 'sure') : x.aircraft?.regGuess ? (x.aircraft.regGuess.basis === 'return' ? 'likely' : 'weak') : null;
+// probabilità di un'ipotesi (calcolata in api.js e moltiplicata lungo la catena)
+const guessP = g => g?.p ?? (g?.basis === 'return' ? 0.85 : 0.3);
+const regLevelOf = x => x.aircraft?.reg ? (/ADS-B/.test(x.aircraft.regSrc || '') ? 'cross' : 'sure') : x.aircraft?.regGuess ? (guessP(x.aircraft.regGuess) >= 0.7 ? 'likely' : guessP(x.aircraft.regGuess) >= 0.35 ? 'weak' : 'faint') : null;
 function boardReg(x, dir) {
   const lv = regLevelOf(x);
   if (!lv) return esc(x.airline?.name || '');
@@ -154,7 +157,11 @@ function boardReg(x, dir) {
     const src = x.aircraft.regSrc ? ` · fonte: ${x.aircraft.regSrc}` : '';
     return `<a class="reglink lv-${lv}" href="${regHref(x.aircraft.reg, flightDate(x), ap)}" title="Marche ${REG_LEVELS[lv][0]}${esc(src)}">✈︎ ${esc(x.aircraft.reg)}</a>`;
   }
-  return regGuessLink(x, dir).replace('class="reglink guess"', `class="reglink guess lv-${lv}"`).replace('title="Ipotesi:', `title="Marche ${REG_LEVELS[lv][0]}. Ipotesi:`);
+  const link = regGuessLink(x, dir);
+  if (!link) return esc(x.airline?.name || '');
+  const pct = Math.round(guessP(x.aircraft.regGuess) * 100);
+  return link.replace('class="reglink guess"', `class="reglink guess lv-${lv}"`).replace('title="', `title="Marche ${REG_LEVELS[lv][0]} (probabilità circa ${pct}%). `)
+    .replace(/<\/a>$/, ` <i class="pct">${pct}%</i></a>`);
 }
 const regLegend = () => `<p class="hint reglegend">Marche: ${Object.entries(REG_LEVELS).map(([k, [l, d]]) => `<span class="lv-${k}" title="${esc(d)}">● ${l}</span>`).join(' ')}</p>`;
 function aircraftCard(ac, date, note = '', probable = false) {
@@ -580,9 +587,11 @@ function etaText(f) {
 }
 
 // Affidabilità misurata col test automatico (tools/backtest.mjs) sugli aeroporti che pubblicano le marche
-const guessReliability = r => r.basis === 'return'
-  ? '<b>Stima affidabile</b>: nel nostro test è giusta circa 9 volte su 10.'
-  : '<b>Stima meno sicura</b>: senza un andata e ritorno evidente dipende da come la compagnia fa girare gli aerei; per le low cost nelle loro basi è spesso giusta, negli hub delle compagnie tradizionali molto meno.';
+const guessReliability = r => {
+  const pct = r.p != null ? Math.round(r.p * 100) : null, tail = pct != null ? ` Probabilità stimata: <b>circa ${pct}%</b>${r.chain ? ' (ipotesi costruita su un’altra ipotesi: le probabilità si moltiplicano)' : ''}.` : '';
+  if (r.basis === 'return' && !r.chain) return `<b>Stima affidabile</b>: nel nostro test l'andata e ritorno è giusta circa 9 volte su 10.${tail}`;
+  return `<b>Stima ${pct != null && pct < 35 ? 'molto incerta' : 'meno sicura'}</b>: senza un andata e ritorno evidente dipende da come la compagnia fa girare gli aerei; per le low cost nelle loro basi è spesso giusta, negli hub delle compagnie tradizionali molto meno.${tail}`;
+};
 
 /** Spiegazione della stima dell'aereo in arrivo (ricostruzione della giornata della compagnia). */
 function guessText(f, inbound, r) {

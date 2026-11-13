@@ -865,7 +865,7 @@ export async function getInbound(flight, depth = 0) {
       // prima con quanto già scoperto su questo dispositivo, poi ricostruendo la giornata all'aeroporto di partenza
       if (!p.aircraft?.reg && p.number) {
         const k = knownRegs(depSide.iata).find(x => x.dir === 'A' && x.number === normNum(p.number) && (!x.sched || Math.abs(Date.parse(x.sched) - arrTime(p)) < 3 * 3600e3));
-        let chain = k?.reg ? { reg: k.reg, sure: true } : k?.guess?.reg ? { reg: k.guess.reg, via: k.guess.via } : null;
+        let chain = k?.reg ? { reg: k.reg, sure: true } : k?.guess?.reg ? { reg: k.guess.reg, via: k.guess.via || k.guess.sameAs, p: k.guess.p ?? 0.3 } : null;
         if (!chain && depth === 0 && p.dep?.iata) {
           // orario di partenza del volo precedente: dal tabellone o, se manca, da FlightAware (già chiesto sopra)
           const fl = pf?.flights?.find(l => l.arr?.iata === depSide.iata) || pf?.flights?.[0];
@@ -873,12 +873,13 @@ export async function getInbound(flight, depth = 0) {
           const r2 = q ? await getInbound(q, 1).catch(() => null) : null;
           if (q && q !== p && q.aircraft?.reg) p.aircraft = { ...p.aircraft, reg: q.aircraft.reg };
           if (p.aircraft?.reg) chain = { reg: p.aircraft.reg, sure: true };
-          else if (r2?.inbound?.aircraft?.reg) chain = { reg: r2.inbound.aircraft.reg, via: r2.inbound.number };
+          else if (r2?.inbound?.aircraft?.reg) chain = { reg: r2.inbound.aircraft.reg, via: r2.inbound.number, p: r2.p ?? 0.3 };
         }
-        if (chain && !chain.sure) p.aircraft = { ...p.aircraft, reg: chain.reg, regSrc: chain.via ? `un'altra ipotesi (l'aereo di ${chain.via}, il volo prima ancora)` : 'un’ipotesi già fatta aprendo quel volo', _chain: true };
+        if (chain && !chain.sure) p.aircraft = { ...p.aircraft, reg: chain.reg, regSrc: chain.via ? `un'altra ipotesi (l'aereo di ${chain.via}, il volo prima ancora)` : 'un’ipotesi già fatta aprendo quel volo', _chain: true, p: chain.p ?? 0.3 };
         else if (chain?.sure) p.aircraft = { ...p.aircraft, reg: chain.reg };
       }
-      return { inbound: p, method: 'guess', basis: p.aircraft?._chain ? 'chain' : sim.basis, waitMin: sim.waitMin };
+      const pr = +(basisP(sim.basis, airline) * (p.aircraft?.reg ? regP(p) : 1)).toFixed(3);
+      return { inbound: p, method: 'guess', basis: sim.basis, chain: !!p.aircraft?._chain, p: pr, waitMin: sim.waitMin };
     }
     if (sim?.basis === 'ground') {
       const name = flight.airline?.name ? ` ${flight.airline.name}` : '', ap = airportByIata(depSide.iata)?.city || depSide.iata;
@@ -1156,10 +1157,10 @@ export function rememberFlightReg(f, inbound, r) {
     if (f.aircraft?.reg) return learnRegs([f]);
     if (r?.method !== 'guess' || !inbound?.aircraft?.reg || !f.dep?.iata || !f.dep.sched?.utc) return;
     const m = pget(KREG, 2 * 86400e3) || {};
-    const g = { reg: inbound.aircraft.reg, via: inbound.number, from: inbound.dep?.iata || null, basis: r.basis };
+    const g = { reg: inbound.aircraft.reg, via: inbound.number, from: inbound.dep?.iata || null, basis: r.basis, p: r.p ?? basisP(r.basis, (f.number || '').slice(0, 2)) };
     m[`${f.dep.iata}|D|${normNum(f.number)}|${f.dep.sched.utc.slice(0, 10)}`] = { guess: g, sched: f.dep.sched.utc, t: Date.now() };
     // anche all'arrivo: così il tabellone della destinazione e il volo successivo da lì ereditano l'ipotesi
-    if (f.arr?.iata && f.arr.sched?.utc) m[`${f.arr.iata}|A|${normNum(f.number)}|${f.arr.sched.utc.slice(0, 10)}`] = { guess: { reg: g.reg, sameAs: g.via, basis: r.basis }, sched: f.arr.sched.utc, t: Date.now() };
+    if (f.arr?.iata && f.arr.sched?.utc) m[`${f.arr.iata}|A|${normNum(f.number)}|${f.arr.sched.utc.slice(0, 10)}`] = { guess: { reg: g.reg, sameAs: g.via, basis: r.basis, p: g.p }, sched: f.arr.sched.utc, t: Date.now() };
     pput(KREG, m);
   } catch {}
 }
@@ -1167,6 +1168,21 @@ function knownRegs(iata) {
   const m = pget(KREG, 2 * 86400e3) || {};
   return Object.entries(m).filter(([k]) => k.startsWith(`${iata}|`)).map(([k, v]) => ({ dir: k.split('|')[1], number: k.split('|')[2], reg: v.reg, guess: v.guess, sched: v.sched }));
 }
+// ---------- probabilità delle ipotesi sulle marche ----------
+// Dal test sugli aeroporti che pubblicano le marche (tools/backtest.mjs, 2026-11-12): andata e ritorno ~85%,
+// giri veloci low cost ~40% (altre compagnie ~15%), aerei fermi da ore o dalla notte ~30%. Un'ipotesi costruita
+// su un'altra ipotesi moltiplica le probabilità: più la catena è lunga, più la marca è incerta.
+export const REG_P = { sure: 1, adsb: 0.97, return: 0.85, rotation: 0.4, rotationOther: 0.15, idle: 0.3, overnight: 0.3 };
+export function basisP(basis, airline) {
+  if (basis === 'rotation') return LOWCOST_CODES.includes(airline) ? REG_P.rotation : REG_P.rotationOther;
+  return REG_P[basis] ?? 0.2;
+}
+/** Probabilità che le marche di un volo siano quelle indicate: 1 se certe, altrimenti quella dell'ipotesi. */
+export function regP(f) {
+  if (f?.aircraft?.reg) return /ADS-B/.test(f.aircraft.regSrc || '') ? REG_P.adsb : f.aircraft._chain ? (f.aircraft.p ?? 0.3) : 1;
+  return f?.aircraft?.regGuess?.reg ? (f.aircraft.regGuess.p ?? 0.3) : 0;
+}
+
 function applyFaRegs(data, fa) {
   let n = 0;
   for (const [list, dir, side] of [[data.arrivals, 'A', 'arr'], [data.departures, 'D', 'dep']]) {
@@ -1177,7 +1193,7 @@ function applyFaRegs(data, fa) {
       const m = fa.find(x => x.dir === dir && (x.reg || x.guess) && (nums.includes(normNum(x.number)) || (x.codeshares || []).map(normNum).some(c => nums.includes(c)))
         && (!x.sched || isNaN(t) || Math.abs(Date.parse(x.sched) - t) < 3 * 3600e3));
       if (!m) continue;
-      if (!m.reg) { f.aircraft = { ...f.aircraft, regGuess: m.guess, _pageGuess: true }; continue; }
+      if (!m.reg) { f.aircraft = { ...f.aircraft, regGuess: { ...m.guess, p: m.guess.p ?? 0.3, saved: true } }; continue; }
       f.aircraft = { ...f.aircraft, reg: m.reg, regSrc: 'FlightAware (letta aprendo il volo)' };
       n++;
     }
@@ -1185,39 +1201,77 @@ function applyFaRegs(data, fa) {
   return n;
 }
 
+/**
+ * Ipotesi sulle marche per i voli del tabellone senza aereo indicato, con la loro probabilità.
+ * Ricalcolate a ogni aggiornamento, partendo dai dati certi (tabellone, ADS-B, FlightAware già letto) e propagate
+ * lungo la giornata: partenza per X → ritorno da X (andata e ritorno) → partenza successiva (giro della compagnia)…
+ * Un'ipotesi ricordata dalla pagina di un volo resta solo se nessun dato nuovo la contraddice.
+ */
 export async function guessBoardRegs(iata, data) {
   if (isDemo() || !data?.departures?.length) return 0;
-  const r0 = [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length, n0 = [...data.departures, ...data.arrivals].filter(d => d.aircraft?.regGuess).length;
-  // marche già viste aprendo i voli di questo aeroporto (nessuna richiesta in più)
+  const all = () => [...data.departures, ...data.arrivals];
+  const sig = () => all().map(f => `${f.aircraft?.reg || ''}/${f.aircraft?.regGuess?.reg || ''}/${f.aircraft?.regGuess?.via || f.aircraft?.regGuess?.next || ''}`).join('|');
+  const s0 = sig();
   applyFaRegs(data, knownRegs(iata));
   const day = await dayMovements(iata, Date.now(), data, null);
   const now = Date.now();
-  const airlines = [...new Set(data.departures.filter(d => !d.aircraft?.reg).map(al))];
-  for (const code of airlines) {
-    const mine = data.departures.filter(d => al(d) === code && d.status !== 'Canceled' && !isNaN(depTime(d))).sort((a, b) => depTime(a) - depTime(b));
-    const last = mine[mine.length - 1];
-    if (!last) continue;
-    const sim = simulateRotation({ flight: last, arrivals: day.arrivals, departures: day.departures, now, coverageFrom: day.from });
-    for (const c of sim?.chain || []) {
-      const reg = c.pick?.aircraft?.reg || c.pick?.aircraft?.regGuess?.reg || data.arrivals.find(a => normNum(a.number) === normNum(c.pick?.number) && a.arr?.sched?.utc === c.pick?.arr?.sched?.utc)?.aircraft?.regGuess?.reg;
-      // sul tabellone solo i giri veloci (più affidabili); gli aerei fermi da ore si verificano con la rete ADS-B nella pagina del volo
-      // andata e ritorno (nel test sugli aeroporti con le marche, tools/backtest.mjs, giusta ~9 volte su 10) e giri
-      // veloci solo per le low cost (negli hub delle compagnie tradizionali il giro veloce è quasi sempre sbagliato)
-      // tutte le ipotesi con marche note; il tabellone le colora per affidabilità (andata e ritorno = affidabile)
-      // anche senza marche note: il tabellone mostra almeno da quale volo arriva probabilmente l'aereo
-      if (!c.pick?.number || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
-      // arrivo: l'aereo che arriva è probabilmente quello che poi riparte con questo volo
-      const arr = data.arrivals.find(a => a === c.pick || (normNum(a.number) === normNum(c.pick.number) && a.arr?.sched?.utc === c.pick.arr?.sched?.utc));
-      if (arr && !arr.aircraft?.reg && !arr.aircraft?.regGuess) {
-        const dreg = c.dep.aircraft?.reg || c.dep.aircraft?.regGuess?.reg || null;
-        arr.aircraft = { ...arr.aircraft, regGuess: { reg: dreg, next: c.dep.number, to: c.dep.arr?.iata || null, basis: c.basis, nextDate: (c.dep.dep?.sched?.local || '').slice(0, 10) || null } };
-      }
-      if (c.dep.aircraft?.reg || c.dep.aircraft?._pageGuess) continue;
-      const pd = (c.pick.dep?.sched?.local || c.pick.arr?.sched?.local || '').slice(0, 10) || null;
-      c.dep.aircraft = { ...c.dep.aircraft, regGuess: { reg: reg || null, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis, viaDate: pd } };
-    }
+  const same = (a, b) => a === b || (normNum(a?.number) === normNum(b?.number) && ((a?.arr?.sched?.utc && a.arr.sched.utc === b?.arr?.sched?.utc) || (a?.dep?.sched?.utc && a.dep.sched.utc === b?.dep?.sched?.utc)));
+  const onBoard = x => data.arrivals.find(a => same(a, x)) || data.departures.find(d => same(d, x)) || x;
+  // ipotesi ricordate contraddette dai dati: il volo da cui veniva l'aereo ora ha marche certe diverse → la scarto
+  for (const f of all()) {
+    const g = f.aircraft?.regGuess;
+    if (!g?.saved || f.aircraft?.reg) continue;
+    const src = [...day.arrivals, ...day.departures].find(x => normNum(x.number) === normNum(g.via || g.sameAs) && x.aircraft?.reg);
+    if (src && src.aircraft.reg !== g.reg && !/ipotesi/.test(src.aircraft.regSrc || '')) f.aircraft = { ...f.aircraft, regGuess: null };
   }
-  return [...data.departures, ...data.arrivals].filter(d => d.aircraft?.regGuess).length - n0 + [...data.departures, ...data.arrivals].filter(f => f.aircraft?.reg).length - r0;
+  // un'ipotesi nuova sostituisce la vecchia se è più probabile, o se la vecchia era stata calcolata qui (non ricordata)
+  const put = (f, g) => {
+    if (f.aircraft?.reg) return false;
+    const old = f.aircraft?.regGuess, link = x => x?.via || x?.sameAs || x?.next;
+    if (old?.saved && (old.p ?? 0) >= g.p) return false;
+    if (old && old.reg === g.reg && link(old) === link(g) && Math.abs((old.p ?? 0) - g.p) < 0.01) return false;
+    f.aircraft = { ...f.aircraft, regGuess: g };
+    return true;
+  };
+  // tre passaggi: ogni passaggio porta le marche un anello più avanti nella catena
+  for (let pass = 0; pass < 3; pass++) {
+    let changed = false;
+    // 1) andata e ritorno: arrivo da X della stessa compagnia dopo una partenza per X con marche (certe o ipotizzate)
+    for (const a of data.arrivals) {
+      if (a.aircraft?.reg || !a.dep?.iata) continue;
+      const ta = arrTime(a);
+      const out = data.departures.filter(d => al(d) === al(a) && d.arr?.iata === a.dep.iata && regP(d) > 0 && depTime(d) < ta - 50 * 60e3 && depTime(d) > ta - 9 * 3600e3)
+        .sort((x, y) => (Math.abs(+normNum(x.number).replace(/\D/g, '') - +normNum(a.number).replace(/\D/g, '')) <= 1 ? -1 : 0) - (Math.abs(+normNum(y.number).replace(/\D/g, '') - +normNum(a.number).replace(/\D/g, '')) <= 1 ? -1 : 0) || depTime(y) - depTime(x))[0];
+      if (!out) continue;
+      const reg = out.aircraft?.reg || out.aircraft?.regGuess?.reg;
+      changed = put(a, { reg, sameAs: out.number, to: out.arr.iata, basis: 'return', p: +(REG_P.return * regP(out)).toFixed(3) }) || changed;
+    }
+    // 2) giri della compagnia all'aeroporto: ogni partenza prende l'aereo arrivato prima (con la sua probabilità)
+    const airlines = [...new Set(data.departures.filter(d => !d.aircraft?.reg).map(al))];
+    for (const code of airlines) {
+      const mine = data.departures.filter(d => al(d) === code && d.status !== 'Canceled' && !isNaN(depTime(d))).sort((x, y) => depTime(x) - depTime(y));
+      const last = mine[mine.length - 1];
+      if (!last) continue;
+      const sim = simulateRotation({ flight: last, arrivals: day.arrivals, departures: day.departures, now, coverageFrom: day.from });
+      for (const c of sim?.chain || []) {
+        if (!c.pick?.number || !['return', 'rotation', 'idle', 'overnight'].includes(c.basis)) continue;
+        const pk = onBoard(c.pick), dep = onBoard(c.dep);
+        // l'arrivo eredita solo da monte (ipotesi "stesso aereo di…"), mai dalla partenza che lui stesso alimenta
+        const upstream = pk.aircraft?.reg ? 1 : pk.aircraft?.regGuess?.sameAs || pk.aircraft?.regGuess?.saved ? regP(pk) : 0;
+        const reg = pk.aircraft?.reg || (upstream ? pk.aircraft.regGuess.reg : null);
+        const bp = basisP(c.basis, code);
+        const pd = (c.pick.dep?.sched?.local || c.pick.arr?.sched?.local || '').slice(0, 10) || null;
+        if (!dep.aircraft?.reg) changed = put(dep, { reg: reg || null, via: c.pick.number, from: c.pick.dep?.iata || null, basis: c.basis, viaDate: pd, p: +(bp * (reg ? upstream : 1)).toFixed(3) }) || changed;
+        // arrivo senza ipotesi da monte: mostro almeno con che volo riparte (non entra nei calcoli)
+        if (!pk.aircraft?.reg && !pk.aircraft?.regGuess?.sameAs && !pk.aircraft?.regGuess?.saved && data.arrivals.includes(pk)) {
+          const dreg = dep.aircraft?.reg || dep.aircraft?.regGuess?.reg || null;
+          changed = put(pk, { reg: dreg, next: c.dep.number, to: c.dep.arr?.iata || null, basis: c.basis, nextDate: (c.dep.dep?.sched?.local || '').slice(0, 10) || null, p: +(bp * (dreg ? regP(dep) || 1 : 1)).toFixed(3) }) || changed;
+        }
+      }
+    }
+    if (!changed) break;
+  }
+  return sig() === s0 ? 0 : 1;
 }
 
 /** Rete ADS-B: true se l'aereo (marche) ha volato lontano dall'aeroporto dopo l'istante indicato, false se risulta
