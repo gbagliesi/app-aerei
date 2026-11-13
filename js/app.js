@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.12 · “aggiornato X min fa” per ogni fonte su tabelloni, voli e aerei';
+const APP_VERSION = '4.12.1 · tabellone in ordine di orario stimato: linea “adesso” all’ora attuale';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -390,10 +390,13 @@ function viewHome() {
 // ---------- Tabellone ----------
 // voli già partiti/arrivati nascosti in cima al tabellone (si mostrano con un tocco); ricordato per tabellone
 const showPast = new Set();
-// posizione nel tabellone: orario programmato, ma per un ritardo anomalo l'orario stimato o effettivo
+// posizione nel tabellone: l'orario mostrato (effettivo, altrimenti stimato, altrimenti programmato), così la
+// linea "adesso" cade davvero all'ora attuale anche con voli in ritardo; i cancellati restano all'orario programmato
 function boardMs(x, dir) {
-  const s = dir === 'dep' ? x.dep : x.arr, t = Date.parse(s?.sched?.utc || ''), b = Date.parse((s?.actual || s?.revised)?.utc || '');
-  return b && b - t >= LATE_RED_MIN * 60e3 ? b : t;
+  const s = dir === 'dep' ? x.dep : x.arr, t = Date.parse(s?.sched?.utc || '');
+  if (x.status === 'Canceled') return t;
+  const b = Date.parse((s?.actual || s?.revised)?.utc || '');
+  return b || t;
 }
 function boardTable(list, dir, filter = '', key = '') {
   const f = norm(filter);
@@ -446,7 +449,7 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
       OFFICIAL_AIRPORTS[iata] && list ? boardCounts(list) : '',
       'aggiornamento (scritto sopra il tabellone): il <b>tabellone ufficiale</b> viene riletto dal Worker al massimo ogni 90 secondi; <b>AeroDataBox</b> l’app lo richiede al massimo ogni 15 minuti per risparmiare le unità del piano, quindi può avere qualche minuto in più. L’età diventa arancione quando il dato è più vecchio del solito; “copia di riserva” = il sito ufficiale non risponde e il Worker mostra l’ultima lettura riuscita',
       'sotto lo stato di ogni volo: <b>uff.</b> = solo tabellone ufficiale, <b>uff. + ADB</b> = tabellone ufficiale completato da AeroDataBox, <b>ADB</b> = solo AeroDataBox',
-      'orari nell’ora locale dell’aeroporto; in arancione l’orario stimato o effettivo se diverso di almeno 5 minuti, in <b>rosso</b> con il ritardo indicato se è di un’ora o più: questi voli sono messi nel tabellone al nuovo orario e restano finché non sono partiti/arrivati da più di 2 ore',
+      'orari nell’ora locale dell’aeroporto; in arancione l’orario stimato o effettivo se diverso di almeno 5 minuti, in <b>rosso</b> con il ritardo indicato se è di un’ora o più: i voli in ritardo restano finché non sono partiti/arrivati da più di 2 ore; il tabellone è in ordine di orario stimato o effettivo, così la linea “adesso” cade all’ora attuale',
       list?.some(x => x._seenAt) ? 'voli con “dato di … min fa”: molto in ritardo e non più nei dati ricevuti, tenuti in questo browser con l’ultimo aggiornamento' : '',
       list?.some(x => x.aircraft?.reg) ? 'marche degli aerei (✈︎): tabellone ufficiale o AeroDataBox' : '',
       list?.some(x => x.aircraft?.regGuess && !x.aircraft?.reg) ? 'marche con ≈: <b>ipotesi</b> dell’app, ricostruendo i giri degli aerei della compagnia in questo aeroporto (la compagnia non le ha ancora indicate)' : '',
