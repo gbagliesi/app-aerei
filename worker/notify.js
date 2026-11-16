@@ -275,7 +275,11 @@ export class Watcher {
     const k = `${number}:${date}`;
     if (!adbCache.has(k)) adbCache.set(k, (async () => {
       w.adbCalls++;
-      const r = await fetch(`https://${ADB_HOST}/flights/number/${encodeURIComponent(number)}/${date}?withAircraftImage=false&withLocation=false`, { headers: { 'X-RapidAPI-Key': key, 'X-RapidAPI-Host': ADB_HOST }, signal: AbortSignal.timeout(15000) });
+      // stessa cache AeroDataBox dell'app (adbcache.js): se l'app ha appena chiesto lo stesso volo non si consuma nulla
+      const path = `/flights/number/${encodeURIComponent(number)}/${date}?withAircraftImage=false&withLocation=false`;
+      const r = this.env.SELF
+        ? await this.env.SELF.fetch(`https://self/adb?ttl=${ADB_EVERY_MS / 1000 - 30}&path=${encodeURIComponent(path)}`, { headers: { 'X-ADB-Key': key }, signal: AbortSignal.timeout(20000) })
+        : await fetch(`https://${ADB_HOST}${path}`, { headers: { 'X-RapidAPI-Key': key, 'X-RapidAPI-Host': ADB_HOST }, signal: AbortSignal.timeout(15000) });
       if (r.status === 204) return [];
       if (!r.ok) { w.lastError = `AeroDataBox ${r.status}`; if (r.status === 429 || r.status === 403) w.adbCalls = ADB_MAX; return null; }
       return r.json();

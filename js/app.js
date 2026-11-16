@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.13.1 · aerei arrivati insieme: probabilità divisa e alternativa mostrata';
+const APP_VERSION = '4.14 · cache comune AeroDataBox nel Worker; tabelloni troppo corti scartati';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];

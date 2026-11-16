@@ -27,8 +27,8 @@ const BKEY = 'aerei.adbBlocked';
 function pget(k, ttl) {
   try { const x = JSON.parse(localStorage.getItem(PKEY + k)); return x && Date.now() - x.t < ttl ? x.v : undefined; } catch { return undefined; }
 }
-function pput(k, v) {
-  const val = JSON.stringify({ t: Date.now(), v });
+function pput(k, v, t = Date.now()) {
+  const val = JSON.stringify({ t, v });
   for (let i = 0; i < 20; i++) {
     try { localStorage.setItem(PKEY + k, val); return; } catch {
       // spazio finito: elimino la voce più vecchia e riprovo
@@ -63,20 +63,39 @@ function pgetT(k, ttl) {
 async function adbCached(path, ttlMs) {
   const hit = pgetT(path, ttlMs);
   if (hit !== undefined) { adbAt.set(path, hit.t); return hit.v; }
-  const v = await adb(path);
-  pput(path, v);
-  adbAt.set(path, Date.now());
+  const meta = {};
+  const v = await adb(path, undefined, false, ttlMs / 1000, meta);
+  // meta.at: quando AeroDataBox è stato letto davvero (anche da un altro dispositivo, tramite la cache del Worker)
+  const at = meta.at || Date.now();
+  pput(path, v, at);
+  adbAt.set(path, at);
   return v;
 }
 
-async function adb(path, key = getSettings().apiKey, force = false) {
+// Con il Worker impostato, le richieste ad AeroDataBox passano dalla sua cache condivisa (worker/adbcache.js):
+// telefono, computer e notifiche consumano le unità del piano una volta sola per la stessa richiesta.
+// Se il Worker non risponde (o non ha ancora /adb) chiamo AeroDataBox direttamente.
+async function adbFetch(path, apiKey, ttlS, meta) {
+  const base = (getSettings().workerUrl || '').trim().replace(/\/+$/, '');
+  if (base && ttlS) {
+    try {
+      const r = await fetch(`${base}/adb?ttl=${Math.round(ttlS)}&path=${encodeURIComponent(path)}`, { headers: { 'X-ADB-Key': apiKey } });
+      // solo le risposte arrivate davvero da AeroDataBox hanno X-Fetched-At; le altre (Worker vecchio, errore del Worker) no
+      const at = +r.headers.get('X-Fetched-At');
+      if (at) { if (meta) meta.at = at; return r; }
+    } catch { /* Worker non raggiungibile: vado diretto */ }
+  }
+  return fetch(`https://${ADB_HOST}${path}`, { headers: { 'X-RapidAPI-Key': apiKey, 'X-RapidAPI-Host': ADB_HOST } });
+}
+
+async function adb(path, key = getSettings().apiKey, force = false, ttlS = 0, meta = null) {
   const apiKey = (key || '').trim();
   if (!apiKey) throw new Error('Manca la chiave API AeroDataBox: aggiungila in Impostazioni.');
   const blk = !force && adbBlocked();
   if (blk) throw new Error(blk.msg);
   let res;
   try {
-    res = await fetch(`https://${ADB_HOST}${path}`, { headers: { 'X-RapidAPI-Key': apiKey, 'X-RapidAPI-Host': ADB_HOST } });
+    res = await adbFetch(path, apiKey, ttlS, meta);
   } catch { throw new Error('Impossibile contattare AeroDataBox: controlla la connessione.'); }
   if (res.status === 204) return null;
   if (res.ok) return res.json();
@@ -347,7 +366,7 @@ export async function testWorker(url) {
 // ---------- API pubblica ----------
 
 /** Tabellone: { departures: [...], arrivals: [...] } da 2h fa a 10h avanti.
- *  AeroDataBox si aggiorna al massimo ogni 15 minuti; gate, orari e stato ufficiali ogni 90 secondi.
+ *  AeroDataBox si aggiorna al massimo ogni 15 minuti (30 dove c'è il tabellone ufficiale); gate, orari e stato ufficiali ogni 90 secondi.
  *  Se AeroDataBox non risponde (es. quota finita) e l'aeroporto ha il tabellone ufficiale, uso solo quello. */
 export async function getBoard(iata) {
   iata = iata.toUpperCase();
@@ -357,7 +376,8 @@ export async function getBoard(iata) {
   const adbPath = `/flights/airports/iata/${iata}?${q}`;
   try {
     base = await cached(`board:${iata}`, 60e3, async () => {
-      const data = await adbCached(adbPath, 15 * 60e3);
+      // con il tabellone ufficiale (orari, gate e stato ogni 90 s) AeroDataBox serve solo a completare: basta ogni 30 minuti
+      const data = await adbCached(adbPath, (OFFICIAL_AIRPORTS[iata] ? 30 : 15) * 60e3);
       const own = { iata, ...(airportByIata(iata) || {}) };
       return { departures: (data?.departures || []).map(f => normFlight(f, 'dep', own)), arrivals: (data?.arrivals || []).map(f => normFlight(f, 'arr', own)) };
     });

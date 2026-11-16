@@ -15,6 +15,7 @@ import { Watcher, setBoardFn } from './notify.js';
 import { handleFa } from './aeroapi.js';
 import { saveSnap, handleSnap, cronSnap, cronList } from './snapshots.js';
 import { handleSeen, kickAdsb, REG_BOARDS } from './adsbwatch.js';
+import { handleAdb } from './adbcache.js';
 export { Watcher };
 export const _readBoard = (a, n, env, log) => readBoard(a, n, env, log); // per i test locali
 
@@ -57,7 +58,49 @@ const isSupported = a => !!(TOSCANA[a] || PUGLIA.includes(a) || ADR[a] || OTHER[
 async function readBoard(airport, nature, env, log = []) {
   return OTHER[airport] ? OTHER[airport](nature, log, env) : airport === 'GVA' ? geneva(nature, log) : ADR[airport] ? adr(airport, nature, log) : PUGLIA.includes(airport) ? puglia(airport, nature, log) : toscana(airport, nature, log);
 }
-setBoardFn((a, n, env) => (isSupported(a) ? readBoard(a, n, env) : null));
+setBoardFn((a, n, env) => (isSupported(a) ? boardForCron(a, n, env).catch(() => null) : null));
+
+// ---------- cache dei tabelloni ufficiali, comune a tutti ----------
+// App (da qualsiasi dispositivo), notifiche e controlli orari passano tutti da qui: un tabellone letto da meno di
+// CACHE_SECONDS (90 s) si riusa, così l'aeroporto riceve al massimo una richiesta ogni 90 secondi per tabellone
+// e nessuno perde aggiornamenti più vecchi di un minuto e mezzo. La cache di Cloudflare è per data center.
+async function boardCached(airport, nature, env, ctx) {
+  const cacheKey = new Request(`https://cache.local/board/${airport}/${nature}`);
+  const staleKey = new Request(`https://cache.local/stale/${airport}/${nature}`);
+  const hit = await caches.default.match(cacheKey);
+  if (hit) return { body: await hit.json(), cache: 'HIT' };
+  const later = p => (ctx ? ctx.waitUntil(p) : p);
+  try {
+    const flights = await readBoard(airport, nature, env, []);
+    const body = { airport, nature, fetchedAt: new Date().toISOString(), count: flights.length, flights };
+    // Lista molto più corta di quella letta poco fa (es. Bari il 16/11: per qualche minuto il sito ha mandato
+    // pochi voli): non è credibile, mostro la lista precedente e non salvo quella nuova. Se dopo 20 minuti il
+    // sito manda ancora la lista corta (es. cambio di giornata), la accetto.
+    const prev = await caches.default.match(staleKey);
+    if (prev) {
+      const old = await prev.json();
+      if (old.count >= 10 && flights.length < old.count * 0.5 && Date.now() - Date.parse(old.fetchedAt) < 20 * 60e3)
+        return { body: { ...old, partial: { count: flights.length, at: body.fetchedAt } }, cache: 'PREVIOUS', partial: true };
+    }
+    if (flights.length) await later(Promise.all([
+      caches.default.put(cacheKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${CACHE_SECONDS}` } })),
+      // copia di riserva per 3 ore: si usa solo se il sito dell'aeroporto non risponde
+      caches.default.put(staleKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': 'max-age=10800' } })),
+      saveSnap(env, airport, nature, flights).catch(() => {}),
+    ]));
+    return { body, cache: 'MISS' };
+  } catch (e) {
+    const old = await caches.default.match(staleKey);
+    if (old) return { body: { ...(await old.json()), stale: true }, cache: 'STALE', stale: true };
+    return { error: String(e.message || e) };
+  }
+}
+/** Per i controlli orari: tabellone dalla cache comune; errore se non c'è una lettura nuova e affidabile. */
+async function boardForCron(airport, nature, env) {
+  const r = await boardCached(airport, nature, env, null);
+  if (r.error || r.stale || r.partial) throw new Error(r.error || 'lista non affidabile');
+  return r.body.flights;
+}
 
 export default {
   // ogni ora: aggiorna la copia dei tabelloni degli aeroporti consultati negli ultimi giorni (snapshots.js)
@@ -65,9 +108,9 @@ export default {
   // marche (metà per volta, per restare nel limite di richieste di un cron), per incrociarle sugli altri aeroporti
   async scheduled(event, env, ctx) {
     const half = Math.ceil(REG_BOARDS.length / 2);
-    if (event.cron === '32 * * * *') ctx.waitUntil(cronList(env, readBoard, REG_BOARDS.slice(0, half)));
-    else if (event.cron === '47 * * * *') ctx.waitUntil(cronList(env, readBoard, REG_BOARDS.slice(half)));
-    else ctx.waitUntil(Promise.all([cronSnap(env, readBoard), kickAdsb(env).catch(() => {})]));
+    if (event.cron === '32 * * * *') ctx.waitUntil(cronList(env, boardForCron, REG_BOARDS.slice(0, half)));
+    else if (event.cron === '47 * * * *') ctx.waitUntil(cronList(env, boardForCron, REG_BOARDS.slice(half)));
+    else ctx.waitUntil(Promise.all([cronSnap(env, boardForCron), kickAdsb(env).catch(() => {})]));
   },
 
   async fetch(request, env, ctx) {
@@ -77,7 +120,7 @@ export default {
     const cors = {
       'Access-Control-Allow-Origin': allowed.includes(origin) ? origin : allowed[0],
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, X-ADB-Key',
       'Vary': 'Origin',
     };
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
@@ -94,6 +137,7 @@ export default {
     }
     if (url.pathname === '/fa' || url.pathname === '/fa/usage') return handleFa(url, env, ctx, json);
     if (url.pathname === '/snap') return handleSnap(url, env, json);
+    if (url.pathname === '/adb') return handleAdb(request, url, ctx, cors);
     if (url.pathname === '/seen' || url.pathname.startsWith('/seen/')) return handleSeen(url, env, json, request);
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA', ...Object.keys(OTHER)] });
     // Prova diagnostica: una richiesta normale (nessun aggiramento) verso i siti degli aeroporti non ancora supportati
@@ -145,32 +189,16 @@ export default {
     if (!TOSCANA[airport] && !PUGLIA.includes(airport) && !ADR[airport] && !OTHER[airport] && airport !== 'GVA') return json({ error: `aeroporto ${airport} non supportato` }, 400);
 
     const debug = url.pathname === '/debug';
-    const cacheKey = new Request(`https://cache.local/board/${airport}/${nature}`);
-    const staleKey = new Request(`https://cache.local/stale/${airport}/${nature}`);
-    if (!debug) {
-      const hit = await caches.default.match(cacheKey);
-      if (hit) return json(await hit.json(), 200, { 'X-Cache': 'HIT' });
+    if (debug) {
+      const log = [];
+      try {
+        const flights = await readBoard(airport, nature, env, log);
+        return json({ airport, nature, fetchedAt: new Date().toISOString(), count: flights.length, flights: flights.slice(0, 5), log });
+      } catch (e) { return json({ error: String(e.message || e), log }, 502); }
     }
-
-    const log = [];
-    try {
-      const flights = await readBoard(airport, nature, env, log);
-      const body = { airport, nature, fetchedAt: new Date().toISOString(), count: flights.length, flights };
-      if (debug) return json({ ...body, flights: flights.slice(0, 5), log });
-      if (flights.length) ctx.waitUntil(Promise.all([
-        caches.default.put(cacheKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${CACHE_SECONDS}` } })),
-        // copia di riserva per 3 ore: si usa solo se il sito dell'aeroporto non risponde
-        caches.default.put(staleKey, new Response(JSON.stringify(body), { headers: { 'Cache-Control': 'max-age=10800' } })),
-        saveSnap(env, airport, nature, flights).catch(() => {}),
-      ]));
-      return json(body);
-    } catch (e) {
-      if (!debug) {
-        const old = await caches.default.match(staleKey);
-        if (old) return json({ ...(await old.json()), stale: true }, 200, { 'X-Cache': 'STALE' });
-      }
-      return json({ error: String(e.message || e), log: debug ? log : undefined }, 502);
-    }
+    const r = await boardCached(airport, nature, env, ctx);
+    if (r.error) return json({ error: r.error }, 502);
+    return json(r.body, 200, { 'X-Cache': r.cache });
   },
 };
 
