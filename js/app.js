@@ -1,4 +1,4 @@
-import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getRegHistory, getTrace, hexOfReg, rememberFlightReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo, boardAge } from './api.js';
+import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAirportInfo, isoDate, testKey, getFlightsByReg, liveByReg, testWorker, officialByReg, getRegHistory, getTrace, hexOfReg, rememberFlightReg, OFFICIAL_AIRPORTS, OFFICIAL_SOURCES, officialInfo, boardAge, boardContext } from './api.js';
 import { searchAirports, airportByIata, AIRPORTS, norm, airportSearchText } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites, reorderFavorites, favKey } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.14 · cache comune AeroDataBox nel Worker; tabelloni troppo corti scartati';
+const APP_VERSION = '4.15 · tabellone vuoto: ultimo e prossimo volo, voli di domani non ancora pubblicati';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -408,12 +408,30 @@ function boardMs(x, dir) {
   const b = Date.parse((s?.actual || s?.revised)?.utc || '');
   return b || t;
 }
-function boardTable(list, dir, filter = '', key = '') {
+// tabellone vuoto: invece del solo "Nessun volo" dico qual è stato l'ultimo volo, qual è il prossimo (se il
+// tabellone ufficiale lo ha già) e perché i voli di domani possono mancare; un pulsante mostra gli ultimi voli
+function emptyBoardHtml(dir, ctx, degraded) {
+  const base = 'Nessun volo nella finestra da 2 ore fa a 10 ore avanti.';
+  if (!ctx) return `<p class="hint">${base}</p>`;
+  const dep = dir === 'dep', other = f => (dep ? f.arr : f.dep), side = f => (dep ? f.dep : f.arr);
+  const dayWord = d => { const n = Math.round((Date.parse(d) - Date.parse(ctx.today)) / 86400e3); return n === 0 ? 'oggi' : n === -1 ? 'ieri' : n === 1 ? 'domani' : `il ${d.slice(8, 10)}/${d.slice(5, 7)}`; };
+  const when = f => `${dayWord(side(f).sched.local.slice(0, 10))} alle ${fmtLocalLike(boardMs(f, dir), side(f).sched)}`;
+  const what = f => `${esc(f.number)} ${dep ? 'per' : 'da'} ${esc(other(f)?.name || other(f)?.iata || '?')}${f.status === 'Canceled' ? ' (cancellato)' : ''}`;
+  const lines = [base];
+  const last = ctx.earlier.at(-1), next = ctx.later[0];
+  if (last) lines.push(`${dep ? 'Ultima partenza' : 'Ultimo arrivo'}: <b>${when(last)}</b>, ${what(last)}.`);
+  if (next) lines.push(`${dep ? 'Prossima partenza' : 'Prossimo arrivo'}: <b>${when(next)}</b>, ${what(next)}.`);
+  else if (ctx.lastDay && ctx.lastDay <= ctx.today) lines.push(`Il tabellone ufficiale dell’aeroporto non ha ancora i voli di domani (molti aeroporti li pubblicano solo dopo mezzanotte)${degraded ? '; AeroDataBox, che di solito li aggiunge, ora non è disponibile' : ''}.`);
+  const n = Math.min(6, ctx.earlier.length);
+  const btn = n ? `<button class="pastbtn" type="button" data-showearlier="1">▲ Mostra ${n === 1 ? `l’ultimo volo ${dep ? 'già partito' : 'già arrivato'}` : `gli ultimi ${n} voli ${dep ? 'già partiti' : 'già arrivati'}`}</button>` : '';
+  return `<p class="hint">${lines.join('<br>')}</p>${btn}`;
+}
+function boardTable(list, dir, filter = '', key = '', ctx = null, degraded = null) {
   const f = norm(filter);
   list = list.map((x, i) => [x, boardMs(x, dir) || 0, i]).sort((a, b) => a[1] - b[1] || a[2] - b[2]).map(a => a[0]);
   // il filtro trova anche la città in italiano, inglese o lingua locale (es. "Londra" per "London Gatwick")
   let rows = list.filter(x => !f || [x.number, ...(x.codeshares || []), x.airline?.name, x.dep?.iata, x.dep?.name, x.arr?.iata, x.arr?.name, airportSearchText(x.dep?.iata), airportSearchText(x.arr?.iata)].some(v => norm(v).includes(f)));
-  if (!rows.length) return `<p class="hint">Nessun volo${f ? ' corrisponde al filtro' : ' nella finestra da 2 ore fa a 10 ore avanti'}.</p>`;
+  if (!rows.length) return f ? '<p class="hint">Nessun volo corrisponde al filtro.</p>' : emptyBoardHtml(dir, ctx, degraded);
   const now = Date.now();
   let marked = false, pastBtn = '';
   if (!f && key && !showPast.has(key)) {
@@ -445,7 +463,7 @@ function boardTable(list, dir, filter = '', key = '') {
 async function viewAirport(iata, dir = 'dep', onlyTo = null) {
   iata = iata.toUpperCase();
   const info = airportByIata(iata) || await getAirportInfo(iata) || { iata, name: iata };
-  let data = null, filter = '', updatedHtml = '', updatedTitle = '';
+  let data = null, filter = '', updatedHtml = '', updatedTitle = '', emptyCtx = null;
   const isRoute = !!onlyTo;
   const bdir = isRoute ? 'dep' : dir;
   const bkey = isRoute ? `route:${iata}-${onlyTo}` : `${iata}:${dir}`;
@@ -484,18 +502,28 @@ async function viewAirport(iata, dir = 'dep', onlyTo = null) {
       </div>`}
       ${siteLink(iata, bdir)}
       ${data ? sourcesNote(iata, bdir, list, data.degraded, data.adbAt) : ''}
-      <div id="board">${data ? boardTable(filtered, bdir, filter, bkey) : '<div class="loading">Caricamento tabellone…</div>'}</div>
+      <div id="board">${data ? boardTable(filtered, bdir, filter, bkey, emptyCtx, data.degraded) : '<div class="loading">Caricamento tabellone…</div>'}</div>
       ${data ? sources(list) : ''}`;
     bindStars($app, render);
     document.getElementById('refresh').onclick = load;
     const board = document.getElementById('board');
-    board.onclick = e => { const b = e.target.closest('[data-showpast]'); if (b) { showPast.add(b.dataset.showpast); board.innerHTML = boardTable(filtered, bdir, filter, bkey); } };
+    board.onclick = e => {
+      if (e.target.closest('[data-showearlier]') && emptyCtx) { board.innerHTML = boardTable(emptyCtx.earlier.slice(-6), bdir, '', ''); return; }
+      const b = e.target.closest('[data-showpast]'); if (b) { showPast.add(b.dataset.showpast); board.innerHTML = boardTable(filtered, bdir, filter, bkey, emptyCtx, data?.degraded); }
+    };
     const fi = document.getElementById('filter');
-    if (fi) fi.oninput = () => { filter = fi.value; board.innerHTML = boardTable(filtered, bdir, filter, bkey); };
+    if (fi) fi.oninput = () => { filter = fi.value; board.innerHTML = boardTable(filtered, bdir, filter, bkey, emptyCtx, data?.degraded); };
   };
   const load = async () => {
     try {
       data = await getBoard(iata);
+      // finestra vuota: ultimi e prossimi voli dal tabellone ufficiale completo (per la tratta, solo quella destinazione)
+      const shown = dir === 'dep' || isRoute ? data.departures : data.arrivals;
+      emptyCtx = null;
+      if (OFFICIAL_AIRPORTS[iata] && !(isRoute ? shown.filter(x => x.arr?.iata === onlyTo) : shown).length) {
+        emptyCtx = await boardContext(iata, bdir === 'dep' ? 'D' : 'A').catch(() => null);
+        if (emptyCtx && isRoute) for (const k of ['earlier', 'later']) emptyCtx[k] = emptyCtx[k].filter(x => x.arr?.iata === onlyTo);
+      }
       const mine = data;
       // marche ipotizzate per le partenze senza aereo (in sottofondo, poi ridisegno il tabellone)
       guessBoardRegs(iata, data).then(n => { if (n && data === mine && document.getElementById('board')) render(); }).catch(() => {});

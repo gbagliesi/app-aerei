@@ -404,7 +404,9 @@ export async function getBoard(iata) {
         [d, a] = await Promise.all([snap('D'), snap('A')]);
         if (d.length || a.length) degraded += ' · il sito ufficiale non risponde ora: mostro l’ultima copia salvata dal Worker';
       }
-      if (!d.length && !a.length) {
+      // il sito ha risposto con dei voli, ma nessuno nella finestra (es. di notte): tabellone vuoto, non un errore
+      const answered = ['D', 'A'].some(n => officialInfo[`${iata}:${n}`]?.count > 0);
+      if (!d.length && !a.length && !answered) {
         const why = officialInfo[`${iata}:D`]?.error || officialInfo[`${iata}:A`]?.error || 'nessun volo ricevuto';
         throw new Error(`${degraded} · Il sito ufficiale di questo aeroporto non ha risposto (${why}): riprova fra un minuto.`);
       }
@@ -519,6 +521,24 @@ async function officialOnly(iata, nature, window = true) {
   if (window) flights = flights.filter(f => inWindow(f));
   if (window) officialInfo[k] = { count: off.length, matched: 0, added: flights.length, only: true };
   return flights.sort((a, b) => Date.parse((a.dep.sched || a.arr.sched).utc) - Date.parse((b.dep.sched || b.arr.sched).utc));
+}
+
+/** Tabellone vuoto nella finestra (da 2 ore fa a 10 ore avanti): dal tabellone ufficiale completo (già in cache)
+ *  gli ultimi voli prima della finestra, il primo dopo, e fin dove arriva il tabellone ufficiale. */
+export async function boardContext(iata, nature) {
+  iata = iata.toUpperCase();
+  const tz = OFFICIAL_AIRPORTS[iata];
+  if (isDemo() || !tz || !(getSettings().workerUrl || '').trim()) return null;
+  const all = await officialOnly(iata, nature, false);
+  const k = nature === 'D' ? 'dep' : 'arr', now = Date.now();
+  const t = f => effMs(f[k]) || Date.parse(f[k].sched.utc);
+  const sorted = all.filter(f => t(f)).sort((a, b) => t(a) - t(b));
+  return {
+    earlier: sorted.filter(f => t(f) <= now - 2 * 3600e3),
+    later: sorted.filter(f => t(f) >= now + 10 * 3600e3),
+    lastDay: all.map(f => f[k].sched.local.slice(0, 10)).sort().pop() || null,
+    today: localDay(now, tz),
+  };
 }
 
 // ---------- FlightAware AeroAPI via Worker (riserva quando AeroDataBox non risponde) ----------
