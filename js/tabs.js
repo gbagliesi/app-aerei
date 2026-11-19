@@ -1,5 +1,6 @@
 // Tab in cima alla pagina: ogni aeroporto, volo, tratta o aereo aperto resta in un tab per tornarci al volo.
 // Desktop: barra di tab cliccabili. Telefono: stessa barra (scorrevole) + scorrimento orizzontale col dito sul contenuto.
+// I tab si riordinano trascinandoli (col dito dopo una pressione lunga); l'ordine resta salvato.
 import { airportByIata } from './airports.js';
 
 const TKEY = 'aerei.tabs.v1';
@@ -144,6 +145,7 @@ const $bar = () => document.getElementById('tabbar');
 function renderBar() {
   const bar = $bar();
   if (!bar) return;
+  if (drag) { drag.stale = true; return; }   // durante un trascinamento ridisegno alla fine
   const home = `<a class="tab home ${active === 'home' ? 'active' : ''}" href="#/" data-key="home" title="Preferiti e ricerca"><span class="tt">★</span><span class="lbl">Preferiti</span></a>`;
   bar.innerHTML = home + tabs.map(t => `<a class="tab k-${esc(t.kind)} ${t.key === active ? 'active' : ''}" href="${esc(t.hash)}" data-key="${esc(t.key)}" title="${esc([t.title, t.city, t.sub].filter(Boolean).join(' · '))}">
       ${t.dot ? `<i class="dot ${esc(t.dot)}"></i>` : ''}<span class="tt">${esc(t.title)}</span>${t.sub ? `<small>${esc(t.sub)}</small>` : ''}
@@ -159,11 +161,15 @@ function renderBar() {
 }
 
 function maybeHint() {
-  if (!tabs.length || !matchMedia('(pointer: coarse)').matches || localStorage.getItem('aerei.tabs.hint')) return;
+  if (tabs.length < 2 || localStorage.getItem('aerei.tabs.hint2')) return;
+  localStorage.setItem('aerei.tabs.hint2', '1');
+  const touch = matchMedia('(pointer: coarse)').matches;
+  const first = touch && !localStorage.getItem('aerei.tabs.hint');
   localStorage.setItem('aerei.tabs.hint', '1');
   const t = document.createElement('div');
   t.className = 'toast';
-  t.textContent = 'Nuovo: le pagine aperte restano nei tab in alto. Scorri col dito a destra o a sinistra per passare da un tab all’altro.';
+  t.textContent = (first ? 'Le pagine aperte restano nei tab in alto: scorri col dito a destra o a sinistra per passare da un tab all’altro. ' : 'Nuovo: ')
+    + (touch ? 'per spostare un tab tienilo premuto e trascinalo.' : 'puoi spostare i tab in alto trascinandoli col mouse.');
   document.body.appendChild(t);
   setTimeout(() => t.classList.add('out'), 5500);
   setTimeout(() => t.remove(), 6200);
@@ -179,7 +185,126 @@ export function initTabs(appEl) {
   // clic centrale su un tab: chiude (come nei browser)
   bar.addEventListener('auxclick', e => { const t = e.target.closest('.tab[data-key]'); if (e.button === 1 && t && t.dataset.key !== 'home') { e.preventDefault(); closeTab(t.dataset.key); } });
   initSwipe(appEl);
+  initDrag(bar);
   renderBar();
+}
+
+// ---------- riordino dei tab trascinandoli ----------
+// mouse/penna: si trascina subito (oltre 6 px); dito: pressione lunga (~0,35 s) poi si trascina,
+// così lo scorrimento normale della barra col dito resta com'è. Il tab "Preferiti" resta sempre primo.
+let drag = null;
+function initDrag(bar) {
+  let press = null;   // pressione in attesa di diventare trascinamento
+  const tabsEls = () => [...bar.querySelectorAll('.tab[data-key]:not(.home)')];
+  const begin = (el, x) => {
+    const r = el.getBoundingClientRect();
+    drag = { el, gx: x - r.left, moved: false, stale: false, x };
+    el.classList.add('dragging');
+    bar.classList.add('reordering');
+    navigator.vibrate?.(10);
+    follow(x);
+  };
+  const follow = x => {
+    const el = drag.el;
+    el.style.transform = '';
+    const r = el.getBoundingClientRect();
+    el.style.transform = `translateX(${x - drag.gx - r.left}px)`;
+  };
+  const place = x => {
+    const el = drag.el, others = tabsEls().filter(o => o !== el);
+    // nuovo posto: prima del primo tab la cui metà è a destra del puntatore, altrimenti in fondo
+    const t = others.find(o => { const r = o.getBoundingClientRect(); return x < r.left + r.width / 2; }) || null;
+    const all = tabsEls(), cur = all.indexOf(el), want = t ? all.indexOf(t) - (all.indexOf(t) > cur ? 1 : 0) : others.length;
+    if (want === cur) return;
+    const before = new Map(others.map(o => [o, o.getBoundingClientRect().left]));
+    if (t) t.before(el); else others[others.length - 1]?.after(el);
+    drag.moved = true;
+    others.forEach(o => {
+      const dx = before.get(o) - o.getBoundingClientRect().left;
+      if (!dx) return;
+      o.style.transition = 'none'; o.style.transform = `translateX(${dx}px)`;
+      o.getBoundingClientRect();
+      o.style.transition = 'transform .16s ease'; o.style.transform = '';
+    });
+  };
+  // vicino ai bordi della barra (su telefono scorre di lato) la faccio scorrere
+  let raf = 0;
+  const edgeScroll = () => {
+    raf = 0;
+    if (!drag) return;
+    const r = bar.getBoundingClientRect(), x = drag.x;
+    const v = x < r.left + 30 ? -8 : x > r.right - 30 ? 8 : 0;
+    if (!v) return;
+    bar.scrollLeft += v;
+    place(x); follow(x);
+    raf = requestAnimationFrame(edgeScroll);
+  };
+  const moveTo = x => {
+    if (!drag) return;
+    drag.x = x;
+    place(x); follow(x);
+    if (!raf) raf = requestAnimationFrame(edgeScroll);
+  };
+  const finish = () => {
+    if (!drag) return;
+    const { el, moved, stale } = drag;
+    drag = null;
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    bar.classList.remove('reordering');
+    if (moved) {
+      const keys = tabsEls().map(o => o.dataset.key);
+      tabs.sort((a, b) => keys.indexOf(a.key) - keys.indexOf(b.key));
+      save();
+      // il clic che segue il rilascio non deve aprire il tab
+      const eat = e => { e.preventDefault(); e.stopPropagation(); };
+      bar.addEventListener('click', eat, true);
+      setTimeout(() => bar.removeEventListener('click', eat, true), 400);
+    }
+    el.style.transition = 'transform .14s ease'; el.style.transform = '';
+    setTimeout(() => { el.classList.remove('dragging'); el.style.transition = ''; if (moved || stale) renderBar(); }, 150);
+  };
+  const cancelPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
+
+  // mouse e penna
+  bar.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'touch' || e.button !== 0 || drag) return;
+    const el = e.target.closest('.tab[data-key]:not(.home)');
+    if (!el || e.target.closest('.x')) return;
+    press = { el, x: e.clientX, id: e.pointerId };
+  });
+  window.addEventListener('pointermove', e => {
+    if (e.pointerType === 'touch') return;
+    if (press && !drag && e.pointerId === press.id && Math.abs(e.clientX - press.x) > 6) {
+      const p = press; press = null;
+      begin(p.el, p.x);
+    }
+    if (drag) { e.preventDefault(); moveTo(e.clientX); }
+  });
+  window.addEventListener('pointerup', e => { if (e.pointerType === 'touch') return; press = null; finish(); });
+  bar.addEventListener('dragstart', e => e.preventDefault());   // niente trascinamento nativo del link
+
+  // dito: pressione lunga, poi trascinamento (Touch Events: su Safari iOS i pointer vengono annullati dallo scorrimento)
+  bar.addEventListener('contextmenu', e => { if (e.target.closest('.tab[data-key]:not(.home)')) e.preventDefault(); });
+  bar.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1 || drag) return;
+    const el = e.target.closest('.tab[data-key]:not(.home)');
+    if (!el || e.target.closest('.x')) return;
+    const x = e.touches[0].clientX, y = e.touches[0].clientY;
+    cancelPress();
+    press = { el, x, y, timer: setTimeout(() => { const p = press; press = null; if (p) begin(p.el, p.x); }, 350) };
+  }, { passive: true });
+  bar.addEventListener('touchmove', e => {
+    if (drag) { e.preventDefault(); moveTo(e.touches[0].clientX); return; }
+    if (press && press.timer) {
+      const t = e.touches[0];
+      if (Math.abs(t.clientX - press.x) > 8 || Math.abs(t.clientY - press.y) > 8) cancelPress();   // sta scorrendo la barra
+    }
+  }, { passive: false });
+  bar.addEventListener('touchend', e => {
+    cancelPress();
+    if (drag) { e.preventDefault(); finish(); }
+  });
+  bar.addEventListener('touchcancel', () => { cancelPress(); finish(); });
 }
 
 // ---------- scorrimento orizzontale col dito (telefono e tablet) ----------

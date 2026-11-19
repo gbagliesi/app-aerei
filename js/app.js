@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.15 · tabellone vuoto: ultimo e prossimo volo, voli di domani non ancora pubblicati';
+const APP_VERSION = '4.16 · tab in alto riordinabili trascinandoli';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -376,7 +376,7 @@ function viewHome() {
       <h2>Come si usa</h2>
       <ol class="steps">
         <li><b>Cerca</b><span>un aeroporto (FCO, Milano…), un volo (FR1234) o un aereo (EI-DCL).</span></li>
-        <li><b>Apri</b><span>ogni pagina resta in un tab in alto, così passi al volo dal tabellone ai voli che segui${matchMedia('(pointer: coarse)').matches ? ' (anche scorrendo col dito)' : ''}.</span></li>
+        <li><b>Apri</b><span>ogni pagina resta in un tab in alto, così passi al volo dal tabellone ai voli che segui${matchMedia('(pointer: coarse)').matches ? ' (anche scorrendo col dito); per spostare un tab tienilo premuto e trascinalo' : '; per spostare un tab trascinalo col mouse'}.</span></li>
         <li><b>Salva</b><span>tocca ☆ per ritrovare qui aeroporti, tratte, voli e aerei.</span></li>
       </ol>
     </section>`}

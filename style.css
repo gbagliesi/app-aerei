@@ -324,3 +324,8 @@ label.check input { margin-top: .2rem; }
 .reglegend .lv-faint { color: #6e7681; }
 .reglink .pct { font-style: normal; font-size: .72em; opacity: .8; margin-left: .15em; }
 .altreg { font-size: .72em; color: #8b949e; font-family: var(--mono); }
+/* riordino dei tab trascinandoli */
+.tabbar .tab:not(.home) { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.tabbar.reordering { scroll-snap-type: none; }
+.tabbar.reordering .tab { cursor: grabbing; }
+.tab.dragging { position: relative; z-index: 5; pointer-events: none; opacity: .85; border-color: var(--amber); box-shadow: 0 4px 14px rgba(0,0,0,.4); }
