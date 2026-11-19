@@ -178,8 +178,10 @@ dd.big { font-size: 1.3rem; color: var(--amber); line-height: 1.1; }
 .tab.active .tt { color: var(--amber); }
 .tab.home { padding-right: .7rem; }
 /* ★ Preferiti resta fermo a sinistra mentre gli altri tab scorrono sotto (sfumati sul suo bordo destro) */
-.tab.home { position: sticky; left: 0; z-index: 3; background-clip: padding-box; box-shadow: 0 0 0 .4rem #0b1220, -1rem 0 0 .4rem #0b1220, .9rem 0 .6rem -.05rem #0b1220; }
-.tab.home.active { box-shadow: inset 0 -2px 0 var(--amber), 0 0 0 .4rem #0b1220, -1rem 0 0 .4rem #0b1220, .9rem 0 .6rem -.05rem #0b1220; }
+.tab.home { position: sticky; left: 0; z-index: 3; background-clip: padding-box; box-shadow: 0 0 0 .4rem #0b1220, -1rem 0 0 .4rem #0b1220; }
+.tab.home.active { box-shadow: inset 0 -2px 0 var(--amber), 0 0 0 .4rem #0b1220, -1rem 0 0 .4rem #0b1220; }
+.tabbar.scrolled .tab.home { box-shadow: 0 0 0 .4rem #0b1220, -1rem 0 0 .4rem #0b1220, .9rem 0 .6rem -.05rem #0b1220; }
+.tabbar.scrolled .tab.home.active { box-shadow: inset 0 -2px 0 var(--amber), 0 0 0 .4rem #0b1220, -1rem 0 0 .4rem #0b1220, .9rem 0 .6rem -.05rem #0b1220; }
 .tab.home .tt { color: var(--amber); }
 .tab .x { background: none; border: 0; color: var(--muted); padding: .1rem .4rem; font-size: 1.05rem; font-weight: 400; line-height: 1; border-radius: 6px; }
 .tab .x:hover { background: var(--line); color: var(--text); }
@@ -333,3 +335,5 @@ html.tabdrag, html.tabdrag * { -webkit-user-select: none !important; user-select
 .tabbar.reordering { scroll-snap-type: none; }
 .tabbar.reordering .tab { cursor: grabbing; }
 .tab.dragging { position: relative; z-index: 5; pointer-events: none; opacity: .85; border-color: var(--amber); box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+.tab .x.arm { background: var(--red); color: #fff; font-size: .78rem; font-weight: 700; padding: .3rem .55rem; border-radius: 7px; animation: armIn .15s ease; }
+@keyframes armIn { from { transform: scale(.7); opacity: .4; } to { transform: none; opacity: 1; } }

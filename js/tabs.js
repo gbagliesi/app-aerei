@@ -13,6 +13,7 @@ let tabs = load();
 let active = null;           // chiave del tab attivo ('home', 'settings' o 'airport:FCO' ecc.)
 const scrolls = {};          // posizione di scroll di ogni tab, per ritrovarla tornandoci
 let pendingAnim = null;      // animazione d'ingresso dopo uno scorrimento col dito
+let armed = null, armTimer = 0; // tab con la × già toccata una volta (telefono): il secondo tocco lo chiude
 
 function load() {
   try {
@@ -149,7 +150,7 @@ function renderBar() {
   const home = `<a class="tab home ${active === 'home' ? 'active' : ''}" href="#/" data-key="home" title="Preferiti e ricerca"><span class="tt">★</span><span class="lbl">Preferiti</span></a>`;
   bar.innerHTML = home + tabs.map(t => `<a class="tab k-${esc(t.kind)} ${t.key === active ? 'active' : ''}" href="${esc(t.hash)}" data-key="${esc(t.key)}" title="${esc([t.title, t.city, t.sub].filter(Boolean).join(' · '))}">
       ${t.dot ? `<i class="dot ${esc(t.dot)}"></i>` : ''}<span class="tt">${esc(t.title)}</span>${t.sub ? `<small>${esc(t.sub)}</small>` : ''}
-      <button class="x" type="button" data-close="${esc(t.key)}" aria-label="Chiudi ${esc(t.title)}" title="Chiudi">×</button></a>`).join('')
+      ${t.key === armed ? `<button class="x arm" type="button" data-close="${esc(t.key)}" aria-label="Conferma: chiudi ${esc(t.title)}">Chiudi</button>` : `<button class="x" type="button" data-close="${esc(t.key)}" aria-label="Chiudi ${esc(t.title)}" title="Chiudi">×</button>`}</a>`).join('')
     + (tabs.length > 1 ? `<button class="tab closeall" type="button" data-closeall title="Chiudi tutti i tab">Chiudi tutti</button>` : '');
   const a = bar.querySelector('.tab.active');
   if (a) {
@@ -169,7 +170,7 @@ function maybeHint() {
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = (first ? 'Le pagine aperte restano nei tab in alto: scorri col dito a destra o a sinistra per passare da un tab all’altro. ' : 'Nuovo: ')
-    + (touch ? 'per spostare un tab tienilo premuto e trascinalo.' : 'puoi spostare i tab in alto trascinandoli col mouse.');
+    + (touch ? `${first ? 'Per' : 'per'} spostare un tab tienilo premuto e trascinalo.` : 'puoi spostare i tab in alto trascinandoli col mouse.');
   document.body.appendChild(t);
   setTimeout(() => t.classList.add('out'), 5500);
   setTimeout(() => t.remove(), 6200);
@@ -179,11 +180,26 @@ export function initTabs(appEl) {
   const bar = $bar();
   bar.addEventListener('click', e => {
     const x = e.target.closest('[data-close]');
-    if (x) { e.preventDefault(); e.stopPropagation(); closeTab(x.dataset.close); return; }
+    if (x) {
+      e.preventDefault(); e.stopPropagation();
+      const k = x.dataset.close;
+      // sul telefono la × si tocca per sbaglio: il primo tocco la trasforma in "Chiudi", il secondo chiude
+      if (matchMedia('(pointer: coarse)').matches && armed !== k) {
+        armed = k; clearTimeout(armTimer);
+        armTimer = setTimeout(() => { armed = null; renderBar(); }, 3000);
+        renderBar(); return;
+      }
+      armed = null; clearTimeout(armTimer);
+      closeTab(k); return;
+    }
+    if (armed) { armed = null; clearTimeout(armTimer); renderBar(); }
     if (e.target.closest('[data-closeall]')) { e.preventDefault(); closeAllTabs(); }
   });
   // clic centrale su un tab: chiude (come nei browser)
   bar.addEventListener('auxclick', e => { const t = e.target.closest('.tab[data-key]'); if (e.button === 1 && t && t.dataset.key !== 'home') { e.preventDefault(); closeTab(t.dataset.key); } });
+  // sfumatura accanto a ★ solo quando ci sono tab scorsi sotto
+  const sc = () => bar.classList.toggle('scrolled', bar.scrollLeft > 2);
+  bar.addEventListener('scroll', sc, { passive: true }); sc();
   initSwipe(appEl);
   initDrag(bar);
   renderBar();
