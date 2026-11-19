@@ -201,6 +201,8 @@ function initDrag(bar) {
     drag = { el, gx: x - r.left, moved: false, stale: false, x };
     el.classList.add('dragging');
     bar.classList.add('reordering');
+    document.documentElement.classList.add('tabdrag');
+    try { getSelection()?.removeAllRanges(); } catch { /* niente */ }
     navigator.vibrate?.(10);
     follow(x);
   };
@@ -251,6 +253,8 @@ function initDrag(bar) {
     drag = null;
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
     bar.classList.remove('reordering');
+    document.documentElement.classList.remove('tabdrag');
+    try { getSelection()?.removeAllRanges(); } catch { /* niente */ }
     if (moved) {
       const keys = tabsEls().map(o => o.dataset.key);
       tabs.sort((a, b) => keys.indexOf(a.key) - keys.indexOf(b.key));
@@ -282,6 +286,9 @@ function initDrag(bar) {
   });
   window.addEventListener('pointerup', e => { if (e.pointerType === 'touch') return; press = null; finish(); });
   bar.addEventListener('dragstart', e => e.preventDefault());   // niente trascinamento nativo del link
+  // la pressione lunga su Android seleziona il testo e annulla il trascinamento: la blocco nella barra e, durante il trascinamento, ovunque
+  bar.addEventListener('selectstart', e => e.preventDefault());
+  document.addEventListener('selectstart', e => { if (drag || press) e.preventDefault(); });
 
   // dito: pressione lunga, poi trascinamento (Touch Events: su Safari iOS i pointer vengono annullati dallo scorrimento)
   bar.addEventListener('contextmenu', e => { if (e.target.closest('.tab[data-key]:not(.home)')) e.preventDefault(); });
