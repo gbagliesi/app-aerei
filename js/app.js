@@ -96,7 +96,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.27 · swipe verso destra in basso a sinistra: apre il pannello delle pagine aperte; dalla metà in su: tab precedente';
+const APP_VERSION = '4.27.1 · stima dell’aereo: un volo molto in ritardo non cambia più il giro previsto delle low cost';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -889,20 +889,22 @@ const copyLeg = l => ({ ...l, dep: { ...l.dep }, arr: { ...l.arr }, aircraft: l.
 // Anelli della catena già calcolati (volo → volo precedente), condivisi tra la pagina di un volo e le catene degli
 // altri: così aprire BRI→PSA o la catena di PSA→BRI dà lo stesso volo precedente. Vince il calcolo più informato:
 // 3 = tratta certa (marche), 2 = stima fatta con FlightAware (pagina del volo o primo anello), 1 = stima senza FlightAware.
-const LINKS = 'aerei.chainLinks.v2', LINK_TTL = 30 * 3600e3, LINK_FRESH = 20 * 60e3;
+// LINK_ALG: versione dell'algoritmo delle stime; le stime fatte con una versione precedente si ricalcolano
+const LINKS = 'aerei.chainLinks.v2', LINK_TTL = 30 * 3600e3, LINK_FRESH = 20 * 60e3, LINK_ALG = 2;
+const linkValid = x => x && (x.rank >= 3 || x.alg === LINK_ALG) && Date.now() - x.at < (x.rank >= 3 ? LINK_TTL : LINK_FRESH);
 const linkKey = l => `${l.number}|${l.dep?.iata || ''}|${flightDay(l) || (l.arr?.sched?.local || '').slice(0, 10)}`;
 const loadLinks = () => { try { return JSON.parse(localStorage.getItem(LINKS)) || {}; } catch { return {}; } };
 function getLink(l) {
   const x = loadLinks()[linkKey(l)];
   // le stime si ricalcolano dopo 20 minuti (nel frattempo possono essere arrivati dati nuovi), le tratte certe restano
-  return x && Date.now() - x.at < (x.rank >= 3 ? LINK_TTL : LINK_FRESH) ? x : null;
+  return linkValid(x) ? x : null;
 }
 // anello già calcolato da un altro dispositivo (condiviso dal Worker): stesso volo precedente su tutti i dispositivi
 async function getLinkAny(l) {
   const x = getLink(l);
   if (x) return x;
   const k = linkKey(l), v = await sharedLink(k);
-  if (!v || Date.now() - v.at >= (v.rank >= 3 ? LINK_TTL : LINK_FRESH)) return null;
+  if (!linkValid(v)) return null;
   const all = loadLinks();
   all[k] = v;
   try { localStorage.setItem(LINKS, JSON.stringify(all)); } catch { /* spazio pieno */ }
@@ -912,9 +914,9 @@ function saveLink(l, r, rank) {
   if (!r) return;
   const all = loadLinks(), k = linkKey(l), old = all[k];
   // una stima meno informata non sostituisce una più informata ancora valida
-  if (old && old.rank > rank && Date.now() - old.at < (old.rank >= 3 ? LINK_TTL : LINK_FRESH)) return;
+  if (old && old.rank > rank && linkValid(old)) return;
   const strip = f => f && { number: f.number, airline: f.airline, status: f.status, callSign: f.callSign, aircraft: f.aircraft, dep: f.dep, arr: f.arr, codeshares: f.codeshares };
-  all[k] = { at: Date.now(), rank, inbound: strip(r.inbound), method: r.method || null, basis: r.basis || null, p: r.p ?? null, reason: r.reason || '' };
+  all[k] = { at: Date.now(), alg: LINK_ALG, rank, inbound: strip(r.inbound), method: r.method || null, basis: r.basis || null, p: r.p ?? null, reason: r.reason || '' };
   // lo condivido con gli altri dispositivi (solo se cambia, per non riscrivere ogni 5 minuti la stessa stima)
   const sig = x => x && JSON.stringify([x.rank, x.inbound?.number, x.inbound?.dep?.iata, x.method, x.basis, x.p]);
   if (sig(all[k]) !== sig(old) || Date.now() - (old?.at || 0) > LINK_FRESH / 2) shareLink(k, all[k]);
