@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.19.3 · catena dei voli: marche ipotizzate non più trattate come sicure';
+const APP_VERSION = '4.20 · pagina del volo coerente con la catena dei voli, che si aggiorna da sola ogni 5 minuti';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -751,17 +751,14 @@ async function viewFlight(number, date, depHint) {
   }
   if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] }); else map.setView([45, 10], 4);
 
-  // tratta precedente
-  let chainArgs = null;
-  try {
-    const hadReg = !!f.aircraft?.reg;
-    const r = await getInbound(f);
-    inbound = r.inbound; inboundGuess = r.method === 'guess';
-    if (inbound && inboundGuess) guessed.add(inbound);
-    rememberFlightReg(f, inbound, r);
-    saveLink(f, r, linkRank(r, true));
-    refreshWatch(f, inbound, inboundGuess).catch(() => {});
+  // tratta precedente: una sola stima per tutta la pagina (riquadro, aereo assegnato, notifiche e catena dei voli),
+  // ricalcolata ogni 5 minuti finché il volo non parte, così segue le informazioni nuove (aereo assegnato, ADS-B, ritardi)
+  const hadReg = !!f.aircraft?.reg;
+  const inbLayer = L.layerGroup().addTo(map);
+  let lastR = null, inbSig = null, chainDone = false;
+  const renderInbound = async r => {
     let html = `<div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="hint">${esc(r.reason)}</p></div>`;
+    inbLayer.clearLayers();
     if (inbound) {
       const turn = minutesBetween(inbound.arr.revised || inbound.arr.sched, f.dep.revised || f.dep.sched);
       const guess = r.method === 'guess';
@@ -770,28 +767,60 @@ async function viewFlight(number, date, depHint) {
         <p class="note ${turn < 35 ? 'warn' : ''}">${turn < 35 ? '⚠️ ' : ''}Tempo di rotazione a ${esc(f.dep.iata)}: <b>${turn} min</b> tra l'arrivo dell'aereo e la partenza prevista${turn < 35 ? ': un ritardo del volo precedente si ripercuoterà probabilmente su questo.' : '.'}</p>`;
       const P = inbound.dep.lat != null ? inbound.dep : await getAirportInfo(inbound.dep.iata);
       if (P?.lat != null && A?.lat != null) {
-        L.polyline(arc(P, A), { color: '#7aa2ff', weight: 2, dashArray: '6 6' }).addTo(map);
-        L.marker([P.lat, P.lon], { icon: apIcon(inbound.dep.iata) }).addTo(map);
-        bounds.push([P.lat, P.lon]); map.fitBounds(bounds, { padding: [30, 30] });
+        L.polyline(arc(P, A), { color: '#7aa2ff', weight: 2, dashArray: '6 6' }).addTo(inbLayer);
+        L.marker([P.lat, P.lon], { icon: apIcon(inbound.dep.iata) }).addTo(inbLayer);
+        map.fitBounds([...bounds, [P.lat, P.lon]], { padding: [30, 30] });
       }
     }
-    document.getElementById('inbound').innerHTML = html;
+    const box = document.getElementById('inbound');
+    if (!box) return;
+    box.innerHTML = html;
     document.getElementById('predict').innerHTML = predictionHtml(f, inbound);
     const card = document.getElementById('aircraft');
     if (inbound && r.method === 'guess' && !f.aircraft?.reg && inbound.aircraft?.reg) {
       card.innerHTML = aircraftCard(inbound.aircraft, date, `Ipotesi: è l'aereo del probabile volo precedente ${esc(inbound.number)} (ricostruzione della giornata della compagnia${inbound.aircraft.regSrc ? `; marche di quel volo da ${esc(inbound.aircraft.regSrc)}` : ''}). ${guessReliability(r)} Diventa sicuro quando la compagnia indica l'aereo.`, true);
     } else if (inbound && r.method === 'reg' && f.aircraft?.reg && !hadReg) {
       card.innerHTML = aircraftCard(f.aircraft, date, r.source === 'FlightAware' ? `Indicate da FlightAware (l'aereo arriva con ${esc(inbound.number)}).` : `La compagnia non lo indica su questo volo, ma la giornata di questo aereo (arrivato con ${esc(inbound.number)}) prevede proprio ${esc(f.number)}.`);
-    }
-    chainArgs = [r];
-  } catch (e) { document.getElementById('inbound').innerHTML = errorBox(e); }
-  // catena dei voli precedenti (non blocca il resto della pagina), ricalcolata ogni 15 minuti finché i voli precedenti non sono tutti atterrati
-  if (chainArgs) {
-    let done = false;
-    const runChain = async () => { if (!done) done = await loadChain(f, inbound, chainArgs[0], date); };
-    runChain();
-    every(900, runChain);
-  } else { const cb = document.getElementById('chain'); if (cb) cb.hidden = true; }
+    } else card.innerHTML = aircraftCard(f.aircraft, date);
+  };
+  // marche ipotizzate prese dalla catena: l'aereo del volo prima del volo precedente, se le sue marche sono sicure
+  const chainAircraft = c => {
+    if (!c || f.aircraft?.reg || inbound?.aircraft?.reg || lastR?.method !== 'guess') return;
+    const legs = c.legs.filter(l => legKey(l) < legKey(f));
+    const i = legs.findIndex(l => sameLeg(l, inbound)), up = i > 0 ? legs[i - 1] : null;
+    if (!up?.aircraft?.reg || up.aircraft._chain) return;
+    const pct = Math.round((up._p ?? 0.3) * 100), card = document.getElementById('aircraft');
+    if (card) card.innerHTML = aircraftCard(up.aircraft, date, `Ipotesi dalla catena dei voli qui sotto: l'aereo del probabile volo precedente ${esc(inbound.number)} arriva a ${esc(inbound.dep?.iata || '?')} con ${esc(up.number)}, di cui le marche sono note${up.aircraft.regSrc ? ` (${esc(up.aircraft.regSrc)})` : ''}. <b>Stima molto incerta</b>: probabilità circa ${pct}% (le probabilità della catena si moltiplicano). Diventa sicuro quando la compagnia indica l'aereo.`, true);
+  };
+  const runChain = async (force = false) => {
+    if (!lastR || (chainDone && !force)) return;
+    const res = await loadChain(f, inbound, lastR, date);
+    chainDone = res?.done; chainAircraft(res?.chain);
+  };
+  const updateInbound = async () => {
+    const r = await getInbound(f, 0, { noChain: true });
+    const sig = `${r.inbound?.number || ''}|${r.method || ''}|${r.basis || ''}|${r.inbound?.aircraft?.reg || ''}|${f.aircraft?.reg || ''}|${r.p ?? ''}`;
+    lastR = r; inbound = r.inbound; inboundGuess = r.method === 'guess';
+    if (inbound && inboundGuess) guessed.add(inbound);
+    rememberFlightReg(f, inbound, r);
+    saveLink(f, r, linkRank(r, true));
+    if (sig === inbSig) return false;
+    const changed = inbSig != null;
+    inbSig = sig;
+    refreshWatch(f, inbound, inboundGuess).catch(() => {});
+    await renderInbound(r);
+    return changed;
+  };
+  try { await updateInbound(); } catch (e) { document.getElementById('inbound').innerHTML = errorBox(e); }
+  if (lastR) runChain(true); else { const cb = document.getElementById('chain'); if (cb) cb.hidden = true; }
+  every(300, async () => {
+    try {
+      // finché il volo non è partito la stima del volo precedente può cambiare; la catena segue
+      const gone = ['Departed', 'EnRoute', 'Approaching', 'Arrived', 'Canceled', 'Diverted'].includes(f.status);
+      const changed = !gone && await updateInbound();
+      await runChain(changed);
+    } catch { /* riprova al giro successivo */ }
+  });
 
   // tracking live (stesso aeromobile: se il volo non è partito, si segue sulla tratta precedente)
   let marker = null, trail = null, groundAtDep = false;
@@ -857,18 +886,19 @@ const copyLeg = l => ({ ...l, dep: { ...l.dep }, arr: { ...l.arr }, aircraft: l.
 // Anelli della catena già calcolati (volo → volo precedente), condivisi tra la pagina di un volo e le catene degli
 // altri: così aprire BRI→PSA o la catena di PSA→BRI dà lo stesso volo precedente. Vince il calcolo più informato:
 // 3 = tratta certa (marche), 2 = stima fatta con FlightAware (pagina del volo o primo anello), 1 = stima senza FlightAware.
-const LINKS = 'aerei.chainLinks.v2', LINK_TTL = 30 * 3600e3;
+const LINKS = 'aerei.chainLinks.v2', LINK_TTL = 30 * 3600e3, LINK_FRESH = 20 * 60e3;
 const linkKey = l => `${l.number}|${l.dep?.iata || ''}|${flightDay(l) || (l.arr?.sched?.local || '').slice(0, 10)}`;
 const loadLinks = () => { try { return JSON.parse(localStorage.getItem(LINKS)) || {}; } catch { return {}; } };
 function getLink(l) {
   const x = loadLinks()[linkKey(l)];
-  return x && Date.now() - x.at < LINK_TTL ? x : null;
+  // le stime si ricalcolano dopo 20 minuti (nel frattempo possono essere arrivati dati nuovi), le tratte certe restano
+  return x && Date.now() - x.at < (x.rank >= 3 ? LINK_TTL : LINK_FRESH) ? x : null;
 }
 function saveLink(l, r, rank) {
   if (!r) return;
   const all = loadLinks(), k = linkKey(l), old = all[k];
-  // una stima meno informata non sostituisce una più informata (ma quelle vecchie di oltre 3 ore sì)
-  if (old && old.rank > rank && Date.now() - old.at < 3 * 3600e3) return;
+  // una stima meno informata non sostituisce una più informata ancora valida
+  if (old && old.rank > rank && Date.now() - old.at < (old.rank >= 3 ? LINK_TTL : LINK_FRESH)) return;
   const strip = f => f && { number: f.number, airline: f.airline, status: f.status, callSign: f.callSign, aircraft: f.aircraft, dep: f.dep, arr: f.arr, codeshares: f.codeshares };
   all[k] = { at: Date.now(), rank, inbound: strip(r.inbound), method: r.method || null, basis: r.basis || null, p: r.p ?? null, reason: r.reason || '' };
   for (const [kk, v] of Object.entries(all)) if (Date.now() - v.at > LINK_TTL) delete all[kk];
@@ -1043,7 +1073,7 @@ async function loadChain(f, inbound, r, date) {
   const box = document.getElementById('chain');
   if (!box) return;
   let c;
-  try { c = await buildChain(f, inbound, r, date); } catch (e) { if (document.body.contains(box)) box.innerHTML = `<span class="eyebrow">La giornata dell'aereo</span>${errorBox(e)}`; return; }
+  try { c = await buildChain(f, inbound, r, date); } catch (e) { if (document.body.contains(box)) box.innerHTML = `<span class="eyebrow">La giornata dell'aereo</span>${errorBox(e)}`; return null; }
   if (!document.body.contains(box)) return;
   const n = c.legs.filter(l => !l._this && legKey(l) < legKey(f)).length;
   const openI = box.querySelector('#chainnotify:not([hidden])')?.dataset.i;
@@ -1055,7 +1085,7 @@ async function loadChain(f, inbound, r, date) {
   bindChain(box, c);
   if (openI != null) box.querySelector(`.chainbell[data-i="${openI}"]`)?.click();
   // true = i voli precedenti sono tutti conclusi: non serve ricalcolare
-  return c.legs.filter(l => legKey(l) < legKey(f)).every(l => ['Arrived', 'Canceled'].includes(l.status));
+  return { chain: c, done: c.legs.filter(l => legKey(l) < legKey(f)).every(l => ['Arrived', 'Canceled'].includes(l.status)) };
 }
 
 

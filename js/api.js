@@ -904,7 +904,8 @@ export async function getInbound(flight, depth = 0, opts = {}) {
       }
       // marche ancora ignote: le ipotizzo anche per il volo precedente (catena di giri della compagnia, un livello),
       // prima con quanto già scoperto su questo dispositivo, poi ricostruendo la giornata all'aeroporto di partenza
-      if (!p.aircraft?.reg && p.number) {
+      // (opts.noChain: la pagina del volo usa la catena dei voli precedenti, una sola stima per tutto)
+      if (!opts.noChain && !p.aircraft?.reg && p.number) {
         const k = knownRegs(depSide.iata).find(x => x.dir === 'A' && x.number === normNum(p.number) && (!x.sched || Math.abs(Date.parse(x.sched) - arrTime(p)) < 3 * 3600e3));
         let chain = k?.reg ? { reg: k.reg, sure: true } : k?.guess?.reg ? { reg: k.guess.reg, via: k.guess.via || k.guess.sameAs, p: k.guess.p ?? 0.3 } : null;
         if (!chain && depth === 0 && p.dep?.iata) {
