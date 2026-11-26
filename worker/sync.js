@@ -79,7 +79,15 @@ export async function handleSync(request, url, env, json) {
       await call(env, acctName, 'acct/check', { secret: tk.secret });
       return json(await call(env, 'syncpair', 'pair/put', { acct: tk.acct }));
     }
-    if (p === '/sync') return json(await call(env, acctName, 'acct/sync', { secret: tk.secret, since: b.since, changes: b.changes, name: b.name }));
+    if (p === '/sync') {
+      const r = await call(env, acctName, 'acct/sync', { secret: tk.secret, since: b.since, changes: b.changes, name: b.name });
+      // account creato prima del limite di un solo account: il primo che si sincronizza diventa l'account del Worker
+      if (r.seq != null) {
+        const { owner } = await call(env, 'syncpair', 'owner/get');
+        if (!owner) await call(env, 'syncpair', 'owner/set', { acct: tk.acct, prev: null }).catch(() => {});
+      }
+      return json(r);
+    }
     if (p === '/sync/devices') return json(await call(env, acctName, 'acct/devices', { secret: tk.secret }));
     if (p === '/sync/remove') return json(await call(env, acctName, 'acct/remove', { secret: tk.secret, id: b.id }));
     if (p === '/sync/wipe') return json(await call(env, acctName, 'acct/wipe', { secret: tk.secret }));
