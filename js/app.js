@@ -96,7 +96,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.21.1 · la catena dei voli già calcolata (anche su un altro dispositivo) compare subito aprendo il volo';
+const APP_VERSION = '4.22 · la cache dei dati sta in IndexedDB: il localStorage condiviso con le altre app resta libero';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
