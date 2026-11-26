@@ -465,13 +465,15 @@ function initDrag(box, { item, mode, scroller }) {
 // ---------- dito dal bordo sinistro verso destra: apre il pannello delle pagine aperte (telefono) ----------
 // Lo swipe partito dal centro dello schermo continua a cambiare tab (initSwipe ignora i bordi).
 // Nota: dove il sistema usa il bordo per "indietro" (Safari in una scheda, Android con navigazione a gesti) vince il sistema.
+// fascia del bordo sinistro riservata al pannello: abbastanza larga per il pollice
+const edgeW = () => isSide() ? 24 : Math.min(72, Math.round(window.innerWidth * 0.18));
 function initEdgeOpen() {
   let st = null;
   document.addEventListener('touchstart', e => {
     st = null;
     if (isSide() || drawerOpen() || e.touches.length !== 1) return;
     const t = e.touches[0];
-    if (t.clientX > 28 || e.target.closest('.leaflet-container, input, textarea, select')) return;
+    if (t.clientX > edgeW() || e.target.closest('.leaflet-container, input, textarea, select')) return;
     st = { x: t.clientX, y: t.clientY, done: false };
   }, { passive: true });
   document.addEventListener('touchmove', e => {
@@ -493,7 +495,7 @@ function initSwipe(el) {
     if (e.touches.length !== 1 || active === 'settings') { mode = 'off'; return; }
     const tch = e.touches[0];
     // niente swipe sulla mappa, nei campi di testo e vicino ai bordi (lì c'è il gesto "indietro" di iOS)
-    if (e.target.closest('.map, .leaflet-container, input, textarea, select, .noswipe') || tch.clientX < 24 || tch.clientX > window.innerWidth - 24) { mode = 'off'; return; }
+    if (e.target.closest('.map, .leaflet-container, input, textarea, select, .noswipe') || tch.clientX < edgeW() || tch.clientX > window.innerWidth - 24) { mode = 'off'; return; }
     sx = tch.clientX; sy = tch.clientY; t0 = Date.now();
     el.style.transition = 'none';
   }, { passive: true });
