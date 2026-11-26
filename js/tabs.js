@@ -469,21 +469,29 @@ function initDrag(box, { item, mode, scroller }) {
 const edgeW = () => isSide() ? 24 : Math.min(72, Math.round(window.innerWidth * 0.18));
 function initEdgeOpen() {
   let st = null;
+  // dopo il gesto il tocco non deve aprire/attivare ciò che c'era sotto il dito (riga, tab, link)
+  const eatClick = () => {
+    const eat = ev => { ev.preventDefault(); ev.stopPropagation(); };
+    document.addEventListener('click', eat, true);
+    setTimeout(() => document.removeEventListener('click', eat, true), 600);
+  };
   document.addEventListener('touchstart', e => {
     st = null;
     if (isSide() || drawerOpen() || e.touches.length !== 1) return;
     const t = e.touches[0];
     if (t.clientX > edgeW() || e.target.closest('.leaflet-container, input, textarea, select')) return;
-    st = { x: t.clientX, y: t.clientY, done: false };
-  }, { passive: true });
+    st = { x: t.clientX, y: t.clientY, done: false, moved: false };
+  }, { passive: true, capture: true });
   document.addEventListener('touchmove', e => {
     if (!st || st.done) return;
     const t = e.touches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
-    if (Math.abs(dy) > 14 && Math.abs(dy) > dx) { st = null; return; }   // sta scorrendo in verticale
-    if (dx > 6) e.preventDefault();
-    if (dx > 40) { st.done = true; openDrawer(); }
-  }, { passive: false });
-  document.addEventListener('touchend', () => { st = null; });
+    if (!st.moved && Math.abs(dy) > 10 && Math.abs(dy) > dx) { st = null; return; }   // sta scorrendo in verticale
+    if (dx > 4 && dx > Math.abs(dy)) st.moved = true;
+    if (st.moved) e.preventDefault();   // niente scorrimento della barra dei tab
+    if (dx > 30) { st.done = true; openDrawer(); }
+  }, { passive: false, capture: true });
+  document.addEventListener('touchend', () => { if (st?.moved) eatClick(); st = null; }, { capture: true });
+  document.addEventListener('touchcancel', () => { st = null; }, { capture: true });
 }
 
 // ---------- scorrimento orizzontale col dito (telefono e tablet) ----------
