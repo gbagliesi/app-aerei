@@ -54,7 +54,15 @@ export async function handleSync(request, url, env, json) {
     const b = await request.json().catch(() => ({}));
     const p = url.pathname;
     if (p === '/sync/new') {
+      // un solo account per Worker (uso personale): dopo il primo, gli altri dispositivi entrano solo con un codice
+      // mostrato da un dispositivo già collegato. Se l'account viene cancellato se ne può creare uno nuovo.
+      const { owner } = await call(env, 'syncpair', 'owner/get');
+      if (owner) {
+        const alive = await call(env, `acct:${owner}`, 'acct/exists').then(r => r.exists).catch(() => true);
+        if (alive) return json({ error: 'Su questo Worker c’è già un account: per collegare questo dispositivo inserisci il codice mostrato da un dispositivo già collegato (Impostazioni → Collega un altro dispositivo).' }, 403);
+      }
       const acct = rnd(16), secret = rnd(24);
+      await call(env, 'syncpair', 'owner/set', { acct, prev: owner || null });
       await call(env, `acct:${acct}`, 'acct/init', { secret, name: devName(b.name) });
       return json({ token: `${acct}.${secret}` });
     }
@@ -117,6 +125,15 @@ export async function syncDo(storage, url, request) {
     if (await storage.get('meta')) throw err('account già esistente', 409);
     await storage.put('meta', { created: now, seq: 0 });
     await addDev(storage, b.name, b.secret);
+    return { ok: true };
+  }
+  if (op === 'acct/exists') return { exists: !!(await storage.get('meta')) };
+  if (op === 'owner/get') return { owner: (await storage.get('owner')) || null };
+  if (op === 'owner/set') {
+    // evita che due richieste contemporanee creino due account
+    const cur = (await storage.get('owner')) || null;
+    if (cur !== (b.prev || null)) throw err('account appena creato da un’altra richiesta', 409);
+    await storage.put('owner', b.acct);
     return { ok: true };
   }
   if (op === 'acct/adddev') {
