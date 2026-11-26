@@ -3,6 +3,7 @@
 import { getSettings } from './store.js';
 import { airportByIata, AIRPORTS, iataByCityName } from './airports.js';
 import * as demo from './demo.js';
+import { initPCache, pget, pgetA, pput } from './pcache.js';
 import { simulateRotation, arrTime, depTime, LOWCOST_CODES } from './rotation.js';
 
 const ADB_HOST = 'aerodatabox.p.rapidapi.com';
@@ -20,26 +21,12 @@ async function cached(key, ttlMs, fn) {
 }
 
 // ---------- risparmio unità AeroDataBox ----------
-// Le risposte di AeroDataBox restano salvate nel browser (anche dopo un ricaricamento) per qualche minuto,
+// Le risposte di AeroDataBox restano salvate nel browser (IndexedDB, anche dopo un ricaricamento) per qualche minuto,
 // così aprire più volte lo stesso tabellone o volo non consuma unità del piano.
-const PKEY = 'aerei.adbcache.';
 const BKEY = 'aerei.adbBlocked';
-function pget(k, ttl) {
-  try { const x = JSON.parse(localStorage.getItem(PKEY + k)); return x && Date.now() - x.t < ttl ? x.v : undefined; } catch { return undefined; }
-}
-function pput(k, v, t = Date.now()) {
-  const val = JSON.stringify({ t, v });
-  for (let i = 0; i < 20; i++) {
-    try { localStorage.setItem(PKEY + k, val); return; } catch {
-      // spazio finito: elimino la voce più vecchia e riprovo
-      const keys = Object.keys(localStorage).filter(x => x.startsWith(PKEY));
-      if (!keys.length) return;
-      let oldest = keys[0], ot = Infinity;
-      for (const x of keys) { try { const t = JSON.parse(localStorage.getItem(x)).t; if (t < ot) { ot = t; oldest = x; } } catch { oldest = x; break; } }
-      localStorage.removeItem(oldest);
-    }
-  }
-}
+// La cache sta in IndexedDB (js/pcache.js), non più nel localStorage condiviso con le altre app di github.io.
+// Aspetto che sia pronta (al massimo 1,5 s: altrimenti si parte senza cache persistente).
+await Promise.race([initPCache().catch(() => {}), new Promise(r => setTimeout(r, 1500))]);
 /** Se la quota è finita non chiamo più AeroDataBox per qualche ora (ogni chiamata fallita è inutile). */
 export function adbBlocked() {
   try { const b = JSON.parse(localStorage.getItem(BKEY)); return b && Date.now() < b.until ? b : null; } catch { return null; }
@@ -55,13 +42,10 @@ const adbAt = new Map();
 const listAge = new WeakMap();
 export const boardAge = {};
 export const adbAge = path => adbAt.get(path) || null;
-function pgetT(k, ttl) {
-  try { const x = JSON.parse(localStorage.getItem(PKEY + k)); return x && Date.now() - x.t < ttl ? x : undefined; } catch { return undefined; }
-}
 
 /** Chiamata AeroDataBox con cache persistente (ttlMs). */
 async function adbCached(path, ttlMs) {
-  const hit = pgetT(path, ttlMs);
+  const hit = await pgetA(path, ttlMs);
   if (hit !== undefined) { adbAt.set(path, hit.t); return hit.v; }
   const meta = {};
   const v = await adb(path, undefined, false, ttlMs / 1000, meta);
@@ -550,7 +534,7 @@ async function faGet(params) {
   const q = new URLSearchParams(params).toString();
   // _faAt: quando il browser ha avuto la risposta (il Worker può averla in cache da qualche minuto in più)
   const stampFa = (j, t) => { for (const f of [...(j?.flights || []), ...(j?.inbound ? [j.inbound] : [])]) f._faAt = t; return j; };
-  const hit = pgetT(`fa:${q}`, 10 * 60e3);
+  const hit = await pgetA(`fa:${q}`, 10 * 60e3);
   if (hit !== undefined) return stampFa(hit.v, hit.t);
   const r = await fetch(`${base}/fa?${q}`).catch(() => null);
   if (!r?.ok) return null; // 501 = FlightAware non configurato, 429 = limite mensile
@@ -584,7 +568,7 @@ export async function getRegHistory(reg, days = 7) {
     for (let d = 0; d < Math.min(days, 3); d++) out.push(...await demo.byReg(reg, isoDate(new Date(Date.now() - d * 86400e3))));
     return { flights: out.reverse(), source: 'demo' };
   }
-  const hit = pget(`hist:${reg}:${days}`, 60 * 60e3);
+  const hit = (await pgetA(`hist:${reg}:${days}`, 60 * 60e3))?.v;
   if (hit !== undefined) return hit;
   const j = await faGet({ reg, days });
   if (!j?.flights) return null;
@@ -1001,7 +985,7 @@ async function dayMovements(iata, depUtc, board, flight) {
         const snap = await getSnap(iata, nature, d);
         if (snap.length) { add(list, mergeOfficial(officialFlights(snap, iata, nature), snap, side, iata), side); dayFrom = Math.min(dayFrom, Date.parse(`${d}T00:00:00${tzOffset(tz, d)}`)); }
       }
-      const prev = pget(`day:${iata}:${nature}:${yesterday}`, 3 * 86400e3);
+      const prev = (await pgetA(`day:${iata}:${nature}:${yesterday}`, 3 * 86400e3))?.v;
       if (prev?.length) { add(list, mergeOfficial(officialFlights(prev, iata, nature), prev, side, iata), side); dayFrom = Math.min(dayFrom, Date.parse(`${yesterday}T00:00:00${tzOffset(tz, yesterday)}`)); }
       else if (off?.length) dayFrom = Math.min(dayFrom, Date.parse(`${today}T00:00:00${tzOffset(tz, today)}`));
     }
@@ -1155,7 +1139,7 @@ async function getSnap(iata, nature, day) {
   const k = `snap2:${iata}:${nature}:${day}`;
   // copia salvata dal Worker: la sua età è quella dell'ultima istantanea (updatedAt), non della lettura
   const out = x => { const v = x?.f || []; if (x?.at) listAge.set(v, { at: x.at, snap: true }); return v; };
-  const hit = pget(k, day < localDay(Date.now(), OFFICIAL_AIRPORTS[iata]) ? 6 * 3600e3 : 10 * 60e3);
+  const hit = (await pgetA(k, day < localDay(Date.now(), OFFICIAL_AIRPORTS[iata]) ? 6 * 3600e3 : 10 * 60e3))?.v;
   if (hit !== undefined) return out(hit);
   return cached(k, 60e3, async () => {
     try {
