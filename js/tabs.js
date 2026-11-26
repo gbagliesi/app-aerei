@@ -1,5 +1,6 @@
 // Tab in cima alla pagina: ogni aeroporto, volo, tratta o aereo aperto resta in un tab per tornarci al volo.
-// Desktop: barra di tab cliccabili. Telefono: stessa barra (scorrevole) + scorrimento orizzontale col dito sul contenuto.
+// Schermo largo: pannello verticale a sinistra. Più stretto: barra in alto (scorrevole) + ▦ per la griglia di tutti i tab,
+// e sul telefono scorrimento orizzontale col dito sul contenuto.
 // I tab si riordinano trascinandoli (col dito dopo una pressione lunga); l'ordine resta salvato.
 import { airportByIata } from './airports.js';
 
@@ -142,38 +143,116 @@ export function playEnterAnim(el) {
 }
 
 // ---------- barra dei tab ----------
+// Schermo largo (≥1080 px): i tab diventano un pannello verticale a sinistra, raggruppati per tipo.
+// Schermo più stretto: riga in alto (scorrevole) + pulsante ▦ che apre una griglia con tutti i tab.
 const $bar = () => document.getElementById('tabbar');
+const sideMQ = matchMedia('(min-width: 1080px)');
+const isSide = () => sideMQ.matches;
+const GROUPS = [['airport', 'Aeroporti'], ['flight', 'Voli'], ['route', 'Tratte'], ['aircraft', 'Aerei']];
+const dotHtml = t => t.dot ? `<i class="dot ${esc(t.dot)}"></i>` : '';
+const tabHtml = t => `<a class="tab k-${esc(t.kind)} ${t.key === active ? 'active' : ''}" href="${esc(t.hash)}" data-key="${esc(t.key)}" title="${esc([t.title, t.city, t.sub].filter(Boolean).join(' · '))}">
+      ${dotHtml(t)}<span class="tt">${esc(t.title)}</span>${t.sub ? `<small>${esc(t.sub)}</small>` : ''}
+      ${t.key === armed ? `<button class="x arm" type="button" data-close="${esc(t.key)}" aria-label="Conferma: chiudi ${esc(t.title)}">Chiudi</button>` : `<button class="x" type="button" data-close="${esc(t.key)}" aria-label="Chiudi ${esc(t.title)}" title="Chiudi">×</button>`}</a>`;
+
 function renderBar() {
   const bar = $bar();
   if (!bar) return;
   if (drag) { drag.stale = true; return; }   // durante un trascinamento ridisegno alla fine
+  const side = isSide();
+  document.documentElement.classList.toggle('sidetabs', side);
   const home = `<a class="tab home ${active === 'home' ? 'active' : ''}" href="#/" data-key="home" title="Preferiti e ricerca"><span class="tt">★</span><span class="lbl">Preferiti</span></a>`;
-  bar.innerHTML = home + tabs.map(t => `<a class="tab k-${esc(t.kind)} ${t.key === active ? 'active' : ''}" href="${esc(t.hash)}" data-key="${esc(t.key)}" title="${esc([t.title, t.city, t.sub].filter(Boolean).join(' · '))}">
-      ${t.dot ? `<i class="dot ${esc(t.dot)}"></i>` : ''}<span class="tt">${esc(t.title)}</span>${t.sub ? `<small>${esc(t.sub)}</small>` : ''}
-      ${t.key === armed ? `<button class="x arm" type="button" data-close="${esc(t.key)}" aria-label="Conferma: chiudi ${esc(t.title)}">Chiudi</button>` : `<button class="x" type="button" data-close="${esc(t.key)}" aria-label="Chiudi ${esc(t.title)}" title="Chiudi">×</button>`}</a>`).join('')
-    + (tabs.length > 1 ? `<button class="tab closeall" type="button" data-closeall title="Chiudi tutti i tab">Chiudi tutti</button>` : '');
-  const a = bar.querySelector('.tab.active');
-  if (a) {
-    // tiene il tab attivo visibile nella barra (su telefono la barra scorre di lato)
-    const l = a.offsetLeft - bar.offsetLeft, r = l + a.offsetWidth;
-    if (l < bar.scrollLeft + 8 || r > bar.scrollLeft + bar.clientWidth - 8) bar.scrollTo({ left: Math.max(0, l - bar.clientWidth / 2 + a.offsetWidth / 2), behavior: 'smooth' });
+  if (side) {
+    // pannello: gruppi per tipo; dentro ogni gruppo l'ordine è quello scelto trascinando
+    const known = GROUPS.map(g => g[0]);
+    const groups = GROUPS.map(([k, label]) => [label, tabs.filter(t => k === 'airport' ? (t.kind === k || !known.includes(t.kind)) : t.kind === k)]).filter(g => g[1].length);
+    bar.innerHTML = home + groups.map(([label, list]) => `<div class="tgrp"><div class="glab">${label}</div>${list.map(tabHtml).join('')}</div>`).join('')
+      + (tabs.length ? (tabs.length > 1 ? `<button class="tab closeall" type="button" data-closeall title="Chiudi tutti i tab">Chiudi tutti</button>` : '')
+        : '<p class="tabhint">Aeroporti, voli e aerei che apri restano qui per tornarci al volo.</p>');
+    const a = bar.querySelector('.tab.active');
+    if (a) { const r = a.getBoundingClientRect(), br = bar.getBoundingClientRect(); if (r.top < br.top || r.bottom > br.bottom) a.scrollIntoView({ block: 'nearest' }); }
+  } else {
+    bar.innerHTML = home + tabs.map(tabHtml).join('')
+      + (tabs.length > 1 ? `<button class="tab closeall" type="button" data-closeall title="Chiudi tutti i tab">Chiudi tutti</button>` : '');
+    const a = bar.querySelector('.tab.active');
+    if (a) {
+      // tiene il tab attivo visibile nella barra (su telefono la barra scorre di lato)
+      const l = a.offsetLeft - bar.offsetLeft, r = l + a.offsetWidth;
+      if (l < bar.scrollLeft + 8 || r > bar.scrollLeft + bar.clientWidth - 8) bar.scrollTo({ left: Math.max(0, l - bar.clientWidth / 2 + a.offsetWidth / 2), behavior: 'smooth' });
+    }
   }
+  const all = document.getElementById('tabsall');
+  if (all) { all.hidden = side || !tabs.length; all.querySelector('b').textContent = tabs.length; }
+  if (sheetOpen()) renderSheet();
   maybeHint();
 }
 
+// ---------- griglia di tutti i tab (telefono e schermi stretti) ----------
+const $sheet = () => document.getElementById('tabsheet');
+const sheetOpen = () => { const s = $sheet(); return !!s && !s.hidden; };
+function renderSheet() {
+  const s = $sheet();
+  if (!s || (drag && drag.box === s.querySelector('.tgrid'))) { if (drag) drag.stale = true; return; }
+  s.querySelector('.shead b').textContent = `${tabs.length} ${tabs.length === 1 ? 'pagina aperta' : 'pagine aperte'}`;
+  s.querySelector('[data-closeall]').hidden = tabs.length < 2;
+  s.querySelector('.tgrid').innerHTML = `<a class="tcard home ${active === 'home' ? 'active' : ''}" href="#/" data-key="home"><span class="tt">★</span><small>Preferiti</small></a>`
+    + tabs.map(t => `<a class="tcard ${t.key === active ? 'active' : ''}" href="${esc(t.hash)}" data-key="${esc(t.key)}">
+        <button class="x" type="button" data-close="${esc(t.key)}" aria-label="Chiudi ${esc(t.title)}">×</button>
+        <span class="tt">${dotHtml(t)}${esc(t.title)}</span><small>${esc(t.sub || '')}</small></a>`).join('');
+  s.querySelector('.shint').hidden = tabs.length < 2;
+}
+function openSheet() {
+  const s = $sheet();
+  if (!s) return;
+  s.hidden = false;
+  renderSheet();
+  requestAnimationFrame(() => s.classList.add('open'));
+  document.documentElement.classList.add('sheetlock');
+}
+function closeSheet() {
+  const s = $sheet();
+  if (!s || s.hidden) return;
+  s.classList.remove('open');
+  document.documentElement.classList.remove('sheetlock');
+  setTimeout(() => { if (!s.classList.contains('open')) s.hidden = true; }, 200);
+}
+function buildSheet() {
+  const s = document.createElement('div');
+  s.id = 'tabsheet'; s.className = 'tabsheet noswipe'; s.hidden = true;
+  s.innerHTML = `<div class="sheetbg" data-dismiss></div><div class="sheet" role="dialog" aria-label="Pagine aperte">
+    <div class="handle" data-dismiss></div>
+    <div class="shead"><b></b><span><button class="linkbtn" type="button" data-closeall>Chiudi tutti</button> <button class="linkbtn" type="button" data-dismiss>Fine</button></span></div>
+    <div class="tgrid"></div>
+    <p class="shint">Tieni premuta una scheda e trascinala per spostarla.</p></div>`;
+  document.body.appendChild(s);
+  s.addEventListener('click', e => {
+    if (e.target.closest('[data-dismiss]')) { e.preventDefault(); closeSheet(); return; }
+    const x = e.target.closest('[data-close]');
+    if (x) { e.preventDefault(); e.stopPropagation(); closeTab(x.dataset.close); renderSheet(); if (!tabs.length) closeSheet(); return; }
+    if (e.target.closest('[data-closeall]')) { e.preventDefault(); closeSheet(); closeAllTabs(); return; }
+    if (e.target.closest('.tcard[data-key]')) closeSheet();   // il link apre la pagina
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+  initDrag(s.querySelector('.tgrid'), { item: '.tcard[data-key]:not(.home)', mode: () => 'grid', scroller: s.querySelector('.sheet') });
+}
+
 function maybeHint() {
-  if (tabs.length < 2 || localStorage.getItem('aerei.tabs.hint2')) return;
-  localStorage.setItem('aerei.tabs.hint2', '1');
+  if (tabs.length < 2 || localStorage.getItem('aerei.tabs.hint3')) return;
+  const seen = localStorage.getItem('aerei.tabs.hint2');
+  localStorage.setItem('aerei.tabs.hint3', '1'); localStorage.setItem('aerei.tabs.hint2', '1'); localStorage.setItem('aerei.tabs.hint', '1');
   const touch = matchMedia('(pointer: coarse)').matches;
-  const first = touch && !localStorage.getItem('aerei.tabs.hint');
-  localStorage.setItem('aerei.tabs.hint', '1');
   const t = document.createElement('div');
   t.className = 'toast';
-  t.textContent = (first ? 'Le pagine aperte restano nei tab in alto: scorri col dito a destra o a sinistra per passare da un tab all’altro. ' : 'Nuovo: ')
-    + (touch ? `${first ? 'Per' : 'per'} spostare un tab tienilo premuto e trascinalo.` : 'puoi spostare i tab in alto trascinandoli col mouse.');
+  t.textContent = isSide()
+    ? `${seen ? 'Nuovo: le' : 'Le'} pagine aperte restano nel pannello a sinistra, raggruppate per tipo. Trascinale per cambiare l’ordine.`
+    : `${seen ? 'Nuovo: tocca' : 'Le pagine aperte restano nei tab in alto. Tocca'} ▦ in alto a destra per vederle tutte insieme${touch ? '; tieni premuta una scheda per spostarla' : ''}.`;
   document.body.appendChild(t);
-  setTimeout(() => t.classList.add('out'), 5500);
-  setTimeout(() => t.remove(), 6200);
+  setTimeout(() => t.classList.add('out'), 6500);
+  setTimeout(() => t.remove(), 7200);
+}
+
+function setSideTop() {
+  const b = document.querySelector('.topbar .bar');
+  if (b) document.documentElement.style.setProperty('--tbtop', `${b.getBoundingClientRect().bottom}px`);
 }
 
 export function initTabs(appEl) {
@@ -205,87 +284,114 @@ export function initTabs(appEl) {
   // clic centrale su un tab: chiude (come nei browser)
   bar.addEventListener('auxclick', e => { const t = e.target.closest('.tab[data-key]'); if (e.button === 1 && t && t.dataset.key !== 'home') { e.preventDefault(); closeTab(t.dataset.key); } });
   // sfumatura accanto a ★ solo quando ci sono tab scorsi sotto
-  const sc = () => bar.classList.toggle('scrolled', bar.scrollLeft > 2);
+  const sc = () => bar.classList.toggle('scrolled', !isSide() && bar.scrollLeft > 2);
   bar.addEventListener('scroll', sc, { passive: true }); sc();
+  document.getElementById('tabsall')?.addEventListener('click', openSheet);
+  buildSheet();
+  sideMQ.addEventListener('change', () => { closeSheet(); setSideTop(); renderBar(); sc(); });
+  window.addEventListener('resize', setSideTop);
+  setSideTop();
   initSwipe(appEl);
-  initDrag(bar);
+  initDrag(bar, { item: '.tab[data-key]:not(.home)', mode: () => isSide() ? 'y' : 'x', scroller: bar });
   renderBar();
 }
 
-// ---------- riordino dei tab trascinandoli ----------
+// ---------- riordino trascinando ----------
 // mouse/penna: si trascina subito (oltre 6 px); dito: pressione lunga (~0,35 s) poi si trascina,
-// così lo scorrimento normale della barra col dito resta com'è. Il tab "Preferiti" resta sempre primo.
+// così lo scorrimento normale col dito resta com'è. "Preferiti" resta sempre primo.
+// mode 'x' = riga in alto, 'y' = pannello laterale (dentro il proprio gruppo), 'grid' = griglia del telefono.
 let drag = null;
-function initDrag(bar) {
+function initDrag(box, { item, mode, scroller }) {
   let press = null;   // pressione in attesa di diventare trascinamento
-  const tabsEls = () => [...bar.querySelectorAll('.tab[data-key]:not(.home)')];
-  const begin = (el, x) => {
+  const items = () => [...box.querySelectorAll(item)];
+  const begin = (el, x, y) => {
     const r = el.getBoundingClientRect();
-    drag = { el, gx: x - r.left, moved: false, stale: false, x };
+    drag = { el, box, m: mode(), gx: x - r.left, gy: y - r.top, moved: false, stale: false, x, y };
     el.classList.add('dragging');
-    bar.classList.add('reordering');
+    box.classList.add('reordering');
     document.documentElement.classList.add('tabdrag');
     try { getSelection()?.removeAllRanges(); } catch { /* niente */ }
     navigator.vibrate?.(10);
-    follow(x);
+    follow();
   };
-  const follow = x => {
-    const el = drag.el;
+  const follow = () => {
+    const { el, m, x, y } = drag;
     el.style.transform = '';
     const r = el.getBoundingClientRect();
-    el.style.transform = `translateX(${x - drag.gx - r.left}px)`;
+    const dx = m === 'y' ? 0 : x - drag.gx - r.left, dy = m === 'x' ? 0 : y - drag.gy - r.top;
+    el.style.transform = `translate(${dx}px, ${dy}px)`;
   };
-  const place = x => {
-    const el = drag.el, others = tabsEls().filter(o => o !== el);
-    // nuovo posto: prima del primo tab la cui metà è a destra del puntatore, altrimenti in fondo
-    const t = others.find(o => { const r = o.getBoundingClientRect(); return x < r.left + r.width / 2; }) || null;
-    const all = tabsEls(), cur = all.indexOf(el), want = t ? all.indexOf(t) - (all.indexOf(t) > cur ? 1 : 0) : others.length;
-    if (want === cur) return;
-    const before = new Map(others.map(o => [o, o.getBoundingClientRect().left]));
-    if (t) t.before(el); else others[others.length - 1]?.after(el);
+  const place = () => {
+    const { el, m, x, y } = drag;
+    // nel pannello si sposta solo dentro il proprio gruppo
+    const sibs = m === 'y' ? [...el.parentElement.querySelectorAll(item)] : items();
+    const others = sibs.filter(o => o !== el);
+    let t = null, after = false;
+    if (m === 'grid') {
+      t = others.find(o => { const r = o.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; });
+      if (!t) return;
+      after = sibs.indexOf(t) > sibs.indexOf(el);
+    } else {
+      const c = r => m === 'y' ? r.top + r.height / 2 : r.left + r.width / 2;
+      const p = m === 'y' ? y : x;
+      // nuovo posto: prima del primo elemento la cui metà è oltre il puntatore, altrimenti in fondo
+      t = others.find(o => p < c(o.getBoundingClientRect())) || null;
+      const cur = sibs.indexOf(el), want = t ? sibs.indexOf(t) - (sibs.indexOf(t) > cur ? 1 : 0) : others.length;
+      if (want === cur) return;
+      if (!t) { t = others[others.length - 1]; after = true; }
+      if (!t) return;
+    }
+    const before = new Map(others.map(o => { const r = o.getBoundingClientRect(); return [o, [r.left, r.top]]; }));
+    if (after) t.after(el); else t.before(el);
     drag.moved = true;
     others.forEach(o => {
-      const dx = before.get(o) - o.getBoundingClientRect().left;
-      if (!dx) return;
-      o.style.transition = 'none'; o.style.transform = `translateX(${dx}px)`;
+      const r = o.getBoundingClientRect(), [l0, t0] = before.get(o), dx = l0 - r.left, dy = t0 - r.top;
+      if (!dx && !dy) return;
+      o.style.transition = 'none'; o.style.transform = `translate(${dx}px, ${dy}px)`;
       o.getBoundingClientRect();
       o.style.transition = 'transform .16s ease'; o.style.transform = '';
     });
   };
-  // vicino ai bordi della barra (su telefono scorre di lato) la faccio scorrere
+  // vicino ai bordi di ciò che scorre lo faccio scorrere
   let raf = 0;
   const edgeScroll = () => {
     raf = 0;
     if (!drag) return;
-    const r = bar.getBoundingClientRect(), x = drag.x;
-    const v = x < r.left + 30 ? -8 : x > r.right - 30 ? 8 : 0;
-    if (!v) return;
-    bar.scrollLeft += v;
-    place(x); follow(x);
+    const r = scroller.getBoundingClientRect();
+    if (drag.m === 'x') {
+      const v = drag.x < r.left + 30 ? -8 : drag.x > r.right - 30 ? 8 : 0;
+      if (!v) return;
+      scroller.scrollLeft += v;
+    } else {
+      const v = drag.y < r.top + 30 ? -8 : drag.y > r.bottom - 30 ? 8 : 0;
+      if (!v) return;
+      scroller.scrollTop += v;
+    }
+    place(); follow();
     raf = requestAnimationFrame(edgeScroll);
   };
-  const moveTo = x => {
+  const moveTo = (x, y) => {
     if (!drag) return;
-    drag.x = x;
-    place(x); follow(x);
+    drag.x = x; drag.y = y;
+    place(); follow();
     if (!raf) raf = requestAnimationFrame(edgeScroll);
   };
   const finish = () => {
-    if (!drag) return;
+    if (!drag || drag.box !== box) return;
     const { el, moved, stale } = drag;
     drag = null;
     if (raf) { cancelAnimationFrame(raf); raf = 0; }
-    bar.classList.remove('reordering');
+    box.classList.remove('reordering');
     document.documentElement.classList.remove('tabdrag');
     try { getSelection()?.removeAllRanges(); } catch { /* niente */ }
     if (moved) {
-      const keys = tabsEls().map(o => o.dataset.key);
+      const keys = items().map(o => o.dataset.key);
       tabs.sort((a, b) => keys.indexOf(a.key) - keys.indexOf(b.key));
       save();
       // il clic che segue il rilascio non deve aprire il tab
       const eat = e => { e.preventDefault(); e.stopPropagation(); };
-      bar.addEventListener('click', eat, true);
-      setTimeout(() => bar.removeEventListener('click', eat, true), 400);
+      box.addEventListener('click', eat, true);
+      setTimeout(() => box.removeEventListener('click', eat, true), 400);
     }
     el.style.transition = 'transform .14s ease'; el.style.transform = '';
     setTimeout(() => { el.classList.remove('dragging'); el.style.transition = ''; if (moved || stale) renderBar(); }, 150);
@@ -293,48 +399,48 @@ function initDrag(bar) {
   const cancelPress = () => { if (press) { clearTimeout(press.timer); press = null; } };
 
   // mouse e penna
-  bar.addEventListener('pointerdown', e => {
+  box.addEventListener('pointerdown', e => {
     if (e.pointerType === 'touch' || e.button !== 0 || drag) return;
-    const el = e.target.closest('.tab[data-key]:not(.home)');
+    const el = e.target.closest(item);
     if (!el || e.target.closest('.x')) return;
-    press = { el, x: e.clientX, id: e.pointerId };
+    press = { el, x: e.clientX, y: e.clientY, id: e.pointerId };
   });
   window.addEventListener('pointermove', e => {
     if (e.pointerType === 'touch') return;
-    if (press && !drag && e.pointerId === press.id && Math.abs(e.clientX - press.x) > 6) {
+    if (press && !drag && e.pointerId === press.id && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6) {
       const p = press; press = null;
-      begin(p.el, p.x);
+      begin(p.el, p.x, p.y);
     }
-    if (drag) { e.preventDefault(); moveTo(e.clientX); }
+    if (drag && drag.box === box) { e.preventDefault(); moveTo(e.clientX, e.clientY); }
   });
   window.addEventListener('pointerup', e => { if (e.pointerType === 'touch') return; press = null; finish(); });
-  bar.addEventListener('dragstart', e => e.preventDefault());   // niente trascinamento nativo del link
-  // la pressione lunga su Android seleziona il testo e annulla il trascinamento: la blocco nella barra e, durante il trascinamento, ovunque
-  bar.addEventListener('selectstart', e => e.preventDefault());
+  box.addEventListener('dragstart', e => e.preventDefault());   // niente trascinamento nativo del link
+  // la pressione lunga su Android seleziona il testo e annulla il trascinamento: la blocco qui e, durante il trascinamento, ovunque
+  box.addEventListener('selectstart', e => e.preventDefault());
   document.addEventListener('selectstart', e => { if (drag || press) e.preventDefault(); });
 
   // dito: pressione lunga, poi trascinamento (Touch Events: su Safari iOS i pointer vengono annullati dallo scorrimento)
-  bar.addEventListener('contextmenu', e => { if (e.target.closest('.tab[data-key]:not(.home)')) e.preventDefault(); });
-  bar.addEventListener('touchstart', e => {
+  box.addEventListener('contextmenu', e => { if (e.target.closest(item)) e.preventDefault(); });
+  box.addEventListener('touchstart', e => {
     if (e.touches.length !== 1 || drag) return;
-    const el = e.target.closest('.tab[data-key]:not(.home)');
+    const el = e.target.closest(item);
     if (!el || e.target.closest('.x')) return;
     const x = e.touches[0].clientX, y = e.touches[0].clientY;
     cancelPress();
-    press = { el, x, y, timer: setTimeout(() => { const p = press; press = null; if (p) begin(p.el, p.x); }, 350) };
+    press = { el, x, y, timer: setTimeout(() => { const p = press; press = null; if (p) begin(p.el, p.x, p.y); }, 350) };
   }, { passive: true });
-  bar.addEventListener('touchmove', e => {
-    if (drag) { e.preventDefault(); moveTo(e.touches[0].clientX); return; }
+  box.addEventListener('touchmove', e => {
+    if (drag && drag.box === box) { e.preventDefault(); moveTo(e.touches[0].clientX, e.touches[0].clientY); return; }
     if (press && press.timer) {
       const t = e.touches[0];
-      if (Math.abs(t.clientX - press.x) > 8 || Math.abs(t.clientY - press.y) > 8) cancelPress();   // sta scorrendo la barra
+      if (Math.abs(t.clientX - press.x) > 8 || Math.abs(t.clientY - press.y) > 8) cancelPress();   // sta scorrendo
     }
   }, { passive: false });
-  bar.addEventListener('touchend', e => {
+  box.addEventListener('touchend', e => {
     cancelPress();
-    if (drag) { e.preventDefault(); finish(); }
+    if (drag && drag.box === box) { e.preventDefault(); finish(); }
   });
-  bar.addEventListener('touchcancel', () => { cancelPress(); finish(); });
+  box.addEventListener('touchcancel', () => { cancelPress(); finish(); });
 }
 
 // ---------- scorrimento orizzontale col dito (telefono e tablet) ----------

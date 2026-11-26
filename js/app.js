@@ -96,7 +96,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.23 · se l’iscrizione alle notifiche scade, l’app ne crea una nuova da sola e riattiva i voli seguiti';
+const APP_VERSION = '4.24 · pagine aperte in un pannello a sinistra su schermo largo; sul telefono il pulsante ▦ le mostra tutte in una griglia';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -387,7 +387,7 @@ function viewHome() {
         <div class="apgrid">${codes.map(c => `<a class="aptile" href="#/airport/${c}/dep"><b>${offDot(c)}${c}</b><span>${esc(apName(c))}</span></a>`).join('')}</div></div>`).join('')}
       ${hasWorker ? '<p class="hint"><i class="dot go"></i> tabellone ufficiale dell’aeroporto collegato</p>' : ''}
     </section>
-    ${ntabs ? `<p class="hint opentabs">${ntabs} ${ntabs === 1 ? 'pagina aperta' : 'pagine aperte'} nei tab in alto · <button class="linkbtn" type="button" id="closetabs">chiudi tutti</button></p>` : ''}
+    ${ntabs ? `<p class="hint opentabs">${ntabs} ${ntabs === 1 ? 'pagina aperta' : 'pagine aperte'} nelle schede · <button class="linkbtn" type="button" id="closetabs">chiudi tutti</button></p>` : ''}
     ${pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
       `tabelloni: per ${Object.keys(OFFICIAL_AIRPORTS).length} aeroporti il <b>tabellone ufficiale</b> dell’aeroporto${hasWorker ? ' (pallino verde)' : ' (si attiva con il Worker in Impostazioni)'}, che ha la priorità ed è sempre completato con <b>AeroDataBox</b>; per gli altri aeroporti solo AeroDataBox. L’elenco completo è in <a href="#/settings">Impostazioni</a>`,
       POS_SRC, MAP_SRC, 'preferiti e tab aperti: salvati solo in questo browser'])}`;
