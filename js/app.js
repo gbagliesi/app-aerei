@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.19.1 · catene dei voli coerenti tra le pagine dei voli';
+const APP_VERSION = '4.19.2 · catena dei voli: niente giornata da marche ipotizzate, voli del giorno prima segnati';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -896,11 +896,11 @@ async function buildChain(f, inbound, r, date) {
   let prev = [], after = [];
   // 1) marche: del volo (sicure) o del volo precedente (sicure se la tratta precedente è certa, altrimenti ipotesi)
   let reg = f.aircraft?.reg || null, regSure = !!reg, pReg = 1;
-  if (reg && f.aircraft?.regSrc && /ipotes/i.test(f.aircraft.regSrc)) regSure = false;
-  if (!reg && inbound?.aircraft?.reg) {
-    reg = inbound.aircraft.reg;
-    regSure = r?.method === 'reg' && !inbound.aircraft._chain;
-    pReg = regSure ? 1 : (r?.p ?? 0.3);
+  if (reg && f.aircraft?.regSrc && /ipotes/i.test(f.aircraft.regSrc)) reg = null;
+  // marche del volo precedente solo se la tratta precedente è certa: con marche ipotizzate la giornata di quell'aereo
+  // darebbe una storia diversa da quella che mostra la pagina del volo precedente (si risale invece un anello alla volta)
+  if (!reg && inbound?.aircraft?.reg && r?.method === 'reg' && !inbound.aircraft._chain && !inbound.aircraft.regGuess) {
+    reg = inbound.aircraft.reg; regSure = true;
   }
   // marche solo ipotizzate ma il volo precedente ha già un suo anello ben calcolato: seguo quello (coerenza tra le pagine)
   const inbLink = inbound && !regSure ? getLink(inbound) : null;
@@ -960,7 +960,8 @@ const pctTag = l => l._src === 'guess' || l._src === 'regGuess' ? `<i class="uff
 function chainRows(legs) {
   return legs.map((l, i) => {
     const on = !!getWatch(l.number, flightDay(l), l.dep?.iata);
-    const rel = l._this ? '<small class="sub">questo volo</small>' : legKey(l) < legKey(legs.find(x => x._this)) ? '' : '<small class="sub">dopo</small>';
+    const me = legs.find(x => x._this), dl = flightDay(l), dm = flightDay(me);
+    const rel = l._this ? '<small class="sub">questo volo</small>' : legKey(l) > legKey(me) ? '<small class="sub">dopo</small>' : dl && dm && dl < dm ? `<small class="sub">${dl === isoDate(new Date(Date.parse(`${dm}T12:00:00`) - 86400e3)) ? 'il giorno prima' : esc(dl)}</small>` : '';
     const canWatch = !l._this && !['Arrived', 'Canceled'].includes(l.status) && l.dep?.iata && flightDay(l);
     return `<div class="row rot ${l._this ? 'me' : ''} ${AIR.includes(l.status) ? 'live' : ''}" role="row" tabindex="0" data-href="${flightLink(l)}">
       <span class="t">${timeCell(l.dep?.sched, l.dep?.revised, l.dep?.actual)}</span>
