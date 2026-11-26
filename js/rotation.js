@@ -92,7 +92,14 @@ export function simulateRotation({ flight, arrivals, departures, exclude = new S
       const gone = d !== flight && t < now;
       const free = pool.filter(a => { const r = a.aircraft?.reg && reserved.get(a.aircraft.reg); return !r || depTime(r) < arrTime(a); })
         .filter(a => !(gone && stayed.has(a.aircraft?.reg)));
-      const quick = free.filter(a => t - arrTime(a) <= quickMax);
+      // o.plan: le low cost assegnano gli aerei sugli orari programmati e di solito non li rimescolano per un ritardo:
+      // il "giro veloce" si giudica sugli orari programmati (un aereo arrivato con 4 ore di ritardo non diventa il
+      // candidato naturale per la partenza successiva), e tra più candidati vince chi era previsto arrivare prima
+      const planA = a => o.plan ? (ms(a.arr?.sched) || arrTime(a)) : arrTime(a);
+      const planT = o.plan ? (ms(d.dep?.sched) || t) : t;
+      let quick = free.filter(a => planT - planA(a) <= quickMax && planA(a) + minTurn <= planT + (o.plan ? 0 : Infinity));
+      if (o.plan && !quick.length) quick = free.filter(a => t - arrTime(a) <= quickMax);
+      if (o.plan) quick.sort((x, y) => planA(x) - planA(y));
       if (quick.length) {
         const dest = d.arr?.iata, n = flightNo(d);
         pick = quick.filter(a => dest && a.dep?.iata === dest).pop()
