@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.19.2 · catena dei voli: niente giornata da marche ipotizzate, voli del giorno prima segnati';
+const APP_VERSION = '4.19.3 · catena dei voli: marche ipotizzate non più trattate come sicure';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -857,7 +857,7 @@ const copyLeg = l => ({ ...l, dep: { ...l.dep }, arr: { ...l.arr }, aircraft: l.
 // Anelli della catena già calcolati (volo → volo precedente), condivisi tra la pagina di un volo e le catene degli
 // altri: così aprire BRI→PSA o la catena di PSA→BRI dà lo stesso volo precedente. Vince il calcolo più informato:
 // 3 = tratta certa (marche), 2 = stima fatta con FlightAware (pagina del volo o primo anello), 1 = stima senza FlightAware.
-const LINKS = 'aerei.chainLinks.v1', LINK_TTL = 30 * 3600e3;
+const LINKS = 'aerei.chainLinks.v2', LINK_TTL = 30 * 3600e3;
 const linkKey = l => `${l.number}|${l.dep?.iata || ''}|${flightDay(l) || (l.arr?.sched?.local || '').slice(0, 10)}`;
 const loadLinks = () => { try { return JSON.parse(localStorage.getItem(LINKS)) || {}; } catch { return {}; } };
 function getLink(l) {
@@ -883,8 +883,8 @@ async function completeLeg(l, day) {
   const m = legs.find(x => x.arr?.iata && x.arr.iata === l.arr?.iata) || legs.find(x => x.dep?.iata && x.dep.iata === l.dep?.iata) || (legs.length === 1 ? legs[0] : null);
   if (!m) return l;
   const out = copyLeg(m);
-  // le marche sicure del volo hanno la precedenza su quelle ipotizzate
-  if (!m.aircraft?.reg && l.aircraft?.reg) out.aircraft = { ...m.aircraft, ...l.aircraft };
+  // marche: solo quelle sicure (le ipotizzate, _chain, farebbero trattare l'ipotesi come certa nell'anello successivo)
+  if (!m.aircraft?.reg && l.aircraft?.reg && !l.aircraft._chain) out.aircraft = { ...m.aircraft, ...l.aircraft };
   for (const k of ['_src', '_p', '_basis', '_regGuess']) if (l[k] !== undefined) out[k] = l[k];
   return out;
 }
@@ -940,7 +940,9 @@ async function buildChain(f, inbound, r, date) {
     let r2 = getLink(cur);
     if (!r2) {
       const withFa = out.steps === 1;
-      r2 = await getInbound(copyLeg(cur), withFa ? 0 : 1, { noFa: !withFa }).catch(() => null);
+      const probe = copyLeg(cur);
+      if (probe.aircraft?._chain) probe.aircraft = { model: probe.aircraft.model };
+      r2 = await getInbound(probe, withFa ? 0 : 1, { noFa: !withFa }).catch(() => null);
       if (r2) saveLink(cur, r2, linkRank(r2, withFa));
     }
     if (!r2?.inbound) { out.end = { kind: r2?.basis === 'ground' ? 'ground' : 'none', at: cur.dep.iata, text: r2?.reason || '' }; break; }
