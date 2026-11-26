@@ -254,15 +254,15 @@ function buildDrawer() {
 }
 
 function maybeHint() {
-  if (tabs.length < 2 || localStorage.getItem('aerei.tabs.hint4')) return;
+  if (tabs.length < 2 || localStorage.getItem('aerei.tabs.hint5')) return;
   const seen = localStorage.getItem('aerei.tabs.hint2');
-  localStorage.setItem('aerei.tabs.hint4', '1'); localStorage.setItem('aerei.tabs.hint3', '1'); localStorage.setItem('aerei.tabs.hint2', '1'); localStorage.setItem('aerei.tabs.hint', '1');
+  localStorage.setItem('aerei.tabs.hint5', '1'); localStorage.setItem('aerei.tabs.hint4', '1'); localStorage.setItem('aerei.tabs.hint3', '1'); localStorage.setItem('aerei.tabs.hint2', '1'); localStorage.setItem('aerei.tabs.hint', '1');
   const touch = matchMedia('(pointer: coarse)').matches;
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = isSide()
     ? `${seen ? 'Nuovo: le' : 'Le'} pagine aperte restano nel pannello a sinistra, raggruppate per tipo. Trascinale per cambiare l’ordine.`
-    : `${seen ? 'Nuovo: tocca' : 'Le pagine aperte restano nei tab in alto. Tocca'} ☰ in alto a sinistra per vederle tutte in un pannello laterale${touch ? '; tieni premuta una voce per spostarla' : ''}.`;
+    : `${seen ? 'Nuovo: tocca' : 'Le pagine aperte restano nei tab in alto. Tocca'} ☰ in alto a sinistra per vederle tutte in un pannello laterale${touch ? ', oppure fai scorrere il dito dal bordo sinistro verso destra; tieni premuta una voce per spostarla' : ''}.`;
   document.body.appendChild(t);
   setTimeout(() => t.classList.add('out'), 6500);
   setTimeout(() => t.remove(), 7200);
@@ -310,6 +310,7 @@ export function initTabs(appEl) {
   window.addEventListener('resize', setSideTop);
   setSideTop();
   initSwipe(appEl);
+  initEdgeOpen();
   initDrag(bar, { item: '.tab[data-key]:not(.home)', mode: () => isSide() ? 'y' : 'x', scroller: bar });
   renderBar();
 }
@@ -459,6 +460,28 @@ function initDrag(box, { item, mode, scroller }) {
     if (drag && drag.box === box) { e.preventDefault(); finish(); }
   });
   box.addEventListener('touchcancel', () => { cancelPress(); finish(); });
+}
+
+// ---------- dito dal bordo sinistro verso destra: apre il pannello delle pagine aperte (telefono) ----------
+// Lo swipe partito dal centro dello schermo continua a cambiare tab (initSwipe ignora i bordi).
+// Nota: dove il sistema usa il bordo per "indietro" (Safari in una scheda, Android con navigazione a gesti) vince il sistema.
+function initEdgeOpen() {
+  let st = null;
+  document.addEventListener('touchstart', e => {
+    st = null;
+    if (isSide() || drawerOpen() || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (t.clientX > 28 || e.target.closest('.leaflet-container, input, textarea, select')) return;
+    st = { x: t.clientX, y: t.clientY, done: false };
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!st || st.done) return;
+    const t = e.touches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
+    if (Math.abs(dy) > 14 && Math.abs(dy) > dx) { st = null; return; }   // sta scorrendo in verticale
+    if (dx > 6) e.preventDefault();
+    if (dx > 40) { st.done = true; openDrawer(); }
+  }, { passive: false });
+  document.addEventListener('touchend', () => { st = null; });
 }
 
 // ---------- scorrimento orizzontale col dito (telefono e tablet) ----------
