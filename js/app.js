@@ -96,7 +96,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.26.2 · lo swipe dal bordo sinistro non attiva più righe, tab o link che si trovano sotto il dito';
+const APP_VERSION = '4.27 · swipe verso destra in basso a sinistra: apre il pannello delle pagine aperte; dalla metà in su: tab precedente';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];

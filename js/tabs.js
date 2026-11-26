@@ -262,7 +262,7 @@ function maybeHint() {
   t.className = 'toast';
   t.textContent = isSide()
     ? `${seen ? 'Nuovo: le' : 'Le'} pagine aperte restano nel pannello a sinistra, raggruppate per tipo. Trascinale per cambiare l’ordine.`
-    : `${seen ? 'Nuovo: tocca' : 'Le pagine aperte restano nei tab in alto. Tocca'} ☰ in alto a sinistra per vederle tutte in un pannello laterale${touch ? ', oppure fai scorrere il dito dal bordo sinistro verso destra; tieni premuta una voce per spostarla' : ''}.`;
+    : `${seen ? 'Nuovo: tocca' : 'Le pagine aperte restano nei tab in alto. Tocca'} ☰ in alto a sinistra per vederle tutte in un pannello laterale${touch ? ', oppure fai scorrere il dito verso destra nella metà bassa dello schermo, a sinistra; tieni premuta una voce per spostarla' : ''}.`;
   document.body.appendChild(t);
   setTimeout(() => t.classList.add('out'), 6500);
   setTimeout(() => t.remove(), 7200);
@@ -467,6 +467,9 @@ function initDrag(box, { item, mode, scroller }) {
 // Nota: dove il sistema usa il bordo per "indietro" (Safari in una scheda, Android con navigazione a gesti) vince il sistema.
 // fascia del bordo sinistro riservata al pannello: abbastanza larga per il pollice
 const edgeW = () => isSide() ? 24 : Math.min(72, Math.round(window.innerWidth * 0.18));
+// zona che apre il pannello con uno swipe verso destra: il bordo sinistro e tutto il quarto in basso a sinistra.
+// Dalla metà in su (fuori dal bordo) lo swipe verso destra torna al tab precedente; verso sinistra va sempre al successivo.
+const inDrawerZone = (x, y) => !isSide() && (x <= edgeW() || (y > window.innerHeight / 2 && x < window.innerWidth / 2));
 function initEdgeOpen() {
   let st = null;
   // dopo il gesto il tocco non deve aprire/attivare ciò che c'era sotto il dito (riga, tab, link)
@@ -479,13 +482,14 @@ function initEdgeOpen() {
     st = null;
     if (isSide() || drawerOpen() || e.touches.length !== 1) return;
     const t = e.touches[0];
-    if (t.clientX > edgeW() || e.target.closest('.leaflet-container, input, textarea, select')) return;
+    if (!inDrawerZone(t.clientX, t.clientY) || e.target.closest('.leaflet-container, input, textarea, select')) return;
     st = { x: t.clientX, y: t.clientY, done: false, moved: false };
   }, { passive: true, capture: true });
   document.addEventListener('touchmove', e => {
     if (!st || st.done) return;
     const t = e.touches[0], dx = t.clientX - st.x, dy = t.clientY - st.y;
     if (!st.moved && Math.abs(dy) > 10 && Math.abs(dy) > dx) { st = null; return; }   // sta scorrendo in verticale
+    if (!st.moved && dx < -6) { st = null; return; }   // verso sinistra: è lo swipe al tab successivo
     if (dx > 4 && dx > Math.abs(dy)) st.moved = true;
     if (st.moved) e.preventDefault();   // niente scorrimento della barra dei tab
     if (dx > 30) { st.done = true; openDrawer(); }
@@ -496,14 +500,15 @@ function initEdgeOpen() {
 
 // ---------- scorrimento orizzontale col dito (telefono e tablet) ----------
 function initSwipe(el) {
-  let sx = 0, sy = 0, dx = 0, mode = null, t0 = 0;
+  let sx = 0, sy = 0, dx = 0, mode = null, t0 = 0, zone = false;
   const reset = () => { el.style.transition = 'transform .2s ease, opacity .2s ease'; el.style.transform = ''; el.style.opacity = ''; };
   el.addEventListener('touchstart', e => {
     mode = null; dx = 0;
     if (e.touches.length !== 1 || active === 'settings') { mode = 'off'; return; }
     const tch = e.touches[0];
     // niente swipe sulla mappa, nei campi di testo e vicino ai bordi (lì c'è il gesto "indietro" di iOS)
-    if (e.target.closest('.map, .leaflet-container, input, textarea, select, .noswipe') || tch.clientX < edgeW() || tch.clientX > window.innerWidth - 24) { mode = 'off'; return; }
+    if (e.target.closest('.map, .leaflet-container, input, textarea, select, .noswipe') || tch.clientX < 16 || tch.clientX > window.innerWidth - 24) { mode = 'off'; return; }
+    zone = inDrawerZone(tch.clientX, tch.clientY);
     sx = tch.clientX; sy = tch.clientY; t0 = Date.now();
     el.style.transition = 'none';
   }, { passive: true });
@@ -514,7 +519,7 @@ function initSwipe(el) {
     const dy = tch.clientY - sy;
     if (!mode) {
       if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
-      mode = Math.abs(dx) > Math.abs(dy) * 1.5 ? 'h' : 'off';
+      mode = Math.abs(dx) > Math.abs(dy) * 1.5 && !(zone && dx > 0) ? 'h' : 'off';   // verso destra nella zona del pannello: lo apre initEdgeOpen
       if (mode === 'off') return;
     }
     e.preventDefault();
