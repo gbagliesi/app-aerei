@@ -4,6 +4,12 @@ import { getSettings } from './store.js';
 import { OFFICIAL_AIRPORTS } from './api.js';
 
 const WKEY = 'aerei.watches.v1';
+// endpoint dell'iscrizione push con cui QUESTO dispositivo ha registrato i voli sul Worker (mai sincronizzato:
+// ogni dispositivo ha la sua iscrizione, gli altri dispositivi ricevono solo il volo e gli eventi)
+const EPKEY = 'aerei.pushep.v1';
+// iscrizione morta secondo il servizio push (anche con un Worker non ancora aggiornato, che dà solo lo stato 404/410)
+const isGone = r => !!r && (r.gone || r.push?.status === 404 || r.push?.status === 410);
+const setEp = ep => { try { localStorage.setItem(EPKEY, ep); } catch { /* spazio pieno */ } };
 export const EVENT_LABELS = {
   inbound: 'Atterraggio dell’aereo in arrivo (volo precedente)',
   inboundDep: 'Decollo dell’aereo in arrivo',
@@ -86,11 +92,21 @@ function knownState(f, inb) {
 
 /** Attiva (o aggiorna) le notifiche per un volo. */
 export async function watchFlight(f, inbound, inboundGuess, events, useKey = true) {
-  const sub = await subscription(true);
+  let sub = await subscription(true);
   const s = getSettings();
   const flight = flightBody(f, inbound, inboundGuess);
   if (!flight.date || !flight.dep) throw new Error('Mancano data o aeroporto di partenza del volo.');
-  const r = await post('/push/watch', { sub: sub.toJSON(), flight, events, adbKey: useKey ? s.apiKey : '' });
+  const body = () => ({ sub: sub.toJSON(), flight, events, adbKey: useKey ? s.apiKey : '' });
+  let r = await post('/push/watch', body());
+  if (isGone(r)) {
+    // il servizio push (Apple/Google/Mozilla) dice che l'iscrizione di questo dispositivo non vale più:
+    // ne creo una nuova, riregistro gli altri voli seguiti qui e riprovo questo (con la notifica di conferma)
+    sub = await renewSubscription({ fresh: true, except: watchKey(flight.number, flight.date, flight.dep) });
+    r = await post('/push/watch', body());
+    if (isGone(r)) throw new Error('Il servizio di notifiche del browser rifiuta anche l’iscrizione nuova: controlla i permessi di notifica del sito.');
+    r.renewed = true;
+  }
+  setEp(sub.endpoint);
   const all = localWatches();
   // flight: serve agli altri dispositivi dell'account per seguire lo stesso volo (sync.js)
   all[watchKey(flight.number, flight.date, flight.dep)] = { id: r.id, events, arr: flight.arr, inbound: inbound?.number || null, useKey, at: Date.now(), flight };
@@ -105,7 +121,8 @@ export async function refreshWatch(f, inbound, inboundGuess) {
   const sub = await subscription(false);
   if (!sub) return;
   const flight = flightBody(f, inbound, inboundGuess);
-  await post('/push/watch', { sub: sub.toJSON(), flight, events: w.events, adbKey: w.useKey ? getSettings().apiKey : '' }).catch(() => {});
+  const r = await post('/push/watch', { sub: sub.toJSON(), flight, events: w.events, adbKey: w.useKey ? getSettings().apiKey : '' }).catch(() => null);
+  if (isGone(r)) renewSubscription({ fresh: true }).catch(() => {});
   // tengo aggiornato il volo salvato (lo usano gli altri dispositivi), senza lo stato del momento che cambia di continuo
   const all = localWatches(), k = watchKey(flight.number, flight.date, flight.dep);
   if (all[k] && JSON.stringify({ ...all[k].flight, known: null }) !== JSON.stringify({ ...flight, known: null })) { all[k].flight = flight; saveLocal(all); }
@@ -123,9 +140,11 @@ export async function unwatch(number, date, dep, id) {
 
 /** Voli seguiti da questo dispositivo secondo il Worker (con le ultime notifiche mandate). */
 export async function listWatches() {
+  await checkPush();
   const sub = await subscription(false);
   if (!sub) return [];
-  const { watches } = await post('/push/list', { endpoint: sub.endpoint });
+  const { watches, gone } = await post('/push/list', { endpoint: sub.endpoint });
+  if (gone) return [];   // rinnovo non riuscito (es. permesso tolto): non cancello i voli locali
   // allineo l'elenco locale: i voli conclusi il Worker li toglie da solo
   const all = localWatches(), ids = new Set(watches.map(w => w.id));
   for (const [k, v] of Object.entries(all)) if (v.id && !ids.has(v.id)) delete all[k];
@@ -134,8 +153,57 @@ export async function listWatches() {
 }
 
 export async function testPush() {
-  const sub = await subscription(true);
-  return post('/push/test', { sub: sub.toJSON() });
+  let sub = await subscription(true);
+  let r = await post('/push/test', { sub: sub.toJSON() });
+  if (isGone(r)) { sub = await renewSubscription({ fresh: true }); r = await post('/push/test', { sub: sub.toJSON() }); r.renewed = true; }
+  return r;
+}
+
+// ---------- iscrizione push scaduta o cambiata ----------
+let renewing = null;
+/**
+ * Crea (se fresh, dopo aver tolto quella vecchia) l'iscrizione push di questo dispositivo e riregistra sul Worker,
+ * in silenzio, tutti i voli seguiti qui (tranne "except"). Toglie dal Worker l'iscrizione precedente, se diversa.
+ */
+export function renewSubscription({ fresh = false, except = null } = {}) {
+  if (!renewing) renewing = (async () => {
+    const reg = await navigator.serviceWorker.ready;
+    if (fresh) { const cur = await reg.pushManager.getSubscription(); if (cur) await cur.unsubscribe().catch(() => {}); }
+    const sub = await subscription(true);
+    const oldEp = localStorage.getItem(EPKEY);
+    if (oldEp && oldEp !== sub.endpoint) await post('/push/drop', { endpoint: oldEp }).catch(() => {});
+    const all = localWatches(), today = new Date(Date.now() - 36 * 3600e3).toISOString().slice(0, 10);
+    let n = 0;
+    for (const [k, w] of Object.entries(all)) {
+      if (!w.id || k === except) continue;
+      // senza il volo salvato (voli seguiti prima della 4.21) o già passati: non si possono riregistrare
+      if (!w.flight || (w.flight.date || '') < today) { delete all[k]; continue; }
+      try {
+        const r = await post('/push/watch', { sub: sub.toJSON(), flight: w.flight, events: w.events, adbKey: w.useKey !== false ? getSettings().apiKey : '', quiet: true });
+        w.id = r.id; delete w.pending; n++;
+      } catch { delete w.id; w.pending = true; }
+    }
+    saveLocal(all);
+    setEp(sub.endpoint);
+    console.info(`[notifiche] iscrizione push rinnovata, ${n} voli riregistrati`);
+    return sub;
+  })().finally(() => { renewing = null; });
+  return renewing;
+}
+
+/**
+ * Controllo all'avvio (solo se qui ci sono voli seguiti e le notifiche sono già permesse): se il browser ha cambiato
+ * o perso l'iscrizione, o il Worker sa che è morta, ne creo una nuova e riregistro i voli. Nessuna richiesta di permesso.
+ */
+export async function checkPush() {
+  if (pushProblem() || !('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!Object.values(localWatches()).some(w => w.id)) return;
+  const cur = await subscription(false).catch(() => null);
+  const ep = localStorage.getItem(EPKEY);
+  if (!cur || (ep && cur.endpoint !== ep)) { await renewSubscription(); return; }
+  const r = await post('/push/list', { endpoint: cur.endpoint }).catch(() => null);
+  if (r?.gone) await renewSubscription({ fresh: true });
+  else if (r && !ep) setEp(cur.endpoint);
 }
 
 // ---------- voli seguiti da altri dispositivi dello stesso account (sync.js) ----------
@@ -152,7 +220,7 @@ async function silentSub() {
  */
 export async function applyRemoteWatches(want) {
   const all = localWatches(), sub = await silentSub();
-  let dirty = false;
+  let dirty = false, gone = false;
   for (const [k, w] of Object.entries(all)) {
     if (want[k] || !w.flight) continue;   // senza "flight" sono voli seguiti prima della sincronizzazione: restano
     if (w.id && sub) await post('/push/unwatch', { endpoint: sub.endpoint, id: w.id }).catch(() => {});
@@ -165,26 +233,35 @@ export async function applyRemoteWatches(want) {
     if (sub && v.flight) {
       try {
         const r = await post('/push/watch', { sub: sub.toJSON(), flight: v.flight, events: v.events, adbKey: entry.useKey ? getSettings().apiKey : '', quiet: true });
-        entry.id = r.id; delete entry.pending;
+        if (isGone(r)) { entry.pending = true; gone = true; } else { entry.id = r.id; delete entry.pending; setEp(sub.endpoint); }
       } catch { entry.pending = true; }
     } else if (!cur?.id) entry.pending = true;
     all[k] = entry; dirty = true;
   }
   if (dirty) saveLocal(all);
+  // iscrizione morta: ne creo una nuova e attivo i voli rimasti in attesa
+  if (gone) await renewSubscription({ fresh: true }).then(() => activatePending()).catch(() => {});
 }
 
 /** Voli seguiti su altri dispositivi ma non ancora attivi qui. */
 export const pendingWatches = () => Object.entries(localWatches()).filter(([, w]) => w.pending || !w.id).map(([k, w]) => ({ k, ...w }));
 
 /** Attiva qui le notifiche dei voli seguiti dagli altri dispositivi (chiede il permesso se serve). */
-export async function activatePending() {
+export async function activatePending(retry = true) {
   const sub = await subscription(true);
   const all = localWatches();
   let n = 0;
   for (const [k, w] of Object.entries(all)) {
     if (w.id || !w.flight) continue;
     const r = await post('/push/watch', { sub: sub.toJSON(), flight: w.flight, events: w.events, adbKey: w.useKey !== false ? getSettings().apiKey : '', quiet: true });
+    if (isGone(r)) {
+      saveLocal(all);
+      if (!retry) throw new Error('Il servizio di notifiche del browser rifiuta l’iscrizione: controlla i permessi di notifica del sito.');
+      await renewSubscription({ fresh: true });
+      return n + await activatePending(false);
+    }
     all[k] = { ...w, id: r.id }; delete all[k].pending; n++;
+    setEp(sub.endpoint);
   }
   saveLocal(all);
   return n;

@@ -2,7 +2,7 @@ import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAi
 import { searchAirports, airportByIata, AIRPORTS, norm, airportSearchText } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites, reorderFavorites, favKey } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
-import { pushProblem, watchFlight, refreshWatch, unwatch, getWatch, listWatches, testPush, EVENT_LABELS, DEFAULT_EVENTS, pendingWatches, activatePending } from './notify.js';
+import { pushProblem, checkPush, watchFlight, refreshWatch, unwatch, getWatch, listWatches, testPush, EVENT_LABELS, DEFAULT_EVENTS, pendingWatches, activatePending } from './notify.js';
 import { initSync, syncNow, syncAccount, isLinked, createAccount, joinAccount, pairingCode, listDevices, removeDevice, unlinkThis, wipeAccount, setCats, SYNC_CATS, sharedLink, shareLink } from './sync.js';
 import { initTabs, enterTab, setTabInfo, playEnterAnim, closeAllTabs, openTabsCount } from './tabs.js';
 
@@ -96,7 +96,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.22 · la cache dei dati sta in IndexedDB: il localStorage condiviso con le altre app resta libero';
+const APP_VERSION = '4.23 · se l’iscrizione alle notifiche scade, l’app ne crea una nuova da sola e riattiva i voli seguiti';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -687,7 +687,7 @@ function bindBell(f, getInb) {
       try {
         const r = await watchFlight(f, inb, guess, events, document.getElementById('usekey')?.checked !== false);
         paint();
-        render(r.updated ? '<p class="okmsg">✓ Notifiche aggiornate.</p>' : r.push?.ok ? '<p class="okmsg">✓ Notifiche attive: ti ho mandato una notifica di conferma.</p>'
+        render(r.updated ? '<p class="okmsg">✓ Notifiche aggiornate.</p>' : r.push?.ok ? `<p class="okmsg">✓ Notifiche attive: ti ho mandato una notifica di conferma.${r.renewed ? ' L’iscrizione alle notifiche di questo dispositivo era scaduta: l’ho rinnovata e ho riattivato anche gli altri voli seguiti qui.' : ''}</p>`
           : errorBox(`Volo registrato, ma la notifica di conferma non è partita (${r.push?.status || ''} ${r.push?.error || ''}).`));
       } catch (e) { render(errorBox(e)); }
     };
@@ -1074,7 +1074,7 @@ function bindChain(box, c) {
         try {
           const res = await watchFlight(l, null, false, events, panel.querySelector('#cusekey')?.checked !== false);
           paint();
-          render(res.updated ? '<p class="okmsg">✓ Avvisi aggiornati.</p>' : res.push?.ok ? '<p class="okmsg">✓ Avvisi attivi: ti ho mandato una notifica di conferma.</p>' : errorBox(`Volo registrato, ma la notifica di conferma non è partita (${res.push?.status || ''} ${res.push?.error || ''}).`));
+          render(res.updated ? '<p class="okmsg">✓ Avvisi aggiornati.</p>' : res.push?.ok ? `<p class="okmsg">✓ Avvisi attivi: ti ho mandato una notifica di conferma.${res.renewed ? ' L’iscrizione alle notifiche era scaduta: l’ho rinnovata.' : ''}</p>` : errorBox(`Volo registrato, ma la notifica di conferma non è partita (${res.push?.status || ''} ${res.push?.error || ''}).`));
         } catch (err) { render(errorBox(err)); }
       };
       const stop = panel.querySelector('#cstop');
@@ -1562,7 +1562,7 @@ async function notifySettings() {
   t.onclick = async () => {
     const out = document.getElementById('ntestres');
     out.textContent = 'Invio…';
-    try { const r = await testPush(); out.textContent = r.push?.ok ? 'Inviata ✓' : `Non partita: ${r.push?.status || ''} ${r.push?.error || ''}`; } catch (e) { out.textContent = e.message; }
+    try { const r = await testPush(); out.textContent = r.push?.ok ? (r.renewed ? 'Inviata ✓ (iscrizione scaduta, rinnovata)' : 'Inviata ✓') : `Non partita: ${r.push?.status || ''} ${r.push?.error || ''}`; } catch (e) { out.textContent = e.message; }
   };
   try {
     const ws = await listWatches();
@@ -1760,4 +1760,8 @@ route();
 window.addEventListener('settings-changed', updateBanner);
 window.addEventListener('sync-changed', () => { if (document.getElementById('synccard') && !document.getElementById('spaircode')?.innerHTML && !document.getElementById('sres')?.innerHTML) syncSettings(); });
 initSync();
-if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  // iscrizione push scaduta o cambiata dal browser: la rinnovo e riregistro i voli seguiti (senza chiedere nulla)
+  setTimeout(() => checkPush().catch(() => {}), 4000);
+}

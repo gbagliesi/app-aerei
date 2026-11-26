@@ -6,6 +6,9 @@
 //   POST /push/unwatch { endpoint, id } → { ok }
 //   POST /push/list    { endpoint }     → { watches: [...] }
 //   POST /push/test    { endpoint }     → { push }
+//   POST /push/drop    { endpoint }     → { ok }   toglie un'iscrizione sostituita (con i suoi voli)
+// Se il servizio push risponde 404/410 l'iscrizione è morta: il Worker la toglie con i suoi voli, ricorda "dead:<id>"
+// e lo dice all'app (gone: true in /push/watch, /push/list, /push/test), che crea un'iscrizione nuova e riregistra i voli.
 //
 // Fonti: prima i tabelloni ufficiali degli aeroporti (gratis, letti dal Worker stesso); AeroDataBox solo per ciò che
 // i tabelloni non coprono, con al massimo ADB_MAX chiamate per volo, per non consumare il piano mensile.
@@ -172,6 +175,7 @@ export class Watcher {
         if (!/^[A-Z0-9]{2,3}\d{1,5}[A-Z]?$/.test(f.number || '') || !/^\d{4}-\d\d-\d\d$/.test(f.date || '') || !f.dep) return json({ error: 'volo non valido' }, 400);
         const old = await this.storage.get(`sub:${subId}`);
         await this.storage.put(`sub:${subId}`, { sub, adbKey: (b.adbKey || '').trim() || old?.adbKey || null, at: Date.now() });
+        await this.storage.delete(`dead:${subId}`);
         const id = `${subId}:${f.number}:${f.date}:${f.dep}`;
         const prev = await this.storage.get(`watch:${id}`);
         if (!prev && (await this.storage.list({ prefix: 'watch:' })).size >= MAX_WATCHES) return json({ error: `al massimo ${MAX_WATCHES} voli seguiti` }, 400);
@@ -195,6 +199,7 @@ export class Watcher {
         let push = null;
         // quiet: volo seguito da un altro dispositivo dello stesso account, attivato qui in automatico (niente conferma)
         if (!prev && !b.quiet) push = await this.send(subId, { title: `🔔 ${f.number}: notifiche attive`, body: `${f.dep}→${f.arr || '?'} del ${f.date.slice(8)}/${f.date.slice(5, 7)}. Ti avviso per: ${events.map(e => LABELS[e]).join(', ') || 'nessun evento'}.`, tag: `${id}:on`, url: flightUrl(w) });
+        if (push?.gone) return json({ id, push, gone: true });   // iscrizione morta: l'app ne crea una nuova e riprova
         await this.schedule(Date.now() + 5e3);
         return json({ id, push, updated: !!prev });
       }
@@ -206,11 +211,17 @@ export class Watcher {
       }
       if (url.pathname === '/push/list') {
         const all = await this.storage.list({ prefix: `watch:${subId}:` });
-        return json({ watches: [...all.values()].map(w => ({ id: w.id, number: w.number, date: w.date, dep: w.dep, arr: w.arr, events: w.events, log: w.log, lastCheck: w.lastCheck, adbCalls: w.adbCalls, inbound: w.inbound?.number || null })) });
+        const dead = await this.storage.get(`dead:${subId}`);
+        return json({ gone: !!dead && !all.size, watches: [...all.values()].map(w => ({ id: w.id, number: w.number, date: w.date, dep: w.dep, arr: w.arr, events: w.events, log: w.log, lastCheck: w.lastCheck, adbCalls: w.adbCalls, inbound: w.inbound?.number || null })) });
       }
       if (url.pathname === '/push/test') {
         if (sub) { const old = await this.storage.get(`sub:${subId}`); await this.storage.put(`sub:${subId}`, { sub, adbKey: old?.adbKey || null, at: Date.now() }); }
-        return json({ push: await this.send(subId, { title: '🔔 Prova notifiche', body: 'Le notifiche dei voli funzionano su questo dispositivo.', tag: 'test', url: './#/settings' }) });
+        const push = await this.send(subId, { title: '🔔 Prova notifiche', body: 'Le notifiche dei voli funzionano su questo dispositivo.', tag: 'test', url: './#/settings' });
+        return json({ push, gone: !!push.gone });
+      }
+      if (url.pathname === '/push/drop') {
+        await this.dropSub(subId);
+        return json({ ok: true });
       }
       return json({ error: 'not found' }, 404);
     } catch (e) { return json({ error: String(e.message || e) }, 500); }
@@ -220,6 +231,12 @@ export class Watcher {
     if (typeof endpoint !== 'string' || !endpoint.startsWith('https://')) return null;
     const h = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(endpoint)));
     return [...h.slice(0, 8)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+
+  async dropSub(subId) {
+    await this.storage.delete(`sub:${subId}`);
+    const ws = await this.storage.list({ prefix: `watch:${subId}:` });
+    if (ws.size) await this.storage.delete([...ws.keys()]);
   }
 
   async schedule(at) {
@@ -236,12 +253,12 @@ export class Watcher {
       const body = await encryptPayload(rec.sub, JSON.stringify(msg));
       const r = await fetch(rec.sub.endpoint, { method: 'POST', body, headers: {
         Authorization: await vapidAuth(rec.sub.endpoint, vapid), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '3600', Urgency: 'high' } });
-      if (r.status === 404 || r.status === 410) { // iscrizione scaduta: tolgo l'iscritto e i suoi voli
-        await this.storage.delete(`sub:${subId}`);
-        const ws = await this.storage.list({ prefix: `watch:${subId}:` });
-        await this.storage.delete([...ws.keys()]);
+      const gone = r.status === 404 || r.status === 410;
+      if (gone) { // iscrizione scaduta o revocata: tolgo l'iscritto e i suoi voli, e me lo ricordo per dirlo all'app
+        await this.dropSub(subId);
+        await this.storage.put(`dead:${subId}`, Date.now());
       }
-      return { ok: r.ok, status: r.status, error: r.ok ? undefined : (await r.text()).slice(0, 200) };
+      return { ok: r.ok, status: r.status, gone: gone || undefined, error: r.ok ? undefined : (await r.text()).slice(0, 200) };
     } catch (e) { return { ok: false, error: String(e.message || e) }; }
   }
 
