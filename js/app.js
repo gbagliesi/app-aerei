@@ -96,7 +96,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.27.1 · stima dell’aereo: un volo molto in ritardo non cambia più il giro previsto delle low cost';
+const APP_VERSION = '4.27.2 · niente più errore _leaflet_pos sotto la mappa; marche dei voli nella catena';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -760,7 +760,7 @@ async function viewFlight(number, date, depHint) {
   let lastR = null, inbSig = null, chainDone = false;
   const renderInbound = async r => {
     let html = `<div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="hint">${esc(r.reason)}</p></div>`;
-    inbLayer.clearLayers();
+    try { inbLayer.clearLayers(); } catch { /* mappa chiusa */ }
     if (inbound) {
       const turn = minutesBetween(inbound.arr.revised || inbound.arr.sched, f.dep.revised || f.dep.sched);
       const guess = r.method === 'guess';
@@ -769,9 +769,12 @@ async function viewFlight(number, date, depHint) {
         <p class="note ${turn < 35 ? 'warn' : ''}">${turn < 35 ? '⚠️ ' : ''}Tempo di rotazione a ${esc(f.dep.iata)}: <b>${turn} min</b> tra l'arrivo dell'aereo e la partenza prevista${turn < 35 ? ': un ritardo del volo precedente si ripercuoterà probabilmente su questo.' : '.'}</p>`;
       const P = inbound.dep.lat != null ? inbound.dep : await getAirportInfo(inbound.dep.iata);
       if (P?.lat != null && A?.lat != null) {
-        L.polyline(arc(P, A), { color: '#7aa2ff', weight: 2, dashArray: '6 6' }).addTo(inbLayer);
-        L.marker([P.lat, P.lon], { icon: apIcon(inbound.dep.iata) }).addTo(inbLayer);
-        map.fitBounds([...bounds, [P.lat, P.lon]], { padding: [30, 30] });
+        try {
+          L.polyline(arc(P, A), { color: '#7aa2ff', weight: 2, dashArray: '6 6' }).addTo(inbLayer);
+          L.marker([P.lat, P.lon], { icon: apIcon(inbound.dep.iata) }).addTo(inbLayer);
+        } catch { /* mappa non visibile */ }
+        // la mappa può essere nascosta o già chiusa (cambio tab, ricalcolo): Leaflet allora lancia _leaflet_pos
+        try { if (document.body.contains(map.getContainer())) map.fitBounds([...bounds, [P.lat, P.lon]], { padding: [30, 30] }); } catch { /* mappa non visibile */ }
       }
     }
     const box = document.getElementById('inbound');
@@ -1016,7 +1019,7 @@ function chainRows(legs) {
     const canWatch = !l._this && !['Arrived', 'Canceled'].includes(l.status) && l.dep?.iata && flightDay(l);
     return `<div class="row rot ${l._this ? 'me' : ''} ${AIR.includes(l.status) ? 'live' : ''}" role="row" tabindex="0" data-href="${flightLink(l)}">
       <span class="t">${timeCell(l.dep?.sched, l.dep?.revised, l.dep?.actual)}</span>
-      <span class="num"><b>${esc(l.number)}</b><small>${esc(l.airline?.name || '')}${l._official ? ` <i class="uff" title="Dal tabellone ufficiale di ${esc([l.dep?._off, l.arr?._off].filter(Boolean).join(' e '))}">uff.</i>` : ''} ${pctTag(l)}</small></span>
+      <span class="num"><b>${esc(l.number)}</b><small>${l.aircraft?.reg && !l.aircraft._chain ? `<span title="Marche ${esc(l.aircraft.regSrc ? `da ${l.aircraft.regSrc}` : l._adbAt ? 'da AeroDataBox' : l._faAt ? 'da FlightAware' : '')}">${esc(l.aircraft.reg)}</span> · ` : ''}${esc(l.airline?.name || '')}${l._official ? ` <i class="uff" title="Dal tabellone ufficiale di ${esc([l.dep?._off, l.arr?._off].filter(Boolean).join(' e '))}">uff.</i>` : ''} ${pctTag(l)}</small></span>
       <span class="dest"><b>${esc(l.dep?.iata || '—')} → ${esc(l.arr?.iata || '—')}</b><small>${esc(l.dep?.iata ? apName(l.dep.iata) : '')} – ${esc(l.arr?.iata ? apName(l.arr.iata) : '')}</small>${rel}</span>
       <span class="t">${timeCell(l.arr?.sched, l.arr?.revised, l.arr?.actual)}</span>
       <span>${statusBadge(l.status)}${l._inferred ? '<small title="Stato dedotto: una tratta successiva è già partita">dedotto</small>' : ''}${canWatch ? ` <button class="bell chainbell ${on ? 'on' : ''}" data-i="${i}" title="${on ? 'Avvisi attivi: modifica' : 'Avvisami per decollo e atterraggio di questo volo'}">${on ? '🔔' : '🔕'}</button>` : ''}</span></div>`;
