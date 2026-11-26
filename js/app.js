@@ -2,7 +2,8 @@ import { getBoard, guessBoardRegs, getFlight, getInbound, getLivePosition, getAi
 import { searchAirports, airportByIata, AIRPORTS, norm, airportSearchText } from './airports.js';
 import { getSettings, saveSettings, getFavorites, isFavorite, toggleFavorite, exportFavorites, importFavorites, reorderFavorites, favKey } from './store.js';
 import { greatCircle, distanceKm } from './demo.js';
-import { pushProblem, watchFlight, refreshWatch, unwatch, getWatch, listWatches, testPush, EVENT_LABELS, DEFAULT_EVENTS } from './notify.js';
+import { pushProblem, watchFlight, refreshWatch, unwatch, getWatch, listWatches, testPush, EVENT_LABELS, DEFAULT_EVENTS, pendingWatches, activatePending } from './notify.js';
+import { initSync, syncNow, syncAccount, isLinked, createAccount, joinAccount, pairingCode, listDevices, removeDevice, unlinkThis, wipeAccount, setCats, SYNC_CATS, sharedLink, shareLink } from './sync.js';
 import { initTabs, enterTab, setTabInfo, playEnterAnim, closeAllTabs, openTabsCount } from './tabs.js';
 
 // ---------- età dei dati: "aggiornato 3 min fa" (si aggiorna da solo ogni 5 secondi) ----------
@@ -95,7 +96,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.20 · pagina del volo coerente con la catena dei voli, che si aggiorna da sola ogni 5 minuti';
+const APP_VERSION = '4.21 · sincronizzazione fra dispositivi (preferiti, tab, voli seguiti, impostazioni) e catena dei voli condivisa';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -675,7 +676,8 @@ function bindBell(f, getInb) {
       <div class="evlist">${Object.entries(EVENT_LABELS).map(([k, l]) => `${(() => { const na = k.startsWith('inbound') && !inb; return `<label class="check"><input type="checkbox" name="ev" value="${k}" ${evs.includes(k) && !na ? 'checked' : ''} ${na ? 'disabled' : ''}> <span>${esc(l)}${na ? ' <small class="sub">(volo precedente non ancora trovato)</small>' : ''}</span></label>`; })()}`).join('')}</div>
       <p class="hint">Fonti: ${off.length ? `tabellone ufficiale di ${off.join(' e ')}` : 'nessun tabellone ufficiale per questi aeroporti'}${needKey ? `${off.length ? '; per il resto' : ':'} AeroDataBox, al massimo 30 chiamate per volo` : ''}.</p>
       ${needKey ? `<label class="check"><input type="checkbox" id="usekey" ${w?.useKey === false ? '' : 'checked'}> Usa la mia chiave AeroDataBox dal Worker (resta salvata solo nel tuo Worker)</label>` : ''}
-      <p><button id="nwatch">${w ? 'Aggiorna' : 'Attiva le notifiche'}</button> ${w ? '<button class="ghost" id="nstop">Disattiva</button>' : ''}</p>`}
+      ${w && !w.id ? '<p class="note">Questo volo lo segui da un altro dispositivo collegato: qui le notifiche non sono ancora attive.</p>' : ''}
+      <p><button id="nwatch">${w && !w.id ? 'Attiva anche qui' : w ? 'Aggiorna' : 'Attiva le notifiche'}</button> ${w ? '<button class="ghost" id="nstop">Disattiva</button>' : ''}</p>`}
       <div id="nres">${msg}</div>`;
     const go = document.getElementById('nwatch');
     if (go) go.onclick = async () => {
@@ -894,6 +896,17 @@ function getLink(l) {
   // le stime si ricalcolano dopo 20 minuti (nel frattempo possono essere arrivati dati nuovi), le tratte certe restano
   return x && Date.now() - x.at < (x.rank >= 3 ? LINK_TTL : LINK_FRESH) ? x : null;
 }
+// anello già calcolato da un altro dispositivo (condiviso dal Worker): stesso volo precedente su tutti i dispositivi
+async function getLinkAny(l) {
+  const x = getLink(l);
+  if (x) return x;
+  const k = linkKey(l), v = await sharedLink(k);
+  if (!v || Date.now() - v.at >= (v.rank >= 3 ? LINK_TTL : LINK_FRESH)) return null;
+  const all = loadLinks();
+  all[k] = v;
+  try { localStorage.setItem(LINKS, JSON.stringify(all)); } catch { /* spazio pieno */ }
+  return v;
+}
 function saveLink(l, r, rank) {
   if (!r) return;
   const all = loadLinks(), k = linkKey(l), old = all[k];
@@ -901,6 +914,9 @@ function saveLink(l, r, rank) {
   if (old && old.rank > rank && Date.now() - old.at < (old.rank >= 3 ? LINK_TTL : LINK_FRESH)) return;
   const strip = f => f && { number: f.number, airline: f.airline, status: f.status, callSign: f.callSign, aircraft: f.aircraft, dep: f.dep, arr: f.arr, codeshares: f.codeshares };
   all[k] = { at: Date.now(), rank, inbound: strip(r.inbound), method: r.method || null, basis: r.basis || null, p: r.p ?? null, reason: r.reason || '' };
+  // lo condivido con gli altri dispositivi (solo se cambia, per non riscrivere ogni 5 minuti la stessa stima)
+  const sig = x => x && JSON.stringify([x.rank, x.inbound?.number, x.inbound?.dep?.iata, x.method, x.basis, x.p]);
+  if (sig(all[k]) !== sig(old) || Date.now() - (old?.at || 0) > LINK_FRESH / 2) shareLink(k, all[k]);
   for (const [kk, v] of Object.entries(all)) if (Date.now() - v.at > LINK_TTL) delete all[kk];
   try { localStorage.setItem(LINKS, JSON.stringify(all)); } catch { /* spazio pieno: pazienza */ }
 }
@@ -933,7 +949,7 @@ async function buildChain(f, inbound, r, date) {
     reg = inbound.aircraft.reg; regSure = true;
   }
   // marche solo ipotizzate ma il volo precedente ha già un suo anello ben calcolato: seguo quello (coerenza tra le pagine)
-  const inbLink = inbound && !regSure ? getLink(inbound) : null;
+  const inbLink = inbound && !regSure ? await getLinkAny(inbound) : null;
   if (inbLink && inbLink.rank >= 2) reg = null;
   if (reg) {
     const seeds = [f.dep?.iata, f.arr?.iata, inbound?.dep?.iata].filter(Boolean);
@@ -967,7 +983,7 @@ async function buildChain(f, inbound, r, date) {
     out.steps++;
     // anello già calcolato (anche dalla pagina di quel volo) o, se manca, calcolato ora come farebbe quella pagina:
     // FlightAware solo sul primo anello, per risparmiare richieste
-    let r2 = getLink(cur);
+    let r2 = await getLinkAny(cur);
     if (!r2) {
       const withFa = out.steps === 1;
       const probe = copyLeg(cur);
@@ -1436,6 +1452,7 @@ function viewSettings() {
       <button>Salva</button> <button type="button" class="ghost" id="test">Prova la chiave</button> <span id="saved" class="sub"></span>
       <div id="testres"></div>
     </form>
+    <div class="card" id="synccard"></div>
     <div class="card">
       <span class="eyebrow">Tracking in tempo reale</span>
       <p class="hint">La posizione dell'aereo arriva da AeroDataBox quando disponibile, altrimenti dalle reti ADS-B gratuite <b>adsb.lol</b> e <b>OpenSky Network</b>, cercando l'aereo per codice ICAO24. Nessuna chiave richiesta.</p>
@@ -1454,7 +1471,7 @@ function viewSettings() {
     </div>
     <div class="card">
       <span class="eyebrow">Preferiti e tab</span>
-      <p class="hint">I preferiti e i tab aperti sono salvati in questo browser. Esporta i preferiti per spostarli su un altro dispositivo.</p>
+      <p class="hint">I preferiti e i tab aperti sono salvati in questo browser${isLinked() ? ' e sincronizzati con gli altri dispositivi collegati' : ''}. Puoi anche esportare i preferiti in un file.</p>
       <button id="exp" class="ghost">Esporta</button> <label class="ghost filebtn">Importa<input id="imp" type="file" accept="application/json" hidden></label>
     </div>`;
   document.getElementById('sf').addEventListener('submit', e => {
@@ -1481,6 +1498,7 @@ function viewSettings() {
     } catch (e) { out.innerHTML = errorBox(`Worker non raggiungibile (${e.message}). Controlla l’indirizzo.`); }
   };
   notifySettings();
+  syncSettings();
   document.getElementById('exp').onclick = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([exportFavorites()], { type: 'application/json' }));
@@ -1494,7 +1512,11 @@ function viewSettings() {
 async function notifySettings() {
   const list = document.getElementById('nlist'), problem = pushProblem();
   const t = document.getElementById('ntest');
-  if (problem) { list.innerHTML = `<p class="note warn">${esc(problem)}</p>`; t.hidden = true; return; }
+  if (!list) return;
+  const pend = pendingWatches();
+  const pendHtml = pend.length ? `<p class="note">${pend.length === 1 ? 'Un volo seguito' : `${pend.length} voli seguiti`} su un altro dispositivo collegato (${pend.map(w => esc(w.k.split('|')[0])).join(', ')}) qui non ${pend.length === 1 ? 'è' : 'sono'} ancora ${pend.length === 1 ? 'attivo' : 'attivi'}. ${problem ? '' : '<button type="button" class="small" id="npend">Attiva qui</button>'}</p>` : '';
+  if (problem) { list.innerHTML = `${pendHtml}<p class="note warn">${esc(problem)}</p>`; t.hidden = true; return; }
+  const bindPend = () => { const b = document.getElementById('npend'); if (b) b.onclick = async () => { b.disabled = true; try { await activatePending(); notifySettings(); } catch (e) { b.disabled = false; alert(e.message); } }; };
   t.onclick = async () => {
     const out = document.getElementById('ntestres');
     out.textContent = 'Invio…';
@@ -1502,17 +1524,104 @@ async function notifySettings() {
   };
   try {
     const ws = await listWatches();
-    if (!ws.length) { list.innerHTML = '<p class="hint">Nessun volo seguito con le notifiche su questo dispositivo.</p>'; return; }
+    if (!ws.length) { list.innerHTML = `${pendHtml}<p class="hint">Nessun volo seguito con le notifiche su questo dispositivo.</p>`; bindPend(); return; }
     const when = ms => new Date(ms).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    list.innerHTML = `<ul class="srclist">${ws.map(w => `<li><a href="#/flight/${encodeURIComponent(w.number)}/${w.date}?dep=${w.dep}"><b>${esc(w.number)}</b> ${esc(w.dep)}→${esc(w.arr || '?')}</a> · ${esc(w.date.slice(8))}/${esc(w.date.slice(5, 7))}
+    list.innerHTML = `${pendHtml}<ul class="srclist">${ws.map(w => `<li><a href="#/flight/${encodeURIComponent(w.number)}/${w.date}?dep=${w.dep}"><b>${esc(w.number)}</b> ${esc(w.dep)}→${esc(w.arr || '?')}</a> · ${esc(w.date.slice(8))}/${esc(w.date.slice(5, 7))}
       ${w.inbound ? `· aereo in arrivo ${esc(w.inbound)}` : ''} · <small>${w.lastCheck ? `ultimo controllo ${esc(when(w.lastCheck))}` : 'controlli a partire da 4 ore prima'}${w.adbCalls ? ` · ${w.adbCalls} chiamate AeroDataBox` : ''}</small>
       <button type="button" class="ghost small" data-unwatch="${esc(w.id)}" data-k="${esc(`${w.number}|${w.date}|${w.dep}`)}">Togli</button>
       ${(w.log || []).length ? `<ul class="nlog">${w.log.slice(-5).reverse().map(l => `<li><small>${esc(when(l.at))}</small> ${esc(l.text)}${l.ok ? '' : ' <small>(non consegnata)</small>'}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ul>`;
+    bindPend();
     list.querySelectorAll('[data-unwatch]').forEach(b => b.onclick = async () => {
       const [n, d, dep] = b.dataset.k.split('|');
       try { await unwatch(n, d, dep, b.dataset.unwatch); notifySettings(); } catch (e) { alert(e.message); }
     });
   } catch (e) { list.innerHTML = errorBox(e); }
+}
+
+
+// ---------- sincronizzazione fra dispositivi (sync.js) ----------
+const whenSync = ms => new Date(ms).toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+function syncSettings(msg = '') {
+  const box = document.getElementById('synccard');
+  if (!box) return;
+  const a = syncAccount(), hasW = !!(getSettings().workerUrl || '').trim();
+  const intro = '<span class="eyebrow">Sincronizzazione fra dispositivi</span>';
+  if (!a) {
+    box.innerHTML = `${intro}
+      <p class="hint">Collega telefono, computer e altri dispositivi: preferiti, tab, voli seguiti con le notifiche e impostazioni (compresa la chiave AeroDataBox) restano uguali su tutti, e la catena dei voli calcolata su uno la vedono anche gli altri. Non servono password né email: i dati restano nel tuo Worker. Senza collegamento l’app funziona come prima, con i dati solo qui.</p>
+      ${hasW ? '' : '<p class="note warn">Serve prima l’indirizzo del Worker qui sopra (premi Salva).</p>'}
+      <p><button type="button" id="snew" ${hasW ? '' : 'disabled'}>Inizia da questo dispositivo</button></p>
+      <label>Hai già collegato un altro dispositivo? Inserisci il codice che compare lì (Impostazioni → Collega un altro dispositivo)<input id="scode" placeholder="ABCD-EFGH" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+      <p><button type="button" class="ghost" id="sjoin" ${hasW ? '' : 'disabled'}>Collega questo dispositivo</button></p>
+      <div id="sres">${msg}</div>`;
+    const busy = async (b, fn) => { b.disabled = true; document.getElementById('sres').innerHTML = '<p class="hint">Un momento…</p>'; try { await fn(); syncSettings('<p class="okmsg">✓ Collegato. I dati si aggiornano da soli.</p>'); notifySettings(); } catch (e) { b.disabled = false; document.getElementById('sres').innerHTML = errorBox(e); } };
+    document.getElementById('snew').onclick = e => busy(e.target, createAccount);
+    document.getElementById('sjoin').onclick = e => busy(e.target, () => joinAccount(document.getElementById('scode').value));
+    return;
+  }
+  const c = { fav: true, tabs: true, watch: true, settings: true, ...(a.cats || {}) };
+  const devs = a.devices || [];
+  box.innerHTML = `${intro}
+    ${a.lastError && (a.lastErrorAt || 0) > (a.lastOk || 0) ? `<p class="note warn">Ultimo tentativo non riuscito: ${esc(a.lastError)}</p>` : `<p class="okmsg">✓ Collegato${a.lastOk ? ` · aggiornato ${esc(whenSync(a.lastOk))}` : ''}</p>`}
+    ${devs.length ? `<p class="hint">Dispositivi collegati:</p><ul class="srclist">${devs.map(d => `<li><b>${esc(d.name)}</b>${d.id === a.me ? ' (questo)' : ''} · <small>ultimo accesso ${esc(whenSync(d.last))}</small> ${d.id === a.me ? '' : `<button type="button" class="ghost small" data-sdev="${esc(d.id)}">Scollega</button>`}</li>`).join('')}</ul>` : ''}
+    <p class="hint">Cosa sincronizzare da questo dispositivo:</p>
+    <div class="evlist">${Object.entries(SYNC_CATS).map(([k, l]) => `<label class="check"><input type="checkbox" name="scat" value="${k}" ${c[k] ? 'checked' : ''}> <span>${esc(l)}</span></label>`).join('')}</div>
+    <p><button type="button" id="spair">Collega un altro dispositivo</button> <button type="button" class="ghost" id="snow">Sincronizza ora</button></p>
+    <div id="spaircode"></div>
+    <div id="sres">${msg}</div>
+    <details><summary class="hint">Codice di recupero e altre opzioni</summary>
+      <p class="hint">Il codice di recupero ricollega un dispositivo anche se li hai persi tutti: conservalo in un posto sicuro (per esempio nel gestore delle password). Chi lo conosce vede i tuoi preferiti e la chiave AeroDataBox.</p>
+      <p><code class="token">${esc(a.token)}</code> <button type="button" class="ghost small" id="scopytk">Copia</button></p>
+      <p><button type="button" class="ghost" id="sunlink">Scollega questo dispositivo</button> <button type="button" class="ghost" id="swipe">Cancella l’account dal Worker</button></p>
+      <p class="hint">Scollegando, i dati restano in questo browser. Cancellando l’account si scollegano tutti i dispositivi e il Worker dimentica i dati (nei browser restano).</p>
+    </details>`;
+  const res = h => { document.getElementById('sres').innerHTML = h; };
+  document.getElementById('snow').onclick = async () => { res('<p class="hint">Sincronizzo…</p>'); try { await syncNow(); syncSettings('<p class="okmsg">✓ Fatto.</p>'); notifySettings(); } catch (e) { syncSettings(errorBox(e)); } };
+  document.getElementById('spair').onclick = async () => {
+    const out = document.getElementById('spaircode');
+    out.innerHTML = '<p class="hint">Creo il codice…</p>';
+    try {
+      const p = await pairingCode();
+      out.innerHTML = `<div class="paircode"><p class="hint">Sull’altro dispositivo apri l’app, vai in Impostazioni e inserisci questo codice (vale fino alle ${esc(new Date(p.exp).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))}, una sola volta):</p>
+        <p class="bigcode">${esc(p.code.slice(0, 4))}-${esc(p.code.slice(4))}</p>
+        <p class="hint">Oppure apri lì questo link (imposta anche il Worker): <a href="${esc(p.link)}">${esc(p.link)}</a> <button type="button" class="ghost small" id="scopy">Copia link</button></p></div>`;
+      document.getElementById('scopy').onclick = e => navigator.clipboard?.writeText(p.link).then(() => { e.target.textContent = 'Copiato ✓'; });
+    } catch (e) { out.innerHTML = errorBox(e); }
+  };
+  box.querySelectorAll('[name=scat]').forEach(x => x.onchange = async () => {
+    const nc = Object.fromEntries([...box.querySelectorAll('[name=scat]')].map(i => [i.value, i.checked]));
+    try { await setCats(nc); syncSettings('<p class="okmsg">✓ Salvato.</p>'); } catch (e) { syncSettings(errorBox(e)); }
+  });
+  box.querySelectorAll('[data-sdev]').forEach(b => b.onclick = async () => {
+    try { await removeDevice(b.dataset.sdev); await listDevices(); syncSettings('<p class="okmsg">✓ Dispositivo scollegato.</p>'); } catch (e) { res(errorBox(e)); }
+  });
+  document.getElementById('scopytk').onclick = e => navigator.clipboard?.writeText(a.token).then(() => { e.target.textContent = 'Copiato ✓'; });
+  document.getElementById('sunlink').onclick = async () => { await unlinkThis(); syncSettings('<p class="hint">Dispositivo scollegato: i dati restano qui.</p>'); };
+  document.getElementById('swipe').onclick = async () => {
+    if (!confirm('Cancellare l’account di sincronizzazione dal Worker? Tutti i dispositivi verranno scollegati (i dati restano nei browser).')) return;
+    try { await wipeAccount(); syncSettings('<p class="hint">Account cancellato.</p>'); } catch (e) { res(errorBox(e)); }
+  };
+  // elenco dei dispositivi aggiornato (in sottofondo)
+  if (!msg && Date.now() - Math.max(a.lastOk || 0, a.devAt || 0) > 60e3) listDevices().then(() => { if (document.getElementById('spair') && !document.getElementById('spaircode').innerHTML) syncSettings(); }).catch(() => {});
+}
+
+// link "Collega" aperto dal codice mostrato su un altro dispositivo: #/collega?c=CODICE&w=indirizzo-del-Worker
+function viewCollega(params) {
+  const code = (params.get('c') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const w = params.get('w') || '';
+  const s = getSettings();
+  if (w && /^https:\/\/[^/]+/.test(w) && !(s.workerUrl || '').trim()) saveSettings({ ...s, workerUrl: w, provider: 'aerodatabox' });
+  $app.innerHTML = `<h1>Collega questo dispositivo</h1>
+    <div class="card">${isLinked() ? '<p class="okmsg">Questo dispositivo è già collegato.</p><p><a href="#/settings">Vai alle impostazioni</a></p>' : `
+      <p class="hint">Preferiti, tab, voli seguiti e impostazioni arriveranno dall’altro dispositivo; quello che hai già qui si aggiunge, non si perde.</p>
+      <p class="bigcode">${esc(code.slice(0, 4))}-${esc(code.slice(4))}</p>
+      <p><button id="cgo">Collega</button></p><div id="cres"></div>`}</div>`;
+  const go = document.getElementById('cgo');
+  if (go) go.onclick = async () => {
+    go.disabled = true; document.getElementById('cres').innerHTML = '<p class="hint">Collego…</p>';
+    try { await joinAccount(code); updateBanner(); location.hash = '#/settings'; }
+    catch (e) { go.disabled = false; document.getElementById('cres').innerHTML = errorBox(e); }
+  };
 }
 
 // ---------- router ----------
@@ -1588,6 +1697,7 @@ function renderView(parts, params) {
   if (parts[0] === 'flight' && parts[1]) return viewFlight(parts[1].toUpperCase(), parts[2] || isoDate(new Date()), params.get('dep'));
   if (parts[0] === 'aircraft' && parts[1]) return viewAircraft(parts[1], parts[2] || isoDate(new Date()), (params.get('ap') || '').toUpperCase() || null);
   if (parts[0] === 'settings') return viewSettings();
+  if (parts[0] === 'collega') return viewCollega(params);
   return viewHome();
 }
 
@@ -1604,4 +1714,8 @@ window.addEventListener('hashchange', route);
 initTabs($app);
 updateBanner();
 route();
+// sincronizzazione: impostazioni arrivate da un altro dispositivo, stato del collegamento nella pagina Impostazioni
+window.addEventListener('settings-changed', updateBanner);
+window.addEventListener('sync-changed', () => { if (document.getElementById('synccard') && !document.getElementById('spaircode')?.innerHTML && !document.getElementById('sres')?.innerHTML) syncSettings(); });
+initSync();
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});

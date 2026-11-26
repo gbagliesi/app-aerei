@@ -342,3 +342,9 @@ html.tabdrag, html.tabdrag * { -webkit-user-select: none !important; user-select
 .uff.est { background: #f5b30122; color: #f5b301; }
 .chainbell { font-size: 1.1rem; padding: 0 .1rem; }
 #chainnotify { margin: .7rem 0 .2rem; padding: .7rem .8rem; border: 1px solid #22304f; border-radius: 10px; }
+
+/* sincronizzazione fra dispositivi */
+.bigcode { font: 700 2rem/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; margin: .3em 0; }
+.paircode { border: 1px dashed var(--line, #ccc); border-radius: 10px; padding: .4em .8em; margin: .5em 0; }
+.paircode a { word-break: break-all; }
+code.token { font-size: .75rem; word-break: break-all; user-select: all; }

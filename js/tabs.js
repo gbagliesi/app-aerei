@@ -23,7 +23,7 @@ function load() {
     return Array.isArray(t) ? t.filter(x => x?.key && x.hash && !(x.date && x.date < yday)) : [];
   } catch { return []; }
 }
-const save = () => { try { localStorage.setItem(TKEY, JSON.stringify(tabs)); } catch { /* spazio pieno */ } };
+const save = () => { try { localStorage.setItem(TKEY, JSON.stringify(tabs)); } catch { /* spazio pieno */ } window.dispatchEvent(new Event('aerei-local-change')); };
 const find = key => tabs.find(t => t.key === key);
 
 export function tabKey(parts) {
@@ -178,6 +178,13 @@ function maybeHint() {
 
 export function initTabs(appEl) {
   const bar = $bar();
+  // tab arrivati da un altro dispositivo (sync.js): ricarico l'elenco, il tab della pagina aperta resta
+  window.addEventListener('tabs-remote', () => {
+    const cur = find(active);
+    tabs = load();
+    if (cur && !find(cur.key)) tabs.push(cur);
+    renderBar();
+  });
   bar.addEventListener('click', e => {
     const x = e.target.closest('[data-close]');
     if (x) {

@@ -75,3 +75,11 @@ Molti siti mostrano solo i voli di oggi o poche ore attorno a adesso. Il Worker 
 - `GET /snap?airport=PSA&nature=A&day=2026-11-10` → `{ flights: [...] }` (stesso formato di `/board`, giorno locale dell'aeroporto).
 - L'app la usa per sapere quali aerei sono arrivati la sera prima e sono rimasti a terra la notte, e per ricostruire la giornata delle
   compagnie (aereo in arrivo e marche ipotizzate).
+
+## Sincronizzazione fra dispositivi (sync.js, dalla versione 4.21 dell'app)
+
+`/sync/...` tiene preferiti, tab, voli seguiti e impostazioni di un account nel Durable Object (istanza `acct:<id>`),
+senza password né email: il primo dispositivo crea l'account (Impostazioni → Sincronizzazione), gli altri si collegano
+con un codice di 8 caratteri valido 10 minuti. `/links` condivide gli anelli della catena dei voli (volo → volo
+precedente) fra tutti i dispositivi: lettura libera, scrittura solo da dispositivi collegati. Nessun segreto da
+configurare: basta ripubblicare il Worker.

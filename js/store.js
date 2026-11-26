@@ -5,11 +5,15 @@ const FKEY = 'aerei.favorites.v1';
 const read = (k, d) => { try { return { ...d, ...JSON.parse(localStorage.getItem(k) || '{}') }; } catch { return d; } };
 
 export const getSettings = () => read(SKEY, { provider: 'demo', apiKey: '', refreshSec: 60, workerUrl: '' });
-export const saveSettings = s => localStorage.setItem(SKEY, JSON.stringify(s));
+// ogni modifica avvisa la sincronizzazione fra dispositivi (sync.js), se attiva
+export const changed = () => window.dispatchEvent(new Event('aerei-local-change'));
+export const saveSettings = s => { localStorage.setItem(SKEY, JSON.stringify(s)); changed(); };
 
 const emptyFav = { airports: [], routes: [], flights: [], aircraft: [] };
 export const getFavorites = () => read(FKEY, emptyFav);
-const saveFav = f => { localStorage.setItem(FKEY, JSON.stringify(f)); window.dispatchEvent(new Event('favorites-changed')); };
+const saveFav = f => { localStorage.setItem(FKEY, JSON.stringify(f)); window.dispatchEvent(new Event('favorites-changed')); changed(); };
+/** Sostituisce tutti i preferiti (dati arrivati da un altro dispositivo). */
+export const replaceFavorites = f => saveFav({ ...emptyFav, ...f });
 
 const keyOf = (type, item) => type === 'airports' ? item.iata : type === 'aircraft' ? item.reg
   : type === 'routes' ? `${item.from}-${item.to}` : item.number;

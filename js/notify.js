@@ -20,7 +20,7 @@ export const DEFAULT_EVENTS = ['inbound', 'gate', 'boarding', 'delay', 'departed
 const base = () => (getSettings().workerUrl || '').trim().replace(/\/+$/, '');
 const watchKey = (number, date, dep) => `${number}|${date}|${dep}`;
 export const localWatches = () => { try { return JSON.parse(localStorage.getItem(WKEY)) || {}; } catch { return {}; } };
-const saveLocal = w => localStorage.setItem(WKEY, JSON.stringify(w));
+const saveLocal = w => { localStorage.setItem(WKEY, JSON.stringify(w)); window.dispatchEvent(new Event('aerei-local-change')); };
 export const getWatch = (number, date, dep) => localWatches()[watchKey(number, date, dep)] || null;
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -92,7 +92,8 @@ export async function watchFlight(f, inbound, inboundGuess, events, useKey = tru
   if (!flight.date || !flight.dep) throw new Error('Mancano data o aeroporto di partenza del volo.');
   const r = await post('/push/watch', { sub: sub.toJSON(), flight, events, adbKey: useKey ? s.apiKey : '' });
   const all = localWatches();
-  all[watchKey(flight.number, flight.date, flight.dep)] = { id: r.id, events, arr: flight.arr, inbound: inbound?.number || null, useKey, at: Date.now() };
+  // flight: serve agli altri dispositivi dell'account per seguire lo stesso volo (sync.js)
+  all[watchKey(flight.number, flight.date, flight.dep)] = { id: r.id, events, arr: flight.arr, inbound: inbound?.number || null, useKey, at: Date.now(), flight };
   saveLocal(all);
   return r;
 }
@@ -103,7 +104,11 @@ export async function refreshWatch(f, inbound, inboundGuess) {
   if (!w || pushProblem()) return;
   const sub = await subscription(false);
   if (!sub) return;
-  await post('/push/watch', { sub: sub.toJSON(), flight: flightBody(f, inbound, inboundGuess), events: w.events, adbKey: w.useKey ? getSettings().apiKey : '' }).catch(() => {});
+  const flight = flightBody(f, inbound, inboundGuess);
+  await post('/push/watch', { sub: sub.toJSON(), flight, events: w.events, adbKey: w.useKey ? getSettings().apiKey : '' }).catch(() => {});
+  // tengo aggiornato il volo salvato (lo usano gli altri dispositivi), senza lo stato del momento che cambia di continuo
+  const all = localWatches(), k = watchKey(flight.number, flight.date, flight.dep);
+  if (all[k] && JSON.stringify({ ...all[k].flight, known: null }) !== JSON.stringify({ ...flight, known: null })) { all[k].flight = flight; saveLocal(all); }
 }
 
 export async function unwatch(number, date, dep, id) {
@@ -123,7 +128,7 @@ export async function listWatches() {
   const { watches } = await post('/push/list', { endpoint: sub.endpoint });
   // allineo l'elenco locale: i voli conclusi il Worker li toglie da solo
   const all = localWatches(), ids = new Set(watches.map(w => w.id));
-  for (const [k, v] of Object.entries(all)) if (!ids.has(v.id)) delete all[k];
+  for (const [k, v] of Object.entries(all)) if (v.id && !ids.has(v.id)) delete all[k];
   saveLocal(all);
   return watches;
 }
@@ -131,4 +136,56 @@ export async function listWatches() {
 export async function testPush() {
   const sub = await subscription(true);
   return post('/push/test', { sub: sub.toJSON() });
+}
+
+// ---------- voli seguiti da altri dispositivi dello stesso account (sync.js) ----------
+/** Notifiche già permesse qui (nessuna richiesta di permesso: si attivano senza chiedere). */
+async function silentSub() {
+  if (pushProblem() || Notification.permission !== 'granted') return null;
+  return subscription(false).catch(() => null);
+}
+
+/**
+ * Allinea i voli seguiti con quelli dell'account. want = { "numero|data|partenza": { flight, events, useKey } }.
+ * I voli nuovi si attivano su questo dispositivo se qui le notifiche sono già permesse, altrimenti restano
+ * "in attesa" (pending) finché non si attivano le notifiche; quelli tolti altrove si tolgono anche qui.
+ */
+export async function applyRemoteWatches(want) {
+  const all = localWatches(), sub = await silentSub();
+  let dirty = false;
+  for (const [k, w] of Object.entries(all)) {
+    if (want[k] || !w.flight) continue;   // senza "flight" sono voli seguiti prima della sincronizzazione: restano
+    if (w.id && sub) await post('/push/unwatch', { endpoint: sub.endpoint, id: w.id }).catch(() => {});
+    delete all[k]; dirty = true;
+  }
+  for (const [k, v] of Object.entries(want)) {
+    const cur = all[k];
+    if (cur && cur.id && JSON.stringify(cur.events) === JSON.stringify(v.events)) continue;
+    const entry = { ...(cur || {}), events: v.events, arr: v.flight?.arr || null, inbound: v.flight?.inbound?.number || null, useKey: v.useKey !== false, flight: v.flight, at: cur?.at || Date.now() };
+    if (sub && v.flight) {
+      try {
+        const r = await post('/push/watch', { sub: sub.toJSON(), flight: v.flight, events: v.events, adbKey: entry.useKey ? getSettings().apiKey : '', quiet: true });
+        entry.id = r.id; delete entry.pending;
+      } catch { entry.pending = true; }
+    } else if (!cur?.id) entry.pending = true;
+    all[k] = entry; dirty = true;
+  }
+  if (dirty) saveLocal(all);
+}
+
+/** Voli seguiti su altri dispositivi ma non ancora attivi qui. */
+export const pendingWatches = () => Object.entries(localWatches()).filter(([, w]) => w.pending || !w.id).map(([k, w]) => ({ k, ...w }));
+
+/** Attiva qui le notifiche dei voli seguiti dagli altri dispositivi (chiede il permesso se serve). */
+export async function activatePending() {
+  const sub = await subscription(true);
+  const all = localWatches();
+  let n = 0;
+  for (const [k, w] of Object.entries(all)) {
+    if (w.id || !w.flight) continue;
+    const r = await post('/push/watch', { sub: sub.toJSON(), flight: w.flight, events: w.events, adbKey: w.useKey !== false ? getSettings().apiKey : '', quiet: true });
+    all[k] = { ...w, id: r.id }; delete all[k].pending; n++;
+  }
+  saveLocal(all);
+  return n;
 }

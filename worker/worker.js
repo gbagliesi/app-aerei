@@ -7,6 +7,7 @@
 //
 //   /push/...  notifiche sui voli seguiti (Web Push): vedi notify.js
 //   /fa?...    FlightAware AeroAPI (riserva di AeroDataBox, aereo in arrivo): vedi aeroapi.js
+//   /sync/...  sincronizzazione fra dispositivi; /links anelli condivisi della catena dei voli: vedi sync.js
 //   /snap?...  copia giornaliera dei tabelloni ufficiali (anche dei giorni precedenti): vedi snapshots.js
 //
 // Uso personale: le risposte restano in cache 90 secondi, così l'aeroporto riceve poche richieste.
@@ -16,6 +17,7 @@ import { handleFa } from './aeroapi.js';
 import { saveSnap, handleSnap, cronSnap, cronList } from './snapshots.js';
 import { handleSeen, kickAdsb, REG_BOARDS } from './adsbwatch.js';
 import { handleAdb } from './adbcache.js';
+import { handleSync } from './sync.js';
 export { Watcher };
 export const _readBoard = (a, n, env, log) => readBoard(a, n, env, log); // per i test locali
 
@@ -137,6 +139,7 @@ export default {
     }
     if (url.pathname === '/fa' || url.pathname === '/fa/usage') return handleFa(url, env, ctx, json);
     if (url.pathname === '/snap') return handleSnap(url, env, json);
+    if (url.pathname === '/sync' || url.pathname.startsWith('/sync/') || url.pathname === '/links') return handleSync(request, url, env, json);
     if (url.pathname === '/adb') return handleAdb(request, url, ctx, cors);
     if (url.pathname === '/seen' || url.pathname.startsWith('/seen/')) return handleSeen(url, env, json, request);
     if (url.pathname === '/' ) return json({ ok: true, airports: [...Object.keys(TOSCANA), ...PUGLIA, ...Object.keys(ADR), 'GVA', ...Object.keys(OTHER)] });

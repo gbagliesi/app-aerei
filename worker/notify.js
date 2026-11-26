@@ -13,7 +13,7 @@
 const TICK_MS = 2 * 60e3;          // controllo ogni 2 minuti
 const ADB_EVERY_MS = 8 * 60e3;     // AeroDataBox al più ogni 8 minuti per volo...
 const ADB_MAX = 30;                // ...e al massimo 30 chiamate per volo (volo + volo precedente)
-const MAX_WATCHES = 40;            // voli seguiti in totale
+const MAX_WATCHES = 80;            // voli seguiti in totale
 const PUSH_HOSTS = ['fcm.googleapis.com', 'updates.push.services.mozilla.com', 'push.services.mozilla.com', 'web.push.apple.com', 'notify.windows.com', 'push.apple.com'];
 export const EVENTS = ['inboundDep', 'inbound', 'gate', 'boarding', 'delay', 'departed', 'landed', 'belt', 'cancel'];
 const ADB_HOST = 'aerodatabox.p.rapidapi.com';
@@ -21,6 +21,7 @@ const ADB_HOST = 'aerodatabox.p.rapidapi.com';
 import { faMeter } from './aeroapi.js';
 import { snapDo } from './snapshots.js';
 import { adsbDo, adsbAlarm } from './adsbwatch.js';
+import { syncDo } from './sync.js';
 let boardFn = null;
 export const setBoardFn = f => { boardFn = f; };
 
@@ -153,6 +154,10 @@ export class Watcher {
       if (url.pathname.startsWith('/fa/')) return json(await faMeter(this.storage, url, request));
       if (url.pathname.startsWith('/snap/')) return json(await snapDo(this.storage, url, request));
       if (url.pathname.startsWith('/adsb/')) return json(await adsbDo(this, url, request));
+      // sincronizzazione fra dispositivi e anelli condivisi (sync.js): istanze "acct:…", "syncpair", "links"
+      if (url.pathname.startsWith('/_sync/')) {
+        try { return json(await syncDo(this.storage, url, request)); } catch (e) { return json({ error: String(e.message || e) }, e.status || 500); }
+      }
       if (url.pathname === '/push/key') return json({ key: (await this.vapid()).publicKey });
       if (request.method !== 'POST') return json({ error: 'usa POST' }, 405);
       const b = await request.json();
@@ -188,7 +193,8 @@ export class Watcher {
         if (prev && prev.inbound?.number !== w.inbound?.number) { delete w.state.inboundLanded; delete w.state.inboundDeparted; w.state.base = false; }
         await this.storage.put(`watch:${id}`, w);
         let push = null;
-        if (!prev) push = await this.send(subId, { title: `🔔 ${f.number}: notifiche attive`, body: `${f.dep}→${f.arr || '?'} del ${f.date.slice(8)}/${f.date.slice(5, 7)}. Ti avviso per: ${events.map(e => LABELS[e]).join(', ') || 'nessun evento'}.`, tag: `${id}:on`, url: flightUrl(w) });
+        // quiet: volo seguito da un altro dispositivo dello stesso account, attivato qui in automatico (niente conferma)
+        if (!prev && !b.quiet) push = await this.send(subId, { title: `🔔 ${f.number}: notifiche attive`, body: `${f.dep}→${f.arr || '?'} del ${f.date.slice(8)}/${f.date.slice(5, 7)}. Ti avviso per: ${events.map(e => LABELS[e]).join(', ') || 'nessun evento'}.`, tag: `${id}:on`, url: flightUrl(w) });
         await this.schedule(Date.now() + 5e3);
         return json({ id, push, updated: !!prev });
       }
