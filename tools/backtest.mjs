@@ -33,8 +33,9 @@ async function snap(a, n, d) {
 const V = (process.env.VARIANTS || '').trim();
 const variants = V ? JSON.parse(V) : {
   attuale: {},
-  plan: { plan: true },
-  plan_lifo: { plan: true, order: 'lifo' },
+  senza_plan: { plan: false },
+  plan_tutti: { plan: true },
+  plan_lc_fifo: { planOrder: 'fifo' },
   v4_6: { reservePairs: false, order: 'lifo' },
   coppie_lifo: { reservePairs: 'city', order: 'lifo' },
   coppie_numero: { reservePairs: 'pair' },

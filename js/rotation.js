@@ -9,7 +9,8 @@
 // Funzione pura (nessuna rete): usata da getInbound in api.js e provabile da sola.
 
 // Varianti dell'algoritmo, scelte col test automatico (tools/backtest.mjs) sugli aeroporti che pubblicano le marche
-export const DEFAULTS = { reservePairs: 'city', pairMax: 180, order: 'fifo' };
+// plan 'lowcost': orari programmati per il giro veloce (e tra i candidati l'ultimo arrivato) solo per le low cost (test 2026-11-26)
+export const DEFAULTS = { reservePairs: 'city', pairMax: 180, order: 'fifo', plan: 'lowcost', planOrder: 'lifo' };
 
 export const LOWCOST_CODES = ['FR', 'RK', 'U2', 'EC', 'DS', 'W6', 'W4', 'W9', 'VY', 'EW', 'HV', 'DY', 'V7', 'LS', 'TO', 'PC'];
 
@@ -39,6 +40,7 @@ export function simulateRotation({ flight, arrivals, departures, exclude = new S
   const minTurn = (o.minTurn ?? (lowcost ? 25 : 35)) * 60e3;
   const quickMax = (o.quickMax ?? (lowcost ? 90 : 120)) * 60e3;
   const target = depTime(flight);
+  const usePlan = o.plan === 'lowcost' ? lowcost : !!o.plan;
   // un aereo può fare la partenza se arriva almeno minTurn prima; se è in ritardo ma il giro era previsto dagli orari
   // programmati, la partenza slitta (tipico delle low cost: FR9472 da Madrid in ritardo → FR9471 per Madrid parte dopo)
   const fits = (a, d, t) => {
@@ -95,16 +97,16 @@ export function simulateRotation({ flight, arrivals, departures, exclude = new S
       // o.plan: le low cost assegnano gli aerei sugli orari programmati e di solito non li rimescolano per un ritardo:
       // il "giro veloce" si giudica sugli orari programmati (un aereo arrivato con 4 ore di ritardo non diventa il
       // candidato naturale per la partenza successiva), e tra più candidati vince chi era previsto arrivare prima
-      const planA = a => o.plan ? (ms(a.arr?.sched) || arrTime(a)) : arrTime(a);
-      const planT = o.plan ? (ms(d.dep?.sched) || t) : t;
-      let quick = free.filter(a => planT - planA(a) <= quickMax && planA(a) + minTurn <= planT + (o.plan ? 0 : Infinity));
-      if (o.plan && !quick.length) quick = free.filter(a => t - arrTime(a) <= quickMax);
-      if (o.plan) quick.sort((x, y) => planA(x) - planA(y));
+      const planA = a => usePlan ? (ms(a.arr?.sched) || arrTime(a)) : arrTime(a);
+      const planT = usePlan ? (ms(d.dep?.sched) || t) : t;
+      let quick = free.filter(a => planT - planA(a) <= quickMax && planA(a) + minTurn <= planT + (usePlan ? 0 : Infinity));
+      if (usePlan && !quick.length) quick = free.filter(a => t - arrTime(a) <= quickMax);
+      if (usePlan) quick.sort((x, y) => planA(x) - planA(y));
       if (quick.length) {
         const dest = d.arr?.iata, n = flightNo(d);
         pick = quick.filter(a => dest && a.dep?.iata === dest).pop()
           || quick.filter(a => Math.abs(flightNo(a) - n) === 1).pop()
-          || (o.order === 'fifo' ? quick[0] : quick[quick.length - 1]);
+          || ((usePlan ? o.planOrder : o.order) === 'fifo' ? quick[0] : quick[quick.length - 1]);
         basis = dest && pick.dep?.iata === dest ? 'return' : 'rotation';
       } else if (free.length) {
         // l'aereo fermo da più tempo, preferendo quelli che la rete ADS-B conferma ancora qui
