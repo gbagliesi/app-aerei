@@ -233,7 +233,9 @@ export async function syncDo(storage, url, request) {
       const e = { ...v, rank, at: Math.min(Number(v.at) || now, now) };
       const old = got.get(`l:${k}`);
       // una stima meno informata non sostituisce una più informata ancora valida
-      if (old && now - old.at < (old.rank >= 3 ? LINK_TTL : LINK_FRESH) && (old.rank > rank || (old.rank === rank && old.at >= e.at))) continue;
+      // eccezioni: versione dell'algoritmo più nuova, o calcolo fatto dalla pagina di quel volo (vince sempre se più recente)
+      const newer = (e.alg || 0) > (old?.alg || 0) || (e.page && e.at > (old?.at || 0));
+      if (!newer && old && now - old.at < (old.rank >= 3 ? LINK_TTL : LINK_FRESH) && (old.rank > rank || (old.rank === rank && old.at >= e.at))) continue;
       puts[`l:${k}`] = e;
     }
     if (Object.keys(puts).length) await storage.put(puts);
