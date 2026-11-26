@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.19 · giornata dell’aereo con i voli precedenti e i loro avvisi';
+const APP_VERSION = '4.19.1 · catene dei voli coerenti tra le pagine dei voli';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -759,6 +759,7 @@ async function viewFlight(number, date, depHint) {
     inbound = r.inbound; inboundGuess = r.method === 'guess';
     if (inbound && inboundGuess) guessed.add(inbound);
     rememberFlightReg(f, inbound, r);
+    saveLink(f, r, linkRank(r, true));
     refreshWatch(f, inbound, inboundGuess).catch(() => {});
     let html = `<div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="hint">${esc(r.reason)}</p></div>`;
     if (inbound) {
@@ -853,9 +854,30 @@ const CHAIN_MAX_STEPS = 4, CHAIN_MIN_P = 0.06;
 const sameLeg = (a, b) => a && b && a.number === b.number && (a.dep?.iata === b.dep?.iata || a.arr?.iata === b.arr?.iata) && Math.abs(legKey(a) - legKey(b)) < 6 * 3600e3;
 const copyLeg = l => ({ ...l, dep: { ...l.dep }, arr: { ...l.arr }, aircraft: l.aircraft ? { ...l.aircraft } : undefined });
 
+// Anelli della catena già calcolati (volo → volo precedente), condivisi tra la pagina di un volo e le catene degli
+// altri: così aprire BRI→PSA o la catena di PSA→BRI dà lo stesso volo precedente. Vince il calcolo più informato:
+// 3 = tratta certa (marche), 2 = stima fatta con FlightAware (pagina del volo o primo anello), 1 = stima senza FlightAware.
+const LINKS = 'aerei.chainLinks.v1', LINK_TTL = 30 * 3600e3;
+const linkKey = l => `${l.number}|${l.dep?.iata || ''}|${flightDay(l) || (l.arr?.sched?.local || '').slice(0, 10)}`;
+const loadLinks = () => { try { return JSON.parse(localStorage.getItem(LINKS)) || {}; } catch { return {}; } };
+function getLink(l) {
+  const x = loadLinks()[linkKey(l)];
+  return x && Date.now() - x.at < LINK_TTL ? x : null;
+}
+function saveLink(l, r, rank) {
+  if (!r) return;
+  const all = loadLinks(), k = linkKey(l), old = all[k];
+  // una stima meno informata non sostituisce una più informata (ma quelle vecchie di oltre 3 ore sì)
+  if (old && old.rank > rank && Date.now() - old.at < 3 * 3600e3) return;
+  const strip = f => f && { number: f.number, airline: f.airline, status: f.status, callSign: f.callSign, aircraft: f.aircraft, dep: f.dep, arr: f.arr, codeshares: f.codeshares };
+  all[k] = { at: Date.now(), rank, inbound: strip(r.inbound), method: r.method || null, basis: r.basis || null, p: r.p ?? null, reason: r.reason || '' };
+  for (const [kk, v] of Object.entries(all)) if (Date.now() - v.at > LINK_TTL) delete all[kk];
+  try { localStorage.setItem(LINKS, JSON.stringify(all)); } catch { /* spazio pieno: pazienza */ }
+}
+const linkRank = (r, withFa) => r?.method === 'reg' ? 3 : withFa ? 2 : 1;
+
 /** Completa una tratta letta da un tabellone arrivi (spesso senza orario di partenza) con i dati del volo. */
 async function completeLeg(l, day) {
-  if (l.dep?.sched?.utc && l.arr?.sched?.utc && l.dep?.iata) return l;
   const d = (l.arr?.sched?.local || l.dep?.sched?.local || '').slice(0, 10) || day;
   const legs = await getFlight(l.number, d, l.dep?.iata).catch(() => []);
   const m = legs.find(x => x.arr?.iata && x.arr.iata === l.arr?.iata) || legs.find(x => x.dep?.iata && x.dep.iata === l.dep?.iata) || (legs.length === 1 ? legs[0] : null);
@@ -880,6 +902,9 @@ async function buildChain(f, inbound, r, date) {
     regSure = r?.method === 'reg' && !inbound.aircraft._chain;
     pReg = regSure ? 1 : (r?.p ?? 0.3);
   }
+  // marche solo ipotizzate ma il volo precedente ha già un suo anello ben calcolato: seguo quello (coerenza tra le pagine)
+  const inbLink = inbound && !regSure ? getLink(inbound) : null;
+  if (inbLink && inbLink.rank >= 2) reg = null;
   if (reg) {
     const seeds = [f.dep?.iata, f.arr?.iata, inbound?.dep?.iata].filter(Boolean);
     const [list, off] = await Promise.all([getFlightsByReg(reg, day).catch(() => []), officialByReg(reg, day, seeds, 6).catch(() => ({ legs: [], boards: [] }))]);
@@ -910,7 +935,14 @@ async function buildChain(f, inbound, r, date) {
     if ((cur.dep.sched.local || '').slice(0, 10) < day || legStart(cur) < dayFrom) { out.end = { kind: 'night', at: cur.dep.iata }; break; }
     if ((cur._p ?? 1) < CHAIN_MIN_P) { out.end = { kind: 'weak', at: cur.dep.iata }; break; }
     out.steps++;
-    const r2 = await getInbound(copyLeg(cur), 1, { noFa: true }).catch(() => null);
+    // anello già calcolato (anche dalla pagina di quel volo) o, se manca, calcolato ora come farebbe quella pagina:
+    // FlightAware solo sul primo anello, per risparmiare richieste
+    let r2 = getLink(cur);
+    if (!r2) {
+      const withFa = out.steps === 1;
+      r2 = await getInbound(copyLeg(cur), withFa ? 0 : 1, { noFa: !withFa }).catch(() => null);
+      if (r2) saveLink(cur, r2, linkRank(r2, withFa));
+    }
     if (!r2?.inbound) { out.end = { kind: r2?.basis === 'ground' ? 'ground' : 'none', at: cur.dep.iata, text: r2?.reason || '' }; break; }
     if (prev.some(l => sameLeg(l, r2.inbound)) || legKey(r2.inbound) >= legKey(cur)) break;
     const guess = r2.method === 'guess';
