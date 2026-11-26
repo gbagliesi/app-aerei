@@ -358,8 +358,10 @@ async function adr(airport, nature, log) {
     const cityM = /^(.*?)\s*\(([A-Z]{3})\)/.exec(dest || '');
     // il tabellone raggruppa per data programmata: schedDate è la data richiesta
     const schedDate = sched ? `${today}T${sched.padStart(5, '0')}` : null;
+    // date-actual sui voli non ancora atterrati/partiti è l'orario stimato (es. arrivo previsto di un volo in volo)
+    const done = /land|atterr|arriv|depart|partit|decoll/i.test(status || '');
     return {
-      number: nums[0] || null, sched, schedDate, est: act, actual: act,
+      number: nums[0] || null, sched, schedDate, est: act, actual: done ? act : null,
       status, gate: null, checkin: null, stand: null, belt: null, reg: null, type: null,
       city: cityM?.[1]?.trim() || null, cityCode: cityM?.[2] || null,
       codeshare: /Operato da/.test(flat) && nums.length > 1 ? [nums[nums.length - 1]] : undefined,

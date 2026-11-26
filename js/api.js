@@ -281,11 +281,14 @@ function mergeOfficial(flights, official, sideKey, iata, used = null) {
     if (o.terminal && !side.terminal) side.terminal = o.terminal;
     const est = localToTime(o.estAt, tz) || clockToTime(o.est, side.sched, tz);
     if (est) side.revised = est;
-    const act = localToTime(o.actualAt, tz) || clockToTime(o.actual, side.sched, tz);
+    let act = localToTime(o.actualAt, tz) || clockToTime(o.actual, side.sched, tz);
+    // un orario "effettivo" nel futuro è in realtà una stima (es. adr.it mette l'ETA dei voli in volo nel campo effettivo)
+    const future = act && Date.parse(act.utc) > Date.now() + 2 * 60e3;
+    if (future) { side.revised = act; act = null; }
     if (act) side.actual = act;
     const st = mapStatus(o.status);
     if (st && !(st === 'Delayed' && ['Departed', 'EnRoute', 'Approaching', 'Arrived'].includes(f.status))) f.status = st;
-    if (sideKey === 'arr' && o.actual && f.status !== 'Canceled') f.status = 'Arrived';
+    if (sideKey === 'arr' && act && f.status !== 'Canceled') f.status = 'Arrived';
     if (o.reg && o.reg.replace(/-/g, '') !== (f.aircraft?.reg || '').replace(/-/g, '')) f.aircraft = { ...f.aircraft, reg: o.reg, regSrc: `tabellone ufficiale di ${iata}`, hex: f.aircraft?.reg ? undefined : f.aircraft?.hex, model: f.aircraft?.model || o.type };
     else if (o.type && !f.aircraft?.model) f.aircraft = { ...f.aircraft, model: o.type };
     side.officialStatus = o.status || null;
