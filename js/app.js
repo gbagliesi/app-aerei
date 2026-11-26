@@ -95,7 +95,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.18 · sul telefono chiudere un tab chiede conferma';
+const APP_VERSION = '4.19 · giornata dell’aereo con i voli precedenti e i loro avvisi';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -727,10 +727,12 @@ async function viewFlight(number, date, depHint) {
     <div class="card"><div class="leghead"><span class="eyebrow">Posizione dell'aereo</span><span id="livemeta" class="sub"></span></div><div id="map" class="map"></div></div>
     <div class="card" id="aircraft">${aircraftCard(f.aircraft, date)}</div>
     <div id="inbound"><div class="card"><span class="eyebrow">Da dove arriva l'aereo</span><p class="loading">Cerco la tratta precedente…</p></div></div>
+    <div class="card" id="chain"><span class="eyebrow">La giornata dell'aereo</span><p class="loading">Ricostruisco i voli precedenti dell'aereo…</p></div>
     ${pageSources(isDemo() ? [DEMO_SRC, MAP_SRC] : [
       'orari, terminal, gate, check-in, nastro e stato: indicati in fondo a ogni riquadro. Quando c’è il <b>tabellone ufficiale dell’aeroporto</b> (partenza e/o arrivo) ha la priorità per questi dati; il resto viene da <b>AeroDataBox</b> (se non risponde, da <b>FlightAware</b>)',
       f._degraded ? `⚠ AeroDataBox non disponibile: ${esc(f._degraded)}` : '',
       'aereo assegnato e volo precedente: <b>AeroDataBox</b>, poi <b>FlightAware</b>, completati con la rete ADS-B <b>adsb.lol</b>; quando è scritto “probabile” o “stima” è una deduzione dell’app',
+      'giornata dell’aereo (in fondo): voli precedenti dalla giornata delle marche se note, altrimenti stimati un anello alla volta come l’aereo in arrivo; le fonti sono scritte sotto l’elenco; ogni volo può avere i suoi avvisi 🔔',
       'ritardo previsto, tempo di rotazione, durata e “parte tra / atterra tra”: calcolati dall’app con gli orari qui sopra',
       NOTIFY_SRC, POS_SRC, MAP_SRC])}`;
   bindStars($app);
@@ -750,6 +752,7 @@ async function viewFlight(number, date, depHint) {
   if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] }); else map.setView([45, 10], 4);
 
   // tratta precedente
+  let chainArgs = null;
   try {
     const hadReg = !!f.aircraft?.reg;
     const r = await getInbound(f);
@@ -779,7 +782,15 @@ async function viewFlight(number, date, depHint) {
     } else if (inbound && r.method === 'reg' && f.aircraft?.reg && !hadReg) {
       card.innerHTML = aircraftCard(f.aircraft, date, r.source === 'FlightAware' ? `Indicate da FlightAware (l'aereo arriva con ${esc(inbound.number)}).` : `La compagnia non lo indica su questo volo, ma la giornata di questo aereo (arrivato con ${esc(inbound.number)}) prevede proprio ${esc(f.number)}.`);
     }
+    chainArgs = [r];
   } catch (e) { document.getElementById('inbound').innerHTML = errorBox(e); }
+  // catena dei voli precedenti (non blocca il resto della pagina), ricalcolata ogni 15 minuti finché i voli precedenti non sono tutti atterrati
+  if (chainArgs) {
+    let done = false;
+    const runChain = async () => { if (!done) done = await loadChain(f, inbound, chainArgs[0], date); };
+    runChain();
+    every(900, runChain);
+  } else { const cb = document.getElementById('chain'); if (cb) cb.hidden = true; }
 
   // tracking live (stesso aeromobile: se il volo non è partito, si segue sulla tratta precedente)
   let marker = null, trail = null, groundAtDep = false;
@@ -830,6 +841,186 @@ async function viewFlight(number, date, depHint) {
       if (fresh) { Object.assign(f, fresh); if (groundAtDep && AIR.includes(f.status)) f.status = 'OnGround'; document.getElementById('leg').innerHTML = legCard(f, 'Questo volo'); tabInfo(); }
     } catch { /* riprova al giro successivo */ }
   });
+}
+
+
+// ---------- catena dei voli dell'aereo nella giornata (voli precedenti, con avvisi) ----------
+// Con le marche note (sicure o ipotizzate) uso la giornata dell'aereo (AeroDataBox/FlightAware + tabelloni ufficiali
+// che pubblicano le marche); altrimenti risalgo un anello alla volta con la stessa stima dell'aereo in arrivo.
+const CHAIN_EVENTS = { departed: 'Decollo', landed: 'Atterraggio', delay: 'Ritardi (10 min o più)', cancel: 'Cancellazione o dirottamento' };
+const CHAIN_DEFAULT = ['departed', 'landed'];
+const CHAIN_MAX_STEPS = 4, CHAIN_MIN_P = 0.06;
+const sameLeg = (a, b) => a && b && a.number === b.number && (a.dep?.iata === b.dep?.iata || a.arr?.iata === b.arr?.iata) && Math.abs(legKey(a) - legKey(b)) < 6 * 3600e3;
+const copyLeg = l => ({ ...l, dep: { ...l.dep }, arr: { ...l.arr }, aircraft: l.aircraft ? { ...l.aircraft } : undefined });
+
+/** Completa una tratta letta da un tabellone arrivi (spesso senza orario di partenza) con i dati del volo. */
+async function completeLeg(l, day) {
+  if (l.dep?.sched?.utc && l.arr?.sched?.utc && l.dep?.iata) return l;
+  const d = (l.arr?.sched?.local || l.dep?.sched?.local || '').slice(0, 10) || day;
+  const legs = await getFlight(l.number, d, l.dep?.iata).catch(() => []);
+  const m = legs.find(x => x.arr?.iata && x.arr.iata === l.arr?.iata) || legs.find(x => x.dep?.iata && x.dep.iata === l.dep?.iata) || (legs.length === 1 ? legs[0] : null);
+  if (!m) return l;
+  const out = copyLeg(m);
+  // le marche sicure del volo hanno la precedenza su quelle ipotizzate
+  if (!m.aircraft?.reg && l.aircraft?.reg) out.aircraft = { ...m.aircraft, ...l.aircraft };
+  for (const k of ['_src', '_p', '_basis', '_regGuess']) if (l[k] !== undefined) out[k] = l[k];
+  return out;
+}
+
+async function buildChain(f, inbound, r, date) {
+  const day = flightDay(f) || date, dep0 = legStart(f);
+  const out = { legs: [], reg: null, regSure: false, pReg: 1, regSrc: '', boards: [], adb: false, fa: false, steps: 0, end: null };
+  const dayFrom = Date.parse(`${day}T00:00:00`) - 3 * 3600e3;
+  let prev = [], after = [];
+  // 1) marche: del volo (sicure) o del volo precedente (sicure se la tratta precedente è certa, altrimenti ipotesi)
+  let reg = f.aircraft?.reg || null, regSure = !!reg, pReg = 1;
+  if (reg && f.aircraft?.regSrc && /ipotes/i.test(f.aircraft.regSrc)) regSure = false;
+  if (!reg && inbound?.aircraft?.reg) {
+    reg = inbound.aircraft.reg;
+    regSure = r?.method === 'reg' && !inbound.aircraft._chain;
+    pReg = regSure ? 1 : (r?.p ?? 0.3);
+  }
+  if (reg) {
+    const seeds = [f.dep?.iata, f.arr?.iata, inbound?.dep?.iata].filter(Boolean);
+    const [list, off] = await Promise.all([getFlightsByReg(reg, day).catch(() => []), officialByReg(reg, day, seeds, 6).catch(() => ({ legs: [], boards: [] }))]);
+    const all = cleanLegs(mergeOfficialLegs(list, off.legs)).filter(l => !l._adsb && legKey(l) >= dayFrom);
+    const before = all.filter(l => !sameLeg(l, f) && (legEnd(l) ?? Infinity) <= dep0 + 15 * 60e3);
+    // con marche ipotizzate la giornata deve portare l'aereo proprio qui prima della partenza, altrimenti l'ipotesi non regge
+    const fits = regSure || before.some(l => l.arr?.iata === f.dep?.iata && dep0 - legEnd(l) < 8 * 3600e3);
+    if (fits && all.length) {
+      const tag = l => Object.assign(copyLeg(l), { _src: regSure ? 'reg' : 'regGuess', _p: regSure ? 1 : pReg });
+      prev = before.map(tag);
+      after = all.filter(l => !sameLeg(l, f) && legKey(l) > legKey(f)).map(tag);
+      Object.assign(out, { reg, regSure, pReg, boards: off.boards, adb: list.some(l => l._adbAt), fa: list.some(l => l._faAt) });
+      out.regSrc = regSure ? (f.aircraft?.reg ? (f.aircraft.regSrc || 'indicate per questo volo') : `volo precedente ${inbound.number}`) : `ipotesi sull'aereo di ${inbound.number}`;
+    }
+  }
+  // il volo precedente trovato dalla pagina deve esserci comunque
+  if (inbound && !prev.some(l => sameLeg(l, inbound))) {
+    prev.push(Object.assign(copyLeg(inbound), { _src: r?.method === 'guess' ? 'guess' : 'reg', _p: r?.method === 'guess' ? (r.p ?? 0.3) : 1, _basis: r?.basis }));
+  }
+  // 2) risalgo un anello alla volta dalla tratta più vecchia, finché resto nella stessa giornata
+  prev.sort((a, b) => legKey(a) - legKey(b));
+  let cur = prev[0] || null;
+  if (!cur && r && !inbound) out.end = { kind: r.basis === 'ground' ? 'ground' : 'none', text: r.reason };
+  while (cur && out.steps < CHAIN_MAX_STEPS) {
+    const full = await completeLeg(cur, day);
+    if (full !== cur) { prev[prev.indexOf(cur)] = full; cur = full; }
+    if (!cur.dep?.iata || !cur.dep?.sched?.utc) { out.end = { kind: 'unknown', at: cur.dep?.iata }; break; }
+    if ((cur.dep.sched.local || '').slice(0, 10) < day || legStart(cur) < dayFrom) { out.end = { kind: 'night', at: cur.dep.iata }; break; }
+    if ((cur._p ?? 1) < CHAIN_MIN_P) { out.end = { kind: 'weak', at: cur.dep.iata }; break; }
+    out.steps++;
+    const r2 = await getInbound(copyLeg(cur), 1, { noFa: true }).catch(() => null);
+    if (!r2?.inbound) { out.end = { kind: r2?.basis === 'ground' ? 'ground' : 'none', at: cur.dep.iata, text: r2?.reason || '' }; break; }
+    if (prev.some(l => sameLeg(l, r2.inbound)) || legKey(r2.inbound) >= legKey(cur)) break;
+    const guess = r2.method === 'guess';
+    const nx = Object.assign(copyLeg(r2.inbound), { _src: guess || cur._src !== 'reg' ? 'guess' : 'reg', _basis: r2.basis, _p: +((cur._p ?? 1) * (guess ? (r2.p ?? 0.3) : 1)).toFixed(3) });
+    prev.unshift(nx);
+    cur = nx;
+  }
+  if (cur && out.steps >= CHAIN_MAX_STEPS && !out.end) out.end = { kind: 'max', at: cur.dep?.iata };
+  const me = Object.assign(copyLeg(f), { _this: true, _src: 'this', _p: 1 });
+  out.legs = cleanLegs([...prev, me, ...after]);
+  return out;
+}
+
+const pctTag = l => l._src === 'guess' || l._src === 'regGuess' ? `<i class="uff est" title="Tratta stimata dall'app: probabilità circa ${Math.round((l._p ?? 0.3) * 100)}%">stima ~${Math.round((l._p ?? 0.3) * 100)}%</i>` : '';
+function chainRows(legs) {
+  return legs.map((l, i) => {
+    const on = !!getWatch(l.number, flightDay(l), l.dep?.iata);
+    const rel = l._this ? '<small class="sub">questo volo</small>' : legKey(l) < legKey(legs.find(x => x._this)) ? '' : '<small class="sub">dopo</small>';
+    const canWatch = !l._this && !['Arrived', 'Canceled'].includes(l.status) && l.dep?.iata && flightDay(l);
+    return `<div class="row rot ${l._this ? 'me' : ''} ${AIR.includes(l.status) ? 'live' : ''}" role="row" tabindex="0" data-href="${flightLink(l)}">
+      <span class="t">${timeCell(l.dep?.sched, l.dep?.revised, l.dep?.actual)}</span>
+      <span class="num"><b>${esc(l.number)}</b><small>${esc(l.airline?.name || '')}${l._official ? ` <i class="uff" title="Dal tabellone ufficiale di ${esc([l.dep?._off, l.arr?._off].filter(Boolean).join(' e '))}">uff.</i>` : ''} ${pctTag(l)}</small></span>
+      <span class="dest"><b>${esc(l.dep?.iata || '—')} → ${esc(l.arr?.iata || '—')}</b><small>${esc(l.dep?.iata ? apName(l.dep.iata) : '')} – ${esc(l.arr?.iata ? apName(l.arr.iata) : '')}</small>${rel}</span>
+      <span class="t">${timeCell(l.arr?.sched, l.arr?.revised, l.arr?.actual)}</span>
+      <span>${statusBadge(l.status)}${l._inferred ? '<small title="Stato dedotto: una tratta successiva è già partita">dedotto</small>' : ''}${canWatch ? ` <button class="bell chainbell ${on ? 'on' : ''}" data-i="${i}" title="${on ? 'Avvisi attivi: modifica' : 'Avvisami per decollo e atterraggio di questo volo'}">${on ? '🔔' : '🔕'}</button>` : ''}</span></div>`;
+  }).join('');
+}
+
+function chainEndText(c) {
+  const e = c.end, ap = e?.at ? `${/^[AEIOU]/i.test(apName(e.at)) ? 'ad' : 'a'} ${esc(apName(e.at))}` : '';
+  if (!e) return '';
+  switch (e.kind) {
+    case 'night': return `Primo volo della giornata: l'aereo ha passato la notte ${ap} o è arrivato lì la sera prima.`;
+    case 'ground': return `Prima di così probabilmente l'aereo era già fermo ${ap} (dalla notte o di riserva nella base).`;
+    case 'weak': return `Oltre questo punto la stima diventa troppo incerta: mi fermo qui.`;
+    case 'max': return `Mostro al massimo ${CHAIN_MAX_STEPS + 1} voli precedenti.`;
+    case 'unknown': return 'Orario di partenza del volo più vecchio non disponibile: non riesco a risalire oltre.';
+    default: return e.text ? esc(e.text) : `Non trovo il volo che ha portato l'aereo ${ap}.`;
+  }
+}
+
+function chainSources(c) {
+  if (isDemo()) return 'Fonte: dati dimostrativi.';
+  const parts = [];
+  if (c.reg) parts.push(`giornata dell'aereo <b>${esc(c.reg)}</b> (${c.regSure ? `marche sicure: ${esc(c.regSrc)}` : `<b>marche ipotizzate</b>, ${esc(c.regSrc)}, circa ${Math.round(c.pReg * 100)}%`}) da ${[c.adb && '<b>AeroDataBox</b>', c.fa && '<b>FlightAware</b>'].filter(Boolean).join(' e ') || 'tabelloni ufficiali'}${c.boards.length ? ` + tabelloni ufficiali con le marche (${c.boards.map(esc).join(', ')})` : ''}`);
+  if (c.legs.some(l => l._src === 'guess')) parts.push('tratte “stima”: ricostruzione della giornata della compagnia in ogni aeroporto (tabellone ufficiale dove c’è, completato con <b>AeroDataBox</b>), le probabilità si moltiplicano risalendo la catena');
+  if (c.legs.some(l => l._official)) parts.push('“uff.”: orari e stato dal tabellone ufficiale dell’aeroporto');
+  return parts.length ? `Fonti: ${parts.join('; ')}.` : '';
+}
+
+function bindChain(box, c) {
+  box.onclick = e => {
+    const b = e.target.closest('.chainbell');
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    const l = c.legs[+b.dataset.i], panel = box.querySelector('#chainnotify');
+    if (!l || !panel) return;
+    if (!panel.hidden && panel.dataset.i === b.dataset.i) { panel.hidden = true; return; }
+    panel.dataset.i = b.dataset.i; panel.hidden = false;
+    const paint = () => { const on = !!getWatch(l.number, flightDay(l), l.dep?.iata); b.classList.toggle('on', on); b.textContent = on ? '🔔' : '🔕'; };
+    const render = (msg = '') => {
+      const w = getWatch(l.number, flightDay(l), l.dep?.iata), problem = pushProblem();
+      const evs = w?.events || CHAIN_DEFAULT;
+      const needKey = !OFFICIAL_AIRPORTS[l.dep?.iata] || !OFFICIAL_AIRPORTS[l.arr?.iata];
+      const est = l._src === 'guess' || l._src === 'regGuess';
+      panel.innerHTML = `<span class="eyebrow">Avvisi per ${esc(l.number)} ${esc(l.dep?.iata || '')}→${esc(l.arr?.iata || '')}${est ? ' (stima)' : ''}</span>
+        ${problem ? `<p class="note warn">${esc(problem)}</p>` : `
+        <div class="evlist">${Object.entries(CHAIN_EVENTS).map(([k, t]) => `<label class="check"><input type="checkbox" name="cev" value="${k}" ${evs.includes(k) ? 'checked' : ''}> <span>${esc(t)}</span></label>`).join('')}</div>
+        ${est ? '<p class="hint">È una tratta stimata: l’avviso segue proprio questo volo, anche se poi risultasse fatto da un altro aereo.</p>' : ''}
+        <p class="hint">Fonti: ${[l.dep?.iata, l.arr?.iata].filter(x => OFFICIAL_AIRPORTS[x]).map(x => `tabellone ufficiale di ${esc(x)}`).join(' e ') || 'nessun tabellone ufficiale'}${needKey ? '; per il resto AeroDataBox, al massimo 30 chiamate per volo' : ''}.</p>
+        ${needKey ? `<label class="check"><input type="checkbox" id="cusekey" ${w?.useKey === false ? '' : 'checked'}> Usa la mia chiave AeroDataBox dal Worker</label>` : ''}
+        <p><button id="cwatch">${w ? 'Aggiorna' : 'Attiva gli avvisi'}</button> ${w ? '<button class="ghost" id="cstop">Disattiva</button>' : ''} <button class="ghost" id="cclose">Chiudi</button></p>`}
+        <div>${msg}</div>`;
+      const go = panel.querySelector('#cwatch');
+      if (go) go.onclick = async () => {
+        const events = [...panel.querySelectorAll('[name=cev]:checked')].map(x => x.value);
+        if (!events.length) { render(errorBox('Scegli almeno un evento.')); return; }
+        go.disabled = true;
+        try {
+          const res = await watchFlight(l, null, false, events, panel.querySelector('#cusekey')?.checked !== false);
+          paint();
+          render(res.updated ? '<p class="okmsg">✓ Avvisi aggiornati.</p>' : res.push?.ok ? '<p class="okmsg">✓ Avvisi attivi: ti ho mandato una notifica di conferma.</p>' : errorBox(`Volo registrato, ma la notifica di conferma non è partita (${res.push?.status || ''} ${res.push?.error || ''}).`));
+        } catch (err) { render(errorBox(err)); }
+      };
+      const stop = panel.querySelector('#cstop');
+      if (stop) stop.onclick = async () => { try { await unwatch(l.number, flightDay(l), l.dep?.iata); paint(); render('<p class="hint">Avvisi disattivati per questo volo.</p>'); } catch (err) { render(errorBox(err)); } };
+      const close = panel.querySelector('#cclose');
+      if (close) close.onclick = () => { panel.hidden = true; };
+    };
+    render();
+  };
+}
+
+async function loadChain(f, inbound, r, date) {
+  const box = document.getElementById('chain');
+  if (!box) return;
+  let c;
+  try { c = await buildChain(f, inbound, r, date); } catch (e) { if (document.body.contains(box)) box.innerHTML = `<span class="eyebrow">La giornata dell'aereo</span>${errorBox(e)}`; return; }
+  if (!document.body.contains(box)) return;
+  const n = c.legs.filter(l => !l._this && legKey(l) < legKey(f)).length;
+  const openI = box.querySelector('#chainnotify:not([hidden])')?.dataset.i;
+  box.innerHTML = `<div class="leghead"><span class="eyebrow">La giornata dell'aereo · ${n ? `${n} ${n === 1 ? 'volo precedente' : 'voli precedenti'}` : 'nessun volo precedente trovato'}</span>${c.reg ? `<a class="sub" href="#/aircraft/${encodeURIComponent(c.reg)}/${flightDay(f) || date}${f.dep?.iata ? `?ap=${f.dep.iata}` : ''}">${esc(c.reg)}${c.regSure ? '' : ' (ipotesi)'} ›</a>` : ''}</div>
+    ${c.legs.length > 1 ? `<div class="board"><div class="row head rot"><span>Partenza</span><span>Volo</span><span>Tratta</span><span>Arrivo</span><span>Stato</span></div>${chainRows(c.legs)}</div>` : ''}
+    <div id="chainnotify" class="notify" hidden></div>
+    <p class="hint">${chainEndText(c)} Tocca 🔕 su un volo per gli avvisi di decollo e atterraggio, tocca la riga per i dettagli.</p>
+    <p class="hint sources">${chainSources(c)}</p>`;
+  bindChain(box, c);
+  if (openI != null) box.querySelector(`.chainbell[data-i="${openI}"]`)?.click();
+  // true = i voli precedenti sono tutti conclusi: non serve ricalcolare
+  return c.legs.filter(l => legKey(l) < legKey(f)).every(l => ['Arrived', 'Canceled'].includes(l.status));
 }
 
 

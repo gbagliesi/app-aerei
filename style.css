@@ -337,3 +337,8 @@ html.tabdrag, html.tabdrag * { -webkit-user-select: none !important; user-select
 .tab.dragging { position: relative; z-index: 5; pointer-events: none; opacity: .85; border-color: var(--amber); box-shadow: 0 4px 14px rgba(0,0,0,.4); }
 .tab .x.arm { background: var(--red); color: #fff; font-size: .78rem; font-weight: 700; padding: .3rem .55rem; border-radius: 7px; animation: armIn .15s ease; }
 @keyframes armIn { from { transform: scale(.7); opacity: .4; } to { transform: none; opacity: 1; } }
+/* giornata dell'aereo: voli precedenti con avvisi */
+.board .row.me { background: #1b2540; box-shadow: inset 3px 0 0 var(--accent, #f5b301); }
+.uff.est { background: #f5b30122; color: #f5b301; }
+.chainbell { font-size: 1.1rem; padding: 0 .1rem; }
+#chainnotify { margin: .7rem 0 .2rem; padding: .7rem .8rem; border: 1px solid #22304f; border-radius: 10px; }

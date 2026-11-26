@@ -772,7 +772,7 @@ export async function getAirportInfo(iata) {
  *                     compagnia che arriva dalla destinazione poco prima (tipico delle low cost,
  *                     che fanno andata e ritorno con lo stesso aereo)
  */
-export async function getInbound(flight, depth = 0) {
+export async function getInbound(flight, depth = 0, opts = {}) {
   const depSide = flight.dep || {};
   const depUtc = (depSide.revised || depSide.sched)?.utc && new Date((depSide.revised || depSide.sched).utc);
   if (!depUtc) return { inbound: null, reason: 'Orario di partenza non disponibile.' };
@@ -812,7 +812,8 @@ export async function getInbound(flight, depth = 0) {
 
   // 1b) FlightAware indica l'aereo assegnato e la tratta precedente (anche per le low cost): due richieste,
   //     solo se le marche non hanno già dato la risposta
-  const fa = await faFlight(flight.number, (depSide.sched?.local || '').slice(0, 10) || isoDate(depUtc), true).catch(() => null);
+  // (opts.noFa: catena dei voli precedenti, FlightAware solo sul primo anello per risparmiare richieste)
+  const fa = opts.noFa ? null : await faFlight(flight.number, (depSide.sched?.local || '').slice(0, 10) || isoDate(depUtc), true).catch(() => null);
   if (fa?.inbound?.number && fa.flights.some(l => !depSide.iata || l.dep?.iata === depSide.iata)) {
     const me = fa.flights.find(l => l.dep?.iata === depSide.iata);
     if (me?.aircraft?.reg && !flight.aircraft?.reg) flight.aircraft = { ...flight.aircraft, reg: me.aircraft.reg, regSrc: 'FlightAware', model: flight.aircraft?.model || me.aircraft.model };
@@ -896,7 +897,7 @@ export async function getInbound(flight, depth = 0) {
       // volo in arrivo senza marche sul tabellone: FlightAware di solito le conosce da quando è decollato, spesso
       // anche prima (es. AZ1677 Roma→Firenze in volo con EI-IMX → AZ1682 per Roma) (una richiesta)
       let pf = null;
-      if (!p.aircraft?.reg && p.number && Math.abs(arrTime(p) - Date.now()) < 8 * 3600e3) {
+      if (!opts.noFa && !p.aircraft?.reg && p.number && Math.abs(arrTime(p) - Date.now()) < 8 * 3600e3) {
         pf = await faFlight(p.number, (p.arr?.sched?.local || '').slice(0, 10) || isoDate(new Date(arrTime(p)))).catch(() => null);
         const leg = pf?.flights?.find(l => l.arr?.iata === depSide.iata && l.aircraft?.reg) || pf?.flights?.find(l => l.aircraft?.reg);
         if (leg) p.aircraft = { ...p.aircraft, reg: leg.aircraft.reg, model: p.aircraft?.model || leg.aircraft.model, regSrc: 'FlightAware' };
