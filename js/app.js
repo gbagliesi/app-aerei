@@ -96,7 +96,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.21 · sincronizzazione fra dispositivi (preferiti, tab, voli seguiti, impostazioni) e catena dei voli condivisa';
+const APP_VERSION = '4.21.1 · la catena dei voli già calcolata (anche su un altro dispositivo) compare subito aprendo il volo';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];
@@ -813,6 +813,7 @@ async function viewFlight(number, date, depHint) {
     await renderInbound(r);
     return changed;
   };
+  showChainSnap(f);
   try { await updateInbound(); } catch (e) { document.getElementById('inbound').innerHTML = errorBox(e); }
   if (lastR) runChain(true); else { const cb = document.getElementById('chain'); if (cb) cb.hidden = true; }
   every(300, async () => {
@@ -1085,23 +1086,64 @@ function bindChain(box, c) {
   };
 }
 
+// Copia della catena già calcolata (qui o su un altro dispositivo collegato, tramite il Worker): si mostra subito
+// aprendo il volo, mentre il ricalcolo parte in sottofondo e poi la sostituisce. Si usa per al massimo 6 ore.
+// Sul Worker sta tra gli anelli condivisi con chiave "chain:…" (rank 3 = tenuta 30 ore, vince la più recente).
+const SNAPS = 'aerei.chainSnap.v1', SNAP_TTL = 6 * 3600e3;
+const snapKey = f => `chain:${linkKey(f)}`;
+const slimSide = x => x && Object.fromEntries(['iata', 'sched', 'revised', 'actual', '_off', 'terminal', 'gate'].filter(k => x[k] != null).map(k => [k, x[k]]));
+const slimLeg = l => Object.fromEntries(Object.entries({ number: l.number, airline: l.airline?.name ? { name: l.airline.name } : undefined, status: l.status, callSign: l.callSign,
+  aircraft: l.aircraft?.reg || l.aircraft?.model ? { reg: l.aircraft.reg, model: l.aircraft.model, _chain: l.aircraft._chain } : undefined, dep: slimSide(l.dep), arr: slimSide(l.arr),
+  _src: l._src, _p: l._p, _basis: l._basis, _this: l._this, _official: l._official, _inferred: l._inferred }).filter(([, v]) => v !== undefined));
+function saveChainSnap(f, c) {
+  const snap = { kind: 'chain', rank: 3, at: Date.now(), c: { ...c, legs: c.legs.map(slimLeg) } };
+  let all = {};
+  try { all = JSON.parse(localStorage.getItem(SNAPS)) || {}; } catch { /* nuovo */ }
+  for (const [k, v] of Object.entries(all)) if (Date.now() - v.at > SNAP_TTL) delete all[k];
+  all[snapKey(f)] = snap;
+  try { localStorage.setItem(SNAPS, JSON.stringify(all)); } catch { /* spazio pieno */ }
+  if (JSON.stringify(snap).length < 7800) shareLink(snapKey(f), snap);
+}
+async function chainSnap(f) {
+  let x = null;
+  try { x = (JSON.parse(localStorage.getItem(SNAPS)) || {})[snapKey(f)] || null; } catch { /* niente */ }
+  if (!x || Date.now() - x.at > 10 * 60e3) {
+    const remote = await sharedLink(snapKey(f));
+    if (remote?.c?.legs && (!x || remote.at > x.at)) x = remote;
+  }
+  return x && Date.now() - x.at < SNAP_TTL && x.c?.legs?.length ? x : null;
+}
+/** Mostra subito l'ultima catena calcolata, se c'è, in attesa del ricalcolo. */
+async function showChainSnap(f) {
+  const box = document.getElementById('chain');
+  const x = box && await chainSnap(f).catch(() => null);
+  if (!x || !document.body.contains(box) || !box.querySelector('.loading')) return;
+  renderChain(box, f, x.c, `Calcolata alle ${new Date(x.at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}: la aggiorno…`);
+}
+
 async function loadChain(f, inbound, r, date) {
   const box = document.getElementById('chain');
   if (!box) return;
   let c;
   try { c = await buildChain(f, inbound, r, date); } catch (e) { if (document.body.contains(box)) box.innerHTML = `<span class="eyebrow">La giornata dell'aereo</span>${errorBox(e)}`; return null; }
   if (!document.body.contains(box)) return;
+  saveChainSnap(f, c);
+  renderChain(box, f, c, '', date);
+  // true = i voli precedenti sono tutti conclusi: non serve ricalcolare
+  return { chain: c, done: c.legs.filter(l => legKey(l) < legKey(f)).every(l => ['Arrived', 'Canceled'].includes(l.status)) };
+}
+
+function renderChain(box, f, c, note = '', date = flightDay(f)) {
   const n = c.legs.filter(l => !l._this && legKey(l) < legKey(f)).length;
   const openI = box.querySelector('#chainnotify:not([hidden])')?.dataset.i;
   box.innerHTML = `<div class="leghead"><span class="eyebrow">La giornata dell'aereo · ${n ? `${n} ${n === 1 ? 'volo precedente' : 'voli precedenti'}` : 'nessun volo precedente trovato'}</span>${c.reg ? `<a class="sub" href="#/aircraft/${encodeURIComponent(c.reg)}/${flightDay(f) || date}${f.dep?.iata ? `?ap=${f.dep.iata}` : ''}">${esc(c.reg)}${c.regSure ? '' : ' (ipotesi)'} ›</a>` : ''}</div>
     ${c.legs.length > 1 ? `<div class="board"><div class="row head rot"><span>Partenza</span><span>Volo</span><span>Tratta</span><span>Arrivo</span><span>Stato</span></div>${chainRows(c.legs)}</div>` : ''}
     <div id="chainnotify" class="notify" hidden></div>
+    ${note ? `<p class="hint"><i>${esc(note)}</i></p>` : ''}
     <p class="hint">${chainEndText(c)} Tocca 🔕 su un volo per gli avvisi di decollo e atterraggio, tocca la riga per i dettagli.</p>
     <p class="hint sources">${chainSources(c)}</p>`;
   bindChain(box, c);
   if (openI != null) box.querySelector(`.chainbell[data-i="${openI}"]`)?.click();
-  // true = i voli precedenti sono tutti conclusi: non serve ricalcolare
-  return { chain: c, done: c.legs.filter(l => legKey(l) < legKey(f)).every(l => ['Arrived', 'Canceled'].includes(l.status)) };
 }
 
 
