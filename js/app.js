@@ -96,7 +96,7 @@ const siteLink = (iata, dir) => {
 const srcTag = x => getSettings().provider !== 'aerodatabox' ? '' : x._officialOnly ? '<small class="src" title="Solo tabellone ufficiale">uff.</small>'
   : x._official ? '<small class="src" title="Tabellone ufficiale + AeroDataBox">uff. + ADB</small>' : '<small class="src" title="Solo AeroDataBox">ADB</small>';
 
-const APP_VERSION = '4.24 · pagine aperte in un pannello a sinistra su schermo largo; sul telefono il pulsante ▦ le mostra tutte in una griglia';
+const APP_VERSION = '4.25 · sul telefono le pagine aperte si vedono tutte nel pannello laterale a scomparsa (☰ in alto a sinistra)';
 const $app = document.getElementById('app');
 let timers = [];
 let maps = [];

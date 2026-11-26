@@ -1,5 +1,5 @@
 // Tab in cima alla pagina: ogni aeroporto, volo, tratta o aereo aperto resta in un tab per tornarci al volo.
-// Schermo largo: pannello verticale a sinistra. Più stretto: barra in alto (scorrevole) + ▦ per la griglia di tutti i tab,
+// Schermo largo: pannello verticale a sinistra. Più stretto: barra in alto (scorrevole) + ☰ per il pannello a scomparsa,
 // e sul telefono scorrimento orizzontale col dito sul contenuto.
 // I tab si riordinano trascinandoli (col dito dopo una pressione lunga); l'ordine resta salvato.
 import { airportByIata } from './airports.js';
@@ -144,7 +144,7 @@ export function playEnterAnim(el) {
 
 // ---------- barra dei tab ----------
 // Schermo largo (≥1080 px): i tab diventano un pannello verticale a sinistra, raggruppati per tipo.
-// Schermo più stretto: riga in alto (scorrevole) + pulsante ▦ che apre una griglia con tutti i tab.
+// Schermo più stretto: riga in alto (scorrevole) + pulsante ☰ che apre lo stesso elenco in un pannello a scomparsa.
 const $bar = () => document.getElementById('tabbar');
 const sideMQ = matchMedia('(min-width: 1080px)');
 const isSide = () => sideMQ.matches;
@@ -154,24 +154,29 @@ const tabHtml = t => `<a class="tab k-${esc(t.kind)} ${t.key === active ? 'activ
       ${dotHtml(t)}<span class="tt">${esc(t.title)}</span>${t.sub ? `<small>${esc(t.sub)}</small>` : ''}
       ${t.key === armed ? `<button class="x arm" type="button" data-close="${esc(t.key)}" aria-label="Conferma: chiudi ${esc(t.title)}">Chiudi</button>` : `<button class="x" type="button" data-close="${esc(t.key)}" aria-label="Chiudi ${esc(t.title)}" title="Chiudi">×</button>`}</a>`;
 
+const homeHtml = () => `<a class="tab home ${active === 'home' ? 'active' : ''}" href="#/" data-key="home" title="Preferiti e ricerca"><span class="tt">★</span><span class="lbl">Preferiti</span></a>`;
+// elenco verticale (pannello del desktop e pannello a scomparsa): gruppi per tipo, dentro ogni gruppo l'ordine scelto trascinando
+function groupedHtml() {
+  const known = GROUPS.map(g => g[0]);
+  const groups = GROUPS.map(([k, label]) => [label, tabs.filter(t => k === 'airport' ? (t.kind === k || !known.includes(t.kind)) : t.kind === k)]).filter(g => g[1].length);
+  return homeHtml() + groups.map(([label, list]) => `<div class="tgrp"><div class="glab">${label}</div>${list.map(tabHtml).join('')}</div>`).join('')
+    + (tabs.length ? (tabs.length > 1 ? `<button class="tab closeall" type="button" data-closeall title="Chiudi tutti i tab">Chiudi tutti</button>` : '')
+      : '<p class="tabhint">Aeroporti, voli e aerei che apri restano qui per tornarci al volo.</p>');
+}
+
 function renderBar() {
   const bar = $bar();
   if (!bar) return;
   if (drag) { drag.stale = true; return; }   // durante un trascinamento ridisegno alla fine
   const side = isSide();
   document.documentElement.classList.toggle('sidetabs', side);
-  const home = `<a class="tab home ${active === 'home' ? 'active' : ''}" href="#/" data-key="home" title="Preferiti e ricerca"><span class="tt">★</span><span class="lbl">Preferiti</span></a>`;
+  bar.classList.toggle('vlist', side);
   if (side) {
-    // pannello: gruppi per tipo; dentro ogni gruppo l'ordine è quello scelto trascinando
-    const known = GROUPS.map(g => g[0]);
-    const groups = GROUPS.map(([k, label]) => [label, tabs.filter(t => k === 'airport' ? (t.kind === k || !known.includes(t.kind)) : t.kind === k)]).filter(g => g[1].length);
-    bar.innerHTML = home + groups.map(([label, list]) => `<div class="tgrp"><div class="glab">${label}</div>${list.map(tabHtml).join('')}</div>`).join('')
-      + (tabs.length ? (tabs.length > 1 ? `<button class="tab closeall" type="button" data-closeall title="Chiudi tutti i tab">Chiudi tutti</button>` : '')
-        : '<p class="tabhint">Aeroporti, voli e aerei che apri restano qui per tornarci al volo.</p>');
+    bar.innerHTML = groupedHtml();
     const a = bar.querySelector('.tab.active');
     if (a) { const r = a.getBoundingClientRect(), br = bar.getBoundingClientRect(); if (r.top < br.top || r.bottom > br.bottom) a.scrollIntoView({ block: 'nearest' }); }
   } else {
-    bar.innerHTML = home + tabs.map(tabHtml).join('')
+    bar.innerHTML = homeHtml() + tabs.map(tabHtml).join('')
       + (tabs.length > 1 ? `<button class="tab closeall" type="button" data-closeall title="Chiudi tutti i tab">Chiudi tutti</button>` : '');
     const a = bar.querySelector('.tab.active');
     if (a) {
@@ -182,69 +187,82 @@ function renderBar() {
   }
   const all = document.getElementById('tabsall');
   if (all) { all.hidden = side || !tabs.length; all.querySelector('b').textContent = tabs.length; }
-  if (sheetOpen()) renderSheet();
+  if (drawerOpen()) renderDrawer();
   maybeHint();
 }
 
-// ---------- griglia di tutti i tab (telefono e schermi stretti) ----------
-const $sheet = () => document.getElementById('tabsheet');
-const sheetOpen = () => { const s = $sheet(); return !!s && !s.hidden; };
-function renderSheet() {
-  const s = $sheet();
-  if (!s || (drag && drag.box === s.querySelector('.tgrid'))) { if (drag) drag.stale = true; return; }
-  s.querySelector('.shead b').textContent = `${tabs.length} ${tabs.length === 1 ? 'pagina aperta' : 'pagine aperte'}`;
-  s.querySelector('[data-closeall]').hidden = tabs.length < 2;
-  s.querySelector('.tgrid').innerHTML = `<a class="tcard home ${active === 'home' ? 'active' : ''}" href="#/" data-key="home"><span class="tt">★</span><small>Preferiti</small></a>`
-    + tabs.map(t => `<a class="tcard ${t.key === active ? 'active' : ''}" href="${esc(t.hash)}" data-key="${esc(t.key)}">
-        <button class="x" type="button" data-close="${esc(t.key)}" aria-label="Chiudi ${esc(t.title)}">×</button>
-        <span class="tt">${dotHtml(t)}${esc(t.title)}</span><small>${esc(t.sub || '')}</small></a>`).join('');
-  s.querySelector('.shint').hidden = tabs.length < 2;
+// ---------- pannello laterale a scomparsa (telefono e schermi stretti) ----------
+const $drawer = () => document.getElementById('tabdrawer');
+const drawerOpen = () => { const d = $drawer(); return !!d && !d.hidden; };
+function renderDrawer() {
+  const d = $drawer();
+  if (!d) return;
+  const list = d.querySelector('.dlist');
+  if (drag && drag.box === list) { drag.stale = true; return; }
+  d.querySelector('.dhead b').textContent = `${tabs.length} ${tabs.length === 1 ? 'pagina aperta' : 'pagine aperte'}`;
+  list.innerHTML = groupedHtml() + (tabs.length > 1 ? '<p class="dhint">Tieni premuta una voce e trascinala per spostarla.</p>' : '');
 }
-function openSheet() {
-  const s = $sheet();
-  if (!s) return;
-  s.hidden = false;
-  renderSheet();
-  requestAnimationFrame(() => s.classList.add('open'));
-  document.documentElement.classList.add('sheetlock');
+function openDrawer() {
+  const d = $drawer();
+  if (!d) return;
+  d.hidden = false;
+  renderDrawer();
+  requestAnimationFrame(() => d.classList.add('open'));
+  document.documentElement.classList.add('drawlock');
+  d.querySelector('.tab.active')?.scrollIntoView({ block: 'nearest' });
 }
-function closeSheet() {
-  const s = $sheet();
-  if (!s || s.hidden) return;
-  s.classList.remove('open');
-  document.documentElement.classList.remove('sheetlock');
-  setTimeout(() => { if (!s.classList.contains('open')) s.hidden = true; }, 200);
+function closeDrawer() {
+  const d = $drawer();
+  if (!d || d.hidden) return;
+  d.classList.remove('open');
+  document.documentElement.classList.remove('drawlock');
+  setTimeout(() => { if (!d.classList.contains('open')) d.hidden = true; }, 200);
 }
-function buildSheet() {
-  const s = document.createElement('div');
-  s.id = 'tabsheet'; s.className = 'tabsheet noswipe'; s.hidden = true;
-  s.innerHTML = `<div class="sheetbg" data-dismiss></div><div class="sheet" role="dialog" aria-label="Pagine aperte">
-    <div class="handle" data-dismiss></div>
-    <div class="shead"><b></b><span><button class="linkbtn" type="button" data-closeall>Chiudi tutti</button> <button class="linkbtn" type="button" data-dismiss>Fine</button></span></div>
-    <div class="tgrid"></div>
-    <p class="shint">Tieni premuta una scheda e trascinala per spostarla.</p></div>`;
-  document.body.appendChild(s);
-  s.addEventListener('click', e => {
-    if (e.target.closest('[data-dismiss]')) { e.preventDefault(); closeSheet(); return; }
+function buildDrawer() {
+  const d = document.createElement('div');
+  d.id = 'tabdrawer'; d.className = 'tabdrawer noswipe'; d.hidden = true;
+  d.innerHTML = `<div class="drawbg" data-dismiss></div><nav class="drawer" aria-label="Pagine aperte">
+    <div class="dhead"><b></b><button class="linkbtn" type="button" data-dismiss aria-label="Chiudi il pannello">×</button></div>
+    <div class="dlist vlist"></div></nav>`;
+  document.body.appendChild(d);
+  d.addEventListener('click', e => {
+    if (e.target.closest('[data-dismiss]')) { e.preventDefault(); closeDrawer(); return; }
     const x = e.target.closest('[data-close]');
-    if (x) { e.preventDefault(); e.stopPropagation(); closeTab(x.dataset.close); renderSheet(); if (!tabs.length) closeSheet(); return; }
-    if (e.target.closest('[data-closeall]')) { e.preventDefault(); closeSheet(); closeAllTabs(); return; }
-    if (e.target.closest('.tcard[data-key]')) closeSheet();   // il link apre la pagina
+    if (x) { e.preventDefault(); e.stopPropagation(); closeTab(x.dataset.close); renderDrawer(); return; }
+    if (e.target.closest('[data-closeall]')) { e.preventDefault(); closeDrawer(); closeAllTabs(); return; }
+    if (e.target.closest('.tab[data-key]')) closeDrawer();   // il link apre la pagina
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
-  initDrag(s.querySelector('.tgrid'), { item: '.tcard[data-key]:not(.home)', mode: () => 'grid', scroller: s.querySelector('.sheet') });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  // scorrendo col dito verso sinistra il pannello si chiude
+  const panel = d.querySelector('.drawer');
+  let sx = null, sy = 0;
+  panel.addEventListener('touchstart', e => { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } }, { passive: true });
+  panel.addEventListener('touchmove', e => {
+    if (sx == null || drag) return;
+    const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+    if (Math.abs(dy) > Math.abs(dx)) { if (Math.abs(dy) > 12) sx = null; return; }
+    if (dx < 0) { panel.style.transition = 'none'; panel.style.transform = `translateX(${dx}px)`; }
+  }, { passive: true });
+  panel.addEventListener('touchend', e => {
+    if (sx == null) return;
+    const dx = (e.changedTouches[0]?.clientX ?? sx) - sx;
+    sx = null;
+    panel.style.transition = ''; panel.style.transform = '';
+    if (dx < -60) closeDrawer();
+  });
+  initDrag(d.querySelector('.dlist'), { item: '.tab[data-key]:not(.home)', mode: () => 'y', scroller: d.querySelector('.dlist') });
 }
 
 function maybeHint() {
-  if (tabs.length < 2 || localStorage.getItem('aerei.tabs.hint3')) return;
+  if (tabs.length < 2 || localStorage.getItem('aerei.tabs.hint4')) return;
   const seen = localStorage.getItem('aerei.tabs.hint2');
-  localStorage.setItem('aerei.tabs.hint3', '1'); localStorage.setItem('aerei.tabs.hint2', '1'); localStorage.setItem('aerei.tabs.hint', '1');
+  localStorage.setItem('aerei.tabs.hint4', '1'); localStorage.setItem('aerei.tabs.hint3', '1'); localStorage.setItem('aerei.tabs.hint2', '1'); localStorage.setItem('aerei.tabs.hint', '1');
   const touch = matchMedia('(pointer: coarse)').matches;
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = isSide()
     ? `${seen ? 'Nuovo: le' : 'Le'} pagine aperte restano nel pannello a sinistra, raggruppate per tipo. Trascinale per cambiare l’ordine.`
-    : `${seen ? 'Nuovo: tocca' : 'Le pagine aperte restano nei tab in alto. Tocca'} ▦ in alto a destra per vederle tutte insieme${touch ? '; tieni premuta una scheda per spostarla' : ''}.`;
+    : `${seen ? 'Nuovo: tocca' : 'Le pagine aperte restano nei tab in alto. Tocca'} ☰ in alto a sinistra per vederle tutte in un pannello laterale${touch ? '; tieni premuta una voce per spostarla' : ''}.`;
   document.body.appendChild(t);
   setTimeout(() => t.classList.add('out'), 6500);
   setTimeout(() => t.remove(), 7200);
@@ -286,9 +304,9 @@ export function initTabs(appEl) {
   // sfumatura accanto a ★ solo quando ci sono tab scorsi sotto
   const sc = () => bar.classList.toggle('scrolled', !isSide() && bar.scrollLeft > 2);
   bar.addEventListener('scroll', sc, { passive: true }); sc();
-  document.getElementById('tabsall')?.addEventListener('click', openSheet);
-  buildSheet();
-  sideMQ.addEventListener('change', () => { closeSheet(); setSideTop(); renderBar(); sc(); });
+  document.getElementById('tabsall')?.addEventListener('click', openDrawer);
+  buildDrawer();
+  sideMQ.addEventListener('change', () => { closeDrawer(); setSideTop(); renderBar(); sc(); });
   window.addEventListener('resize', setSideTop);
   setSideTop();
   initSwipe(appEl);
@@ -299,7 +317,7 @@ export function initTabs(appEl) {
 // ---------- riordino trascinando ----------
 // mouse/penna: si trascina subito (oltre 6 px); dito: pressione lunga (~0,35 s) poi si trascina,
 // così lo scorrimento normale col dito resta com'è. "Preferiti" resta sempre primo.
-// mode 'x' = riga in alto, 'y' = pannello laterale (dentro il proprio gruppo), 'grid' = griglia del telefono.
+// mode 'x' = riga in alto, 'y' = pannello laterale (dentro il proprio gruppo), 'grid' = griglia (non più usata).
 let drag = null;
 function initDrag(box, { item, mode, scroller }) {
   let press = null;   // pressione in attesa di diventare trascinamento
